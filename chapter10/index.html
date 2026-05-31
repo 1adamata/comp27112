@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binary Morphology · COMP27112 Visual Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0f14;
+  --bg2:#11151c;
+  --panel:#161b24;
+  --panel2:#1b212c;
+  --line:#2a3340;
+  --ink:#e8edf2;
+  --muted:#8a98a8;
+  --green:#39e639;       /* object pixels, matches slides */
+  --green-dim:#1f7a1f;
+  --blue:#4d8dff;        /* structuring element outline */
+  --amber:#ffb84d;
+  --red:#ff5a6e;
+  --grid-line:#323b48;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'Hanken Grotesk',system-ui,sans-serif;
+  font-size:17px;line-height:1.65;
+  overflow-x:hidden;
+  background-image:
+    linear-gradient(rgba(57,230,57,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(57,230,57,.025) 1px,transparent 1px);
+  background-size:28px 28px;
+}
+/* progress + nav */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--green),var(--blue));z-index:200;box-shadow:0 0 12px var(--green)}
+nav{position:fixed;top:0;right:0;z-index:150;padding:14px 22px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;backdrop-filter:blur(8px);background:linear-gradient(180deg,rgba(12,15,20,.85),transparent)}
+nav a{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.04em;text-decoration:none;color:var(--muted);padding:5px 9px;border:1px solid transparent;border-radius:6px;transition:.2s;text-transform:uppercase}
+nav a:hover{color:var(--green);border-color:var(--line)}
+
+section{max-width:1080px;margin:0 auto;padding:90px 26px 40px;position:relative}
+.reveal{opacity:0;transform:translateY(36px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* hero */
+#hero{min-height:96vh;display:flex;flex-direction:column;justify-content:center;max-width:1180px}
+.eyebrow{font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.32em;color:var(--green);text-transform:uppercase;margin-bottom:24px}
+h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(3rem,10vw,8rem);line-height:.92;letter-spacing:-.02em}
+h1 .em{font-style:italic;color:var(--green)}
+.lede{font-size:clamp(1.1rem,2.2vw,1.5rem);color:var(--muted);max-width:680px;margin-top:30px;line-height:1.5}
+.herometa{margin-top:46px;display:flex;gap:34px;flex-wrap:wrap;font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);letter-spacing:.05em}
+.herometa b{color:var(--ink);display:block;font-size:24px;font-family:'Fraunces',serif;font-weight:600;letter-spacing:0}
+.hero-pixels{display:flex;gap:6px;margin-top:54px}
+.hero-pixels i{width:34px;height:34px;border:1px solid var(--line);border-radius:5px;background:var(--panel);animation:pop .6s backwards}
+.hero-pixels i.on{background:var(--green);border-color:var(--green);box-shadow:0 0 18px rgba(57,230,57,.5)}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+
+h2{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(2rem,5vw,3.4rem);line-height:1;letter-spacing:-.02em;margin-bottom:8px}
+.sectiontag{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.2em;color:var(--green);text-transform:uppercase;display:block;margin-bottom:18px}
+h3{font-family:'Fraunces',serif;font-weight:600;font-size:1.6rem;margin:38px 0 14px;letter-spacing:-.01em}
+p{margin:14px 0;color:#cdd6df}
+p.big{font-size:1.2rem;color:var(--ink)}
+strong{color:#fff;font-weight:700}
+.green{color:var(--green)}
+.blue{color:var(--blue)}
+.amber{color:var(--amber)}
+em.term{font-style:normal;color:var(--green);font-weight:700}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:30px;margin:26px 0}
+.card.glow{box-shadow:0 0 0 1px rgba(57,230,57,.12),0 30px 60px -30px rgba(0,0,0,.6)}
+.formula{font-family:'Space Mono',monospace;background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--green);border-radius:8px;padding:16px 20px;margin:18px 0;font-size:1.05rem;color:var(--ink);overflow-x:auto}
+.formula b{color:var(--green)}
+.callout{border-left:3px solid var(--amber);background:rgba(255,184,77,.06);padding:14px 20px;border-radius:0 10px 10px 0;margin:20px 0;font-size:.98rem}
+.callout .lbl{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--amber);text-transform:uppercase;display:block;margin-bottom:4px}
+
+ul.clean{list-style:none;margin:16px 0}
+ul.clean li{padding:8px 0 8px 30px;position:relative;color:#cdd6df}
+ul.clean li::before{content:"▸";position:absolute;left:4px;color:var(--green)}
+
+/* two-col */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin:26px 0}
+@media(max-width:760px){.cols{grid-template-columns:1fr}.herometa{gap:22px}}
+
+/* image example with before/after */
+.exhibit{margin:26px 0}
+.exhibit figcaption{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);margin-top:10px;text-align:center;letter-spacing:.04em}
+.ba{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);user-select:none;background:#000;cursor:ew-resize}
+.ba img{display:block;width:100%;height:auto;pointer-events:none}
+.ba .after{position:absolute;inset:0;width:100%;overflow:hidden}
+.ba .after img{position:absolute;top:0;left:0;height:100%;width:auto;max-width:none}
+.ba .handle{position:absolute;top:0;bottom:0;width:2px;background:var(--green);box-shadow:0 0 10px var(--green);left:50%}
+.ba .handle::after{content:"⇄";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34px;height:34px;background:var(--green);color:#04130a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700}
+.ba .tag{position:absolute;top:10px;font-family:'Space Mono',monospace;font-size:11px;background:rgba(0,0,0,.65);padding:3px 8px;border-radius:5px;letter-spacing:.05em}
+.ba .tag.l{left:10px;color:#fff}
+.ba .tag.r{right:10px;color:var(--green)}
+img.flat{width:100%;border-radius:12px;border:1px solid var(--line);display:block;background:#fff}
+
+/* ---- interactive playground ---- */
+.lab{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:26px;margin:30px 0}
+.lab h4{font-family:'Fraunces',serif;font-size:1.3rem;font-weight:600;margin-bottom:4px}
+.lab .hint{font-size:.9rem;color:var(--muted);margin-bottom:18px}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{background:var(--bg2);color:var(--muted);border:none;padding:9px 14px;font-family:'Space Mono',monospace;font-size:12px;cursor:pointer;letter-spacing:.04em;transition:.18s;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:none}
+.seg button.active{background:var(--green);color:#04130a;font-weight:700}
+.seg button:hover:not(.active){color:var(--ink)}
+.btn{background:var(--bg2);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 16px;font-family:'Space Mono',monospace;font-size:12px;cursor:pointer;letter-spacing:.04em;transition:.18s}
+.btn:hover{border-color:var(--green);color:var(--green)}
+.btn.primary{background:var(--green);color:#04130a;border-color:var(--green);font-weight:700}
+.btn.primary:hover{filter:brightness(1.1);color:#04130a}
+.ctl-label{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-right:2px}
+
+.stage{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+@media(max-width:680px){.stage{grid-template-columns:1fr}}
+.gridwrap{text-align:center}
+.gridwrap .glabel{font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;text-transform:uppercase}
+.pixgrid{display:inline-grid;gap:2px;background:var(--grid-line);padding:2px;border-radius:6px;touch-action:none}
+.px{width:var(--ps,26px);height:var(--ps,26px);background:#fff;border-radius:2px;transition:background .12s}
+.px.on{background:var(--green)}
+.px.se{outline:2px solid var(--blue);outline-offset:-2px;z-index:2;position:relative}
+.px.write{box-shadow:0 0 0 2px var(--amber) inset}
+.px.removed{background:#9aa7b2}
+.px.added{background:var(--green-dim)}
+.statusbar{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);margin-top:16px;min-height:20px}
+.statusbar b{color:var(--green)}
+
+/* quiz */
+.quiz{counter-reset:q}
+.qcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;margin:20px 0;transition:.2s}
+.qcard .qnum{font-family:'Space Mono',monospace;font-size:11px;color:var(--green);letter-spacing:.15em}
+.qcard .qtext{font-size:1.12rem;font-weight:500;margin:8px 0 16px;color:#fff}
+.opt{display:block;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:13px 16px;margin:8px 0;color:#cdd6df;cursor:pointer;font-family:inherit;font-size:.97rem;transition:.15s}
+.opt:hover{border-color:var(--muted)}
+.opt.correct{border-color:var(--green);background:rgba(57,230,57,.12);color:#fff}
+.opt.wrong{border-color:var(--red);background:rgba(255,90,110,.1);color:#fff}
+.opt .mk{font-family:'Space Mono',monospace;float:right}
+.feedback{margin-top:14px;padding:12px 16px;border-radius:10px;background:rgba(77,141,255,.08);border-left:3px solid var(--blue);font-size:.92rem;display:none}
+.feedback.show{display:block}
+.feedback .lbl{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--blue);text-transform:uppercase;display:block;margin-bottom:3px}
+
+/* exam */
+.exam{background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:22px 24px;margin:18px 0}
+.exam .meta{font-family:'Space Mono',monospace;font-size:11px;color:var(--amber);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.exam .marks{float:right;color:var(--muted)}
+.exam .reveal-ans{margin-top:14px}
+.ans{display:none;margin-top:14px;padding:14px 16px;border-radius:10px;background:rgba(57,230,57,.06);border-left:3px solid var(--green);font-size:.93rem}
+.ans.show{display:block}
+.ans .lbl{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--green);text-transform:uppercase;display:block;margin-bottom:5px}
+
+footer{max-width:1080px;margin:60px auto 0;padding:40px 26px 80px;border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;font-family:'Space Mono',monospace;letter-spacing:.03em}
+footer a{color:var(--green);text-decoration:none}
+
+.kbd{font-family:'Space Mono',monospace;background:var(--bg2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 7px;font-size:.85em;color:var(--ink)}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);margin:50px 0}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<nav>
+  <a href="#hero">Top</a>
+  <a href="#se">Structuring Elements</a>
+  <a href="#erosion">Erosion</a>
+  <a href="#dilation">Dilation</a>
+  <a href="#openclose">Open · Close</a>
+  <a href="#lab">Playground</a>
+  <a href="#beyond">Beyond Binary</a>
+  <a href="#quiz">Quiz</a>
+  <a href="#exam">Exam</a>
+</nav>
+
+<!-- ============ HERO ============ -->
+<section id="hero">
+  <div class="eyebrow">COMP27112 · Image Processing · Lecture 10</div>
+  <h1>Binary<br><span class="em">Morphology</span></h1>
+  <p class="lede">How four simple operations — <span class="green">erosion</span>, <span class="green">dilation</span>, <span class="green">opening</span> and <span class="green">closing</span> — reshape the blobs in a thresholded image: filling holes, erasing noise, and joining or splitting objects, all by sliding a tiny template across the pixels.</p>
+  <div class="hero-pixels" id="heroPx"></div>
+  <div class="herometa">
+    <div><b>4</b>core operations</div>
+    <div><b>1</b>structuring element</div>
+    <div><b>2</b>ideas: fit &amp; hit</div>
+    <div><b>0/1</b>every pixel</div>
+  </div>
+</section>
+
+<!-- ============ MOTIVATION ============ -->
+<section id="why">
+  <span class="sectiontag reveal">// the problem</span>
+  <h2 class="reveal">Thresholding is messy</h2>
+  <p class="big reveal">When you threshold a greyscale image into a binary one, the result is rarely clean. Objects come out with ragged edges, tiny <strong>holes</strong> punched through them, <strong>spurs</strong> sticking out, and stray <strong>noise specks</strong> scattered across the background.</p>
+  <div class="card reveal">
+    <p>The lecture's running example is a <strong>tadpole</strong>. After thresholding, one tadpole has two little <em class="term">eye-holes</em> where the eyes were, and its <em class="term">tail</em> has broken up into a string of disconnected blobs instead of one continuous line.</p>
+    <p>Morphology gives us the tools to repair this: <span class="green">fill the eyes</span>, <span class="green">reconnect the tail</span> — or, if we prefer, <span class="green">erode the tail away completely</span>. Same toolkit, different intent.</p>
+  </div>
+  <div class="callout reveal">
+    <span class="lbl">Mental model</span>
+    Throughout, the <span class="green">object (foreground)</span> is drawn in <span class="green">green</span> and has value <span class="kbd">1</span>; the background is white and has value <span class="kbd">0</span>.
+  </div>
+
+  <figure class="exhibit reveal">
+    <div class="ba" data-ba>
+      <img src="assets/wbc_original.jpeg" alt="Original white blood cell microscopy image">
+      <div class="after"><img src="assets/wbc_threshold.png" alt="Thresholded binary version"></div>
+      <div class="handle"></div>
+      <span class="tag l">Original</span><span class="tag r">Thresholded → binary</span>
+    </div>
+    <figcaption>Drag the handle. The thresholded result (right) is riddled with holes, ragged edges and noise specks — the raw material morphology cleans up.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ STRUCTURING ELEMENTS ============ -->
+<section id="se">
+  <span class="sectiontag reveal">// the tool</span>
+  <h2 class="reveal">Structuring elements</h2>
+  <p class="big reveal">A <em class="term">structuring element</em> (SE) is a small template of pixels that you slide across the image <strong>one pixel at a time</strong> — much like the kernel in convolution. Its shape and size decide exactly how an operation behaves.</p>
+
+  <div class="cols">
+    <figure class="exhibit reveal">
+      <img class="flat" src="assets/structuring_elements.png" alt="Examples of structuring elements: a 3x3 square and a cross shape">
+      <figcaption>From the slides — a 3×3 square and a cross-shaped SE</figcaption>
+    </figure>
+    <div class="reveal">
+      <h3>Common shapes</h3>
+      <ul class="clean">
+        <li>Squares — e.g. 3×3 or 5×5 blocks</li>
+        <li>Crosses (plus-shaped)</li>
+        <li>Circles / discs, and really <strong>any shape and size</strong></li>
+      </ul>
+      <p>The SE has an <em class="term">origin</em>, usually its centre — this is the pixel whose value gets written in the output. SEs almost always have <strong>odd</strong> dimensions so the centre is well-defined.</p>
+    </div>
+  </div>
+
+  <h3 class="reveal">Two key ideas: <span class="green">fit</span> and <span class="blue">hit</span></h3>
+  <p class="reveal">Tim's handout frames every operation around two relationships between the SE and the image underneath it:</p>
+  <div class="cols">
+    <div class="card reveal">
+      <h3 style="margin-top:0">Fit</h3>
+      <p>The SE <strong>fits</strong> at a location if <strong>every</strong> SE pixel (every <span class="kbd">1</span> in the template) lands on an object pixel. Erosion keeps a pixel only where the SE <span class="green">fits</span>.</p>
+    </div>
+    <div class="card reveal">
+      <h3 style="margin-top:0">Hit</h3>
+      <p>The SE <strong>hits</strong> at a location if <strong>any</strong> SE pixel lands on an object pixel. Dilation sets a pixel wherever the SE <span class="blue">hits</span>.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ EROSION ============ -->
+<section id="erosion">
+  <span class="sectiontag reveal">// operation 1</span>
+  <h2 class="reveal">Erosion <span class="green">— eats the object</span></h2>
+  <p class="big reveal">Erosion shrinks objects, eats away spurs, and enlarges holes.</p>
+  <div class="card glow reveal">
+    <p style="margin-top:0"><strong>Rule.</strong> Place the SE centre on every pixel. If the centre is over an <span class="green">object</span> pixel <strong>and any</strong> other SE element is over a <strong>background</strong> pixel, the centre pixel becomes <strong>background</strong> in the output.</p>
+    <p>Equivalently: a pixel survives only where the SE <span class="green">fits</span> entirely inside the object.</p>
+  </div>
+  <div class="callout reveal">
+    <span class="lbl">Critical detail</span>
+    The result <strong>must be drawn into a new image</strong> — you cannot edit in place, or pixels you've just changed would corrupt the calculation for their neighbours. (This shows up directly as an exam question.)
+  </div>
+
+  <h3 class="reveal">What it does, visually</h3>
+  <ul class="clean reveal">
+    <li>The object loses a layer of <strong>border</strong> pixels all the way round — it shrinks.</li>
+    <li>Any <strong>holes</strong> inside the object get <strong>larger</strong>.</li>
+    <li>Small <strong>noise specks</strong> and thin <strong>spurs</strong> can disappear entirely — <em>but only if the SE is large enough relative to them.</em></li>
+  </ul>
+
+  <figure class="exhibit reveal">
+    <div class="ba" data-ba>
+      <img src="assets/erosion_before.png" alt="Thresholded white blood cells">
+      <div class="after"><img src="assets/erosion_after.png" alt="After erosion"></div>
+      <div class="handle"></div>
+      <span class="tag l">Thresholded</span><span class="tag r">Eroded · 5×5 SE</span>
+    </div>
+    <figcaption>White blood cells — drag the handle. Noise mostly gone; holes opened up; outlines thinned.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ DILATION ============ -->
+<section id="dilation">
+  <span class="sectiontag reveal">// operation 2</span>
+  <h2 class="reveal">Dilation <span class="green">— grows the object</span></h2>
+  <p class="big reveal">Dilation is the converse of erosion: it adds pixels, so objects grow and gaps fill.</p>
+  <div class="card glow reveal">
+    <p style="margin-top:0"><strong>Rule.</strong> Place the SE centre on every pixel. If the centre is over a <strong>background</strong> pixel <strong>and any</strong> other SE element is over an <span class="green">object</span> pixel, the centre pixel becomes <span class="green">object</span> in the output.</p>
+    <p>Equivalently: a pixel is set wherever the SE <span class="blue">hits</span> the object. (And again — write to a new image.)</p>
+  </div>
+
+  <h3 class="reveal">What it does, visually</h3>
+  <ul class="clean reveal">
+    <li>A <strong>border</strong> of pixels is added all the way around the object — it grows.</li>
+    <li>Small <strong>holes</strong> and gaps get <strong>filled in</strong> (big holes survive a small SE).</li>
+    <li>Two nearby objects can <strong>merge</strong> into one.</li>
+  </ul>
+
+  <figure class="exhibit reveal">
+    <div class="ba" data-ba>
+      <img src="assets/dilation_before.png" alt="Thresholded white blood cells">
+      <div class="after"><img src="assets/dilation_after.png" alt="After dilation"></div>
+      <div class="handle"></div>
+      <span class="tag l">Thresholded</span><span class="tag r">Dilated · 5×5 SE</span>
+    </div>
+    <figcaption>The same cells — holes filled, objects fatter, specks grown.</figcaption>
+  </figure>
+
+  <div class="card reveal">
+    <h3 style="margin-top:0">Erosion vs Dilation, side by side</h3>
+    <div class="cols" style="margin:0">
+      <div><strong class="green">Erosion</strong><p style="margin:6px 0">Smaller object · holes grow · removes specks &amp; spurs</p></div>
+      <div><strong class="green">Dilation</strong><p style="margin:6px 0">Larger object · holes shrink/fill · merges neighbours</p></div>
+    </div>
+    <p style="margin-bottom:0">The catch: both <strong>change the object's size</strong>. Often we want the cleaning effect <em>without</em> the size change — which is exactly what opening and closing deliver.</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ OPENING & CLOSING ============ -->
+<section id="openclose">
+  <span class="sectiontag reveal">// operations 3 &amp; 4</span>
+  <h2 class="reveal">Opening &amp; Closing</h2>
+  <p class="big reveal">Chain erosion and dilation together and the size change cancels out — leaving only the cleanup.</p>
+
+  <div class="cols">
+    <div class="card glow reveal">
+      <h3 style="margin-top:0">Opening</h3>
+      <p>Removes spurs &amp; specks and enlarges holes — keeping object size.</p>
+      <div class="formula" style="margin-bottom:0">open(I) = <b>dilate</b>(<b>erode</b>(I))</div>
+      <p style="font-size:.92rem;color:var(--muted)">Erode first (kill the small stuff), then dilate to restore the survivors to size. What erosion deleted can't reappear.</p>
+    </div>
+    <div class="card glow reveal">
+      <h3 style="margin-top:0">Closing</h3>
+      <p>Fills holes &amp; fills out spurs and joins near objects — keeping object size.</p>
+      <div class="formula" style="margin-bottom:0">close(I) = <b>erode</b>(<b>dilate</b>(I))</div>
+      <p style="font-size:.92rem;color:var(--muted)">Dilate first (fill the gaps), then erode back to size. Filled holes stay filled.</p>
+    </div>
+  </div>
+
+  <div class="callout reveal">
+    <span class="lbl">The tadpole, finally</span>
+    To close the eye-holes: <strong>dilate</strong> fills them, then <strong>erode</strong> shrinks the body back — but there's no longer any background inside the eyes to re-open. Same-size tadpole, no eyes. That's a <strong>closing</strong>.
+  </div>
+
+  <figure class="exhibit reveal">
+    <img class="flat" src="assets/open_close_worked.png" alt="Worked grid example of opening (erode then dilate) and closing (dilate then erode)">
+    <figcaption>Worked example from the slides. <strong>Opening</strong> (left) breaks the thin bridge → two separate objects. <strong>Closing</strong> (right) keeps the bridge → one merged object.</figcaption>
+  </figure>
+
+  <div class="cols">
+    <figure class="exhibit reveal">
+      <div class="ba" data-ba>
+        <img src="assets/opening_before.png" alt="before opening">
+        <div class="after"><img src="assets/opening_after.png" alt="after opening"></div>
+        <div class="handle"></div>
+        <span class="tag l">Thresholded</span><span class="tag r">Opened</span>
+      </div>
+      <figcaption>Opening · 5×5 — noise &amp; spurs gone, sizes preserved</figcaption>
+    </figure>
+    <figure class="exhibit reveal">
+      <div class="ba" data-ba>
+        <img src="assets/closing_before.png" alt="before closing">
+        <div class="after"><img src="assets/closing_after.png" alt="after closing"></div>
+        <div class="handle"></div>
+        <span class="tag l">Thresholded</span><span class="tag r">Closed</span>
+      </div>
+      <figcaption>Closing · 5×5 — holes filled, sizes preserved</figcaption>
+    </figure>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ INTERACTIVE PLAYGROUND ============ -->
+<section id="lab">
+  <span class="sectiontag reveal">// try it yourself</span>
+  <h2 class="reveal">Morphology playground</h2>
+  <p class="big reveal">Draw on the left grid, pick an operation and a structuring element, then watch the SE sweep across and write the result into the new image on the right.</p>
+
+  <div class="lab reveal">
+    <h4>Interactive engine</h4>
+    <p class="hint"><span class="kbd">Click</span> or <span class="kbd">drag</span> on the input grid to toggle pixels. Then <span class="kbd">Step</span> through, or <span class="kbd">Play</span> the full sweep.</p>
+
+    <div class="controls">
+      <span class="ctl-label">Op</span>
+      <div class="seg" id="opSeg">
+        <button data-op="erode" class="active">Erode</button>
+        <button data-op="dilate">Dilate</button>
+        <button data-op="open">Open</button>
+        <button data-op="close">Close</button>
+      </div>
+      <span class="ctl-label">SE</span>
+      <div class="seg" id="seSeg">
+        <button data-se="sq3" class="active">3×3 □</button>
+        <button data-se="cross3">cross +</button>
+        <button data-se="sq5">5×5 □</button>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn primary" id="playBtn">▶ Play</button>
+      <button class="btn" id="stepBtn">Step ▸</button>
+      <button class="btn" id="resetBtn">↺ Reset output</button>
+      <span class="ctl-label">Preset</span>
+      <div class="seg" id="presetSeg">
+        <button data-preset="L" class="active">L-block</button>
+        <button data-preset="bridge">2 blobs</button>
+        <button data-preset="noisy">noisy</button>
+        <button data-preset="clear">clear</button>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="gridwrap">
+        <div class="glabel">Input image</div>
+        <div class="pixgrid" id="inGrid"></div>
+      </div>
+      <div class="gridwrap">
+        <div class="glabel">Output image (new buffer)</div>
+        <div class="pixgrid" id="outGrid"></div>
+      </div>
+    </div>
+    <div class="statusbar" id="status">Ready. <b>Erode</b> with a <b>3×3 square</b> — press Play.</div>
+  </div>
+
+  <div class="callout reveal">
+    <span class="lbl">Watch for</span>
+    With <strong>Open</strong> and <strong>Close</strong> the output is computed in two passes (the status line tells you which). Try the <strong>2 blobs</strong> preset: <strong>Open</strong> snaps the bridge; <strong>Close</strong> keeps it.
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ BEYOND BINARY ============ -->
+<section id="beyond">
+  <span class="sectiontag reveal">// further reading · Tim's handout ch.4</span>
+  <h2 class="reveal">Beyond binary</h2>
+  <p class="big reveal">The handout pushes past the lecture into greyscale morphology and the structural features it unlocks — a taste of more advanced material.</p>
+
+  <h3 class="reveal">Greyscale morphology</h3>
+  <p class="reveal">The SE is no longer binary — it can hold integer values. Picture the image as a <strong>landscape</strong> where intensity is height:</p>
+  <ul class="clean reveal">
+    <li><strong>Greyscale erosion</strong> — slide the SE <em>beneath</em> the surface and raise it as far as it goes without poking through; the height is the output. Darkens, removes bright peaks.</li>
+    <li><strong>Greyscale dilation</strong> — lower an inverted SE from above until it touches; record its height. Brightens, fills dark dips.</li>
+  </ul>
+
+  <div class="cols">
+    <div class="card reveal">
+      <h3 style="margin-top:0">Useful combinations</h3>
+      <ul class="clean" style="margin:0">
+        <li><strong>Smoothing</strong> — open then close removes both bright and dark extrema.</li>
+        <li><strong>Morphological gradient</strong> — (opened − closed); an orientation-insensitive edge measure.</li>
+        <li><strong>Top-hat transform</strong> — (original − opened); pulls out detail hidden by uneven shading.</li>
+      </ul>
+    </div>
+    <div class="card reveal">
+      <h3 style="margin-top:0">Measuring shape</h3>
+      <ul class="clean" style="margin:0">
+        <li><strong>Granulometry</strong> — open/close with growing SEs to recover a particle <em>size distribution</em>.</li>
+        <li><strong>Distance transform</strong> — repeatedly erode; a pixel's iteration count is its distance to background. Used to find e.g. the centre of a palm.</li>
+        <li><strong>Skeleton</strong> — a minimal one-pixel-wide representation of an object's shape; <strong>convex hull</strong> — minimal enclosing shape.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout reveal">
+    <span class="lbl">Recommended</span>
+    Tim's IP handout, <strong>Chapter 4, pp. 65–86</strong> (~88 min) goes deeper on all of the above, with the formal set-theoretic definitions of erosion (f ⊖ s) and dilation (f ⊕ s).
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ QUIZ ============ -->
+<section id="quiz">
+  <span class="sectiontag reveal">// check yourself</span>
+  <h2 class="reveal">Quiz</h2>
+  <p class="big reveal">From the course's own visual quiz bank. Pick an answer to see if you're right — and why.</p>
+  <div class="quiz" id="quiz"></div>
+  <div class="statusbar reveal" id="quizScore" style="font-size:14px"></div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ EXAM ============ -->
+<section id="exam">
+  <span class="sectiontag reveal">// past papers &amp; exam practice</span>
+  <h2 class="reveal">Exam practice</h2>
+  <p class="reveal">In the published COMP27112 papers, the morphology questions sit in the <strong>restricted Section A (MCQ)</strong>, which isn't released — so the closest <em>genuine</em> past-paper item is the binary-image boundary question below, followed by exam-style practice built around this chapter. Reveal each model answer once you've attempted it.</p>
+
+  <div class="exam reveal">
+    <div class="meta">Genuine · COMP27112 2025 · Q27a <span class="marks">[5 marks]</span></div>
+    <p><strong>Binary boundary marking.</strong> A figure shows an object in a binary image. Boundary pixels are being labelled as object (O) or background (B); the process has been started (e.g. B₀, O₀, O₁, B₁, O₂…). <em>Explain how the process of marking boundary pixels is performed, with reference to the already-labelled pixels.</em></p>
+    <button class="btn reveal-ans" onclick="toggleAns(this)">Show model answer</button>
+    <div class="ans">
+      <span class="lbl">Model answer</span>
+      Trace the object's outline by examining each pixel's neighbours. A pixel is a <strong>boundary (object) pixel</strong> if it is an object pixel (=1) that has at least one background neighbour; interior object pixels (all neighbours =1) are not boundary. Starting from a known boundary pixel, move around the contour visiting connected object pixels, labelling each as O and the adjacent background transitions as B, until you return to the start. This is exactly the set of pixels erosion would remove — so <strong>boundary = original − erode(original)</strong> (handout Fig 4.11), tying the question back to morphology.
+    </div>
+  </div>
+
+  <div class="exam reveal">
+    <div class="meta">Exam-style practice · 1 <span class="marks">[4 marks]</span></div>
+    <p>Define <strong>erosion</strong> and <strong>dilation</strong> of a binary image in terms of a structuring element. State the effect of each on (i) object size, (ii) holes, and (iii) noise.</p>
+    <button class="btn reveal-ans" onclick="toggleAns(this)">Show model answer</button>
+    <div class="ans"><span class="lbl">Model answer</span>
+    <strong>Erosion:</strong> set the centre pixel to background if the SE centre is over an object pixel and any other SE element overlies background (the SE must <em>fit</em>). → object shrinks, holes enlarge, small noise/spurs removed if the SE is big enough. <strong>Dilation:</strong> set the centre pixel to object if the centre is over background and any other SE element overlies an object pixel (the SE <em>hits</em>). → object grows, holes shrink/fill, nearby objects may merge. Both write to a new output image.</div>
+  </div>
+
+  <div class="exam reveal">
+    <div class="meta">Exam-style practice · 2 <span class="marks">[4 marks]</span></div>
+    <p>Define <strong>opening</strong> and <strong>closing</strong> using erosion and dilation. An image has small bright noise specks <em>and</em> small holes inside its objects. Which operation removes the specks, and which fills the holes — each without changing overall object size? Justify.</p>
+    <button class="btn reveal-ans" onclick="toggleAns(this)">Show model answer</button>
+    <div class="ans"><span class="lbl">Model answer</span>
+    open(I) = dilate(erode(I)); close(I) = erode(dilate(I)). <strong>Opening removes the specks:</strong> the initial erosion deletes the small specks/spurs, then dilation restores the surviving objects to their original size (deleted specks can't return). <strong>Closing fills the holes:</strong> dilation fills the small holes, then erosion shrinks objects back to size while the filled holes stay filled. Because each pairs an op with its inverse, overall object size is preserved.</div>
+  </div>
+
+  <div class="exam reveal">
+    <div class="meta">Exam-style practice · 3 <span class="marks">[5 marks]</span></div>
+    <p>A thresholded image of a <strong>tadpole</strong> has two eye-holes and a tail broken into separate blobs. Using morphology, describe how to (a) fill the eyes and reconnect the tail, and (b) alternatively remove the tail entirely.</p>
+    <button class="btn reveal-ans" onclick="toggleAns(this)">Show model answer</button>
+    <div class="ans"><span class="lbl">Model answer</span>
+    <strong>(a)</strong> Apply <strong>closing</strong>: dilation fills the eye-holes and bridges the gaps between the tail fragments (reconnecting the tail), then erosion returns the body to its original size while filled regions remain filled. <strong>(b)</strong> Apply <strong>erosion</strong> (or an opening) with an SE larger than the thin tail fragments — the narrow, broken tail is too thin to survive and is eroded away, leaving just the body.</div>
+  </div>
+
+  <div class="exam reveal">
+    <div class="meta">Exam-style practice · 4 <span class="marks">[2 marks]</span></div>
+    <p>Why must the output of erosion and dilation be written into a <strong>new</strong> image rather than modified in place?</p>
+    <button class="btn reveal-ans" onclick="toggleAns(this)">Show model answer</button>
+    <div class="ans"><span class="lbl">Model answer</span>
+    Each output pixel depends on the <em>original</em> neighbourhood values. If you wrote results back into the same image, already-updated pixels would feed into the calculation of their neighbours, corrupting the result — exactly as with convolution. A separate output buffer keeps every computation based on the unmodified input.</div>
+  </div>
+
+  <div class="exam reveal">
+    <div class="meta">Exam-style practice · 5 <span class="marks">[3 marks]</span></div>
+    <p>(From the handout.) Define what it means for a structuring element to <strong>fit</strong> and to <strong>hit</strong> an image at a location, and relate each to erosion and dilation.</p>
+    <button class="btn reveal-ans" onclick="toggleAns(this)">Show model answer</button>
+    <div class="ans"><span class="lbl">Model answer</span>
+    The SE <strong>fits</strong> at a location if every SE "1" pixel overlies an object pixel (background under SE "0"s is irrelevant). The SE <strong>hits</strong> if <em>any</em> SE "1" pixel overlies an object pixel. <strong>Erosion</strong> outputs object only where the SE <em>fits</em>; <strong>dilation</strong> outputs object wherever the SE <em>hits</em>.</div>
+  </div>
+</section>
+
+<footer>
+  COMP27112 · Introduction to Visual Computing · Image Processing Lecture 10 (Terence Morley) + Tim's IP Handout, Ch.4.<br>
+  Interactive study notes — diagrams &amp; example images taken from the course presentation. Object = green (1), background = white (0).<br>
+  Built for revision. Drag the before/after sliders, draw in the playground, and attempt the quiz before revealing answers.
+</footer>
+
+<script>
+/* ---------- progress bar + reveal ---------- */
+const prog=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement;const sc=h.scrollTop/(h.scrollHeight-h.clientHeight);prog.style.width=(sc*100)+'%';});
+const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* ---------- hero pixels ---------- */
+const hp=document.getElementById('heroPx');
+const pattern=[1,1,0,1,1,1,0,1,1,1];
+pattern.forEach((v,i)=>{const i2=document.createElement('i');if(v)i2.className='on';i2.style.animationDelay=(i*0.06)+'s';hp.appendChild(i2);});
+
+/* ---------- before/after sliders ---------- */
+function initBA(el){
+  const after=el.querySelector('.after'),handle=el.querySelector('.handle');
+  function set(p){p=Math.max(0,Math.min(100,p));after.style.width=p+'%';handle.style.left=p+'%';
+    const img=after.querySelector('img');img.style.width=el.clientWidth+'px';}
+  set(50);
+  let drag=false;
+  const move=(x)=>{const r=el.getBoundingClientRect();set((x-r.left)/r.width*100);};
+  el.addEventListener('pointerdown',e=>{drag=true;move(e.clientX);el.setPointerCapture(e.pointerId);});
+  el.addEventListener('pointermove',e=>{if(drag)move(e.clientX);});
+  el.addEventListener('pointerup',()=>drag=false);
+  new ResizeObserver(()=>{const p=parseFloat(after.style.width);after.querySelector('img').style.width=el.clientWidth+'px';}).observe(el);
+}
+document.querySelectorAll('[data-ba]').forEach(initBA);
+
+/* =================================================================
+   MORPHOLOGY PLAYGROUND ENGINE
+   ================================================================= */
+const COLS=15, ROWS=11;
+let img=makeGrid(), outImg=makeGrid();
+let op='erode', seName='sq3', timer=null;
+
+function makeGrid(){return Array.from({length:ROWS},()=>Array(COLS).fill(0));}
+const SES={
+  sq3:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,0],[0,1],[1,-1],[1,0],[1,1]],
+  cross3:[[-1,0],[0,-1],[0,0],[0,1],[1,0]],
+  sq5:(()=>{const a=[];for(let r=-2;r<=2;r++)for(let c=-2;c<=2;c++)a.push([r,c]);return a;})()
+};
+
+/* presets */
+function loadPreset(name){
+  img=makeGrid();
+  if(name==='L'){
+    const on=[[2,3],[2,4],[2,6],[2,7],[2,8],[3,3],[3,4],[3,5],[3,6],[3,7],[4,5],[4,6],[4,7],[5,5],[5,6],[5,7]];
+    on.forEach(([r,c])=>img[r][c]=1);
+  }else if(name==='bridge'){
+    for(let r=3;r<=6;r++)for(let c=2;c<=4;c++)img[r][c]=1;       // blob A
+    for(let r=3;r<=6;r++)for(let c=9;c<=11;c++)img[r][c]=1;      // blob B
+    img[4][5]=1;img[5][5]=1;img[4][6]=1;img[5][6]=1;img[4][7]=1;img[5][7]=1;img[4][8]=1;img[5][8]=1; // thin bridge
+  }else if(name==='noisy'){
+    for(let r=3;r<=7;r++)for(let c=4;c<=10;c++)img[r][c]=1;       // big blob
+    img[5][6]=0;img[5][7]=0;img[4][8]=0;                          // holes
+    img[1][2]=1;img[9][12]=1;img[2][13]=1;img[8][1]=1;img[1][11]=1; // specks
+    img[5][2]=1;img[4][12]=1;                                     // spurs
+  }
+  outImg=makeGrid();
+  drawGrids();status(`Loaded preset. <b>${opLabel()}</b> with <b>${seLabel()}</b>.`);
+}
+
+/* apply one erosion or dilation pass over `src` -> returns new grid */
+function pass(src,mode){
+  const dst=makeGrid();const se=SES[seName];
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    if(mode==='erode'){
+      let fit=1;
+      for(const[dr,dc]of se){const rr=r+dr,cc=c+dc;const v=(rr<0||cc<0||rr>=ROWS||cc>=COLS)?0:src[rr][cc];if(v===0){fit=0;break;}}
+      dst[r][c]=fit;
+    }else{
+      let hit=0;
+      for(const[dr,dc]of se){const rr=r+dr,cc=c+dc;const v=(rr<0||cc<0||rr>=ROWS||cc>=COLS)?0:src[rr][cc];if(v===1){hit=1;break;}}
+      dst[r][c]=hit;
+    }
+  }
+  return dst;
+}
+
+/* build DOM grids */
+const inGrid=document.getElementById('inGrid'),outGrid=document.getElementById('outGrid');
+function sizePx(){const w=Math.min(360,(window.innerWidth-90)/2);document.documentElement.style.setProperty('--ps',Math.floor(w/COLS-2)+'px');}
+function buildGrid(host,interactive){
+  host.style.gridTemplateColumns=`repeat(${COLS},var(--ps))`;
+  host.innerHTML='';
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const d=document.createElement('div');d.className='px';d.dataset.r=r;d.dataset.c=c;
+    host.appendChild(d);
+  }
+  if(interactive){
+    let painting=false,val=1;
+    const paint=(t)=>{if(!t.classList||!t.classList.contains('px'))return;const r=+t.dataset.r,c=+t.dataset.c;img[r][c]=val;drawGrids();};
+    host.addEventListener('pointerdown',e=>{const t=e.target;if(!t.dataset)return;const r=+t.dataset.r,c=+t.dataset.c;val=img[r][c]?0:1;painting=true;paint(t);host.setPointerCapture(e.pointerId);});
+    host.addEventListener('pointermove',e=>{if(!painting)return;const t=document.elementFromPoint(e.clientX,e.clientY);if(t)paint(t);});
+    host.addEventListener('pointerup',()=>painting=false);
+    host.addEventListener('pointercancel',()=>painting=false);
+  }
+}
+function cellAt(host,r,c){return host.children[r*COLS+c];}
+function drawGrids(){
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const ci=cellAt(inGrid,r,c);ci.className='px'+(img[r][c]?' on':'');
+    const co=cellAt(outGrid,r,c);co.className='px'+(outImg[r][c]?' on':'');
+  }
+}
+function status(html){document.getElementById('status').innerHTML=html;}
+function opLabel(){return{erode:'Erode',dilate:'Dilate',open:'Open',close:'Close'}[op];}
+function seLabel(){return{sq3:'3×3 square',cross3:'cross',sq5:'5×5 square'}[seName];}
+
+/* ---- animated sweep ---- */
+function clearHighlights(){document.querySelectorAll('.px.se,.px.write,.px.removed,.px.added').forEach(e=>{e.classList.remove('se','write','removed','added');});}
+function stopAnim(){if(timer){clearInterval(timer);timer=null;}clearHighlights();document.getElementById('playBtn').textContent='▶ Play';}
+
+/* plan the sequence of passes for current op */
+function passes(){
+  if(op==='erode')return[['erode',img]];
+  if(op==='dilate')return[['dilate',img]];
+  if(op==='open')return[['erode',img],['dilate',null]]; // dilate uses result of erode
+  if(op==='close')return[['dilate',img],['erode',null]];
+}
+
+let sweepState=null;
+function startSweep(animated){
+  stopAnim();
+  const seq=passes();
+  // precompute results
+  let cur=img.map(r=>r.slice());
+  const results=[];
+  for(const[mode]of seq){const res=pass(cur,mode);results.push({mode,input:cur,output:res});cur=res;}
+  if(!animated){
+    outImg=results[results.length-1].output;drawGrids();
+    status(`<b>${opLabel()}</b> (${seLabel()}) applied. ${seq.length>1?seq.map(s=>s[0]).join(' → '):''}`);
+    return;
+  }
+  // animate cell by cell across all passes
+  let pi=0, idx=0;
+  outImg=makeGrid();drawGrids();
+  document.getElementById('playBtn').textContent='⏸ Pause';
+  const se=SES[seName];
+  timer=setInterval(()=>{
+    if(pi>=results.length){stopAnim();drawGrids();status(`<b>${opLabel()}</b> complete.`);return;}
+    const {mode,input,output}=results[pi];
+    const r=Math.floor(idx/COLS), c=idx%COLS;
+    clearHighlights();
+    // show input grid for current pass + SE footprint
+    for(let rr=0;rr<ROWS;rr++)for(let cc=0;cc<COLS;cc++){cellAt(inGrid,rr,cc).className='px'+(input[rr][cc]?' on':'');}
+    se.forEach(([dr,dc])=>{const rr=r+dr,cc=c+dc;if(rr>=0&&cc>=0&&rr<ROWS&&cc<COLS)cellAt(inGrid,rr,cc).classList.add('se');});
+    // write into output progressively
+    outImg[r][c]=output[r][c];
+    const co=cellAt(outGrid,r,c);co.className='px'+(output[r][c]?' on':'')+' write';
+    status(`Pass ${pi+1}/${results.length}: <b>${mode}</b> · scanning (${r},${c})`);
+    idx++;
+    if(idx>=ROWS*COLS){
+      // pass done; carry output to input view for next pass
+      pi++;idx=0;
+    }
+  }, animated===true?14:14);
+}
+
+/* controls */
+function seg(id,attr,cb){document.getElementById(id).addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')return;[...e.currentTarget.children].forEach(b=>b.classList.remove('active'));e.target.classList.add('active');cb(e.target.dataset[attr]);});}
+seg('opSeg','op',v=>{op=v;stopAnim();drawGrids();status(`<b>${opLabel()}</b> selected — press Play.`);});
+seg('seSeg','se',v=>{seName=v;stopAnim();status(`SE = <b>${seLabel()}</b>.`);});
+seg('presetSeg','preset',v=>{stopAnim();loadPreset(v);});
+document.getElementById('playBtn').addEventListener('click',()=>{if(timer){stopAnim();}else{startSweep(true);}});
+document.getElementById('stepBtn').addEventListener('click',()=>{stopAnim();startSweep(false);});
+document.getElementById('resetBtn').addEventListener('click',()=>{stopAnim();outImg=makeGrid();drawGrids();status('Output cleared.');});
+
+/* init */
+function initLab(){sizePx();buildGrid(inGrid,true);buildGrid(outGrid,false);loadPreset('L');}
+initLab();
+addEventListener('resize',()=>{sizePx();inGrid.style.gridTemplateColumns=`repeat(${COLS},var(--ps))`;outGrid.style.gridTemplateColumns=`repeat(${COLS},var(--ps))`;});
+
+/* =================================================================
+   QUIZ
+   ================================================================= */
+const QUESTIONS=[
+ {q:"Which of the following is true about structuring elements?",
+  opts:["They can be any shape and size.","They can be used for dilation and erosion but not for opening and closing.","They must be squares.","They are convolution kernels."],
+  correct:0, fb:"Common shapes are rectangles, crosses and circles — any shape and size works."},
+ {q:"If an object is 1 and the background is 0, which is true of a blob when dilation is applied?",
+  opts:["The blob becomes smaller and holes are made larger.","The blob becomes larger and holes are made larger.","The blob becomes smaller and holes may be filled in.","The blob becomes larger and holes may be filled in."],
+  correct:3, fb:"Dilation = expanding/enlarging: the object grows and small holes may be filled."},
+ {q:"Will erosion always remove noisy pixels from an image?",
+  opts:["Only if used in conjunction with dilation.","Yes.","Only if the structuring element is large enough for the size of the noise blob.","No."],
+  correct:2, fb:"Erosion makes things smaller. Small blobs may vanish; larger ones only shrink a bit — so it depends on the SE size vs the noise size."},
+ {q:"Which describes the binary morphological operation Opening?",
+  opts:["Erosion followed by Closing.","open(I) = erode(dilate(I))","Dilation followed by Erosion.","open(I) = dilate(erode(I))"],
+  correct:3, fb:"Opening erodes first, then dilates: open(I) = dilate(erode(I))."},
+ {q:"Two slightly separated blobs appear after thresholding. Which operation connects them while leaving sizes unchanged?",
+  opts:["Opening.","Closing.","Dilation.","Skeletonisation."],
+  correct:1, fb:"Closing fills holes/gaps while keeping size — and a small gap between blobs behaves like a hole, so closing joins them."}
+];
+let answered=0,correct=0;
+const quizEl=document.getElementById('quiz');
+QUESTIONS.forEach((Q,qi)=>{
+  const card=document.createElement('div');card.className='qcard reveal';io.observe(card);
+  card.innerHTML=`<div class="qnum">QUESTION ${qi+1} / ${QUESTIONS.length}</div><div class="qtext">${Q.q}</div>`;
+  Q.opts.forEach((o,oi)=>{
+    const b=document.createElement('button');b.className='opt';b.innerHTML=`${o}<span class="mk"></span>`;
+    b.addEventListener('click',()=>{
+      if(card.dataset.done)return;card.dataset.done=1;answered++;
+      const btns=card.querySelectorAll('.opt');
+      btns.forEach((bb,bi)=>{bb.style.cursor='default';if(bi===Q.correct){bb.classList.add('correct');bb.querySelector('.mk').textContent='✓';}});
+      if(oi!==Q.correct){b.classList.add('wrong');b.querySelector('.mk').textContent='✗';}else{correct++;}
+      const fb=card.querySelector('.feedback');fb.classList.add('show');
+      updateScore();
+    });
+    card.appendChild(b);
+  });
+  const fb=document.createElement('div');fb.className='feedback';fb.innerHTML=`<span class="lbl">Why</span>${Q.fb}`;
+  card.appendChild(fb);
+  quizEl.appendChild(card);
+});
+function updateScore(){const el=document.getElementById('quizScore');el.innerHTML=`Score: <b style="color:var(--green)">${correct}</b> / ${answered} answered (${QUESTIONS.length} total)`;}
+
+/* exam answer toggles */
+function toggleAns(btn){const a=btn.nextElementSibling;a.classList.toggle('show');btn.textContent=a.classList.contains('show')?'Hide model answer':'Show model answer';}
+</script>
+</body>
+</html>
