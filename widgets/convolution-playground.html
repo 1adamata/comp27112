@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- COURSE: COMP27112 | TOPIC: Region Processing / Convolution | CONCEPT: 3x3 kernel convolution -->
+<title>COMP27112 · Convolution Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/house.css">
+<style>
+  /* widget-local styles — everything else comes from house.css */
+  .conv-wrap{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+  @media(max-width:820px){.conv-wrap{grid-template-columns:1fr}}
+  .kgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:230px}
+  .kgrid input{
+    font-family:"IBM Plex Mono";font-size:16px;text-align:center;
+    padding:10px 4px;border:1.5px solid var(--ink);border-radius:8px;
+    background:var(--paper);width:100%;
+  }
+  .kgrid input:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 2px rgba(91,42,134,.2)}
+  .presets{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 0}
+  .canvases{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+  .canvas-col{display:flex;flex-direction:column;gap:6px}
+  .canvas-col canvas{width:220px;height:220px;image-rendering:auto;cursor:crosshair}
+  .canvas-col .clab{font-family:"IBM Plex Mono";font-size:12px;color:var(--ink-soft);text-align:center}
+  .mathbox{background:var(--ink);color:#efe6d4;border-radius:10px;padding:14px 16px;font-family:"IBM Plex Mono";font-size:12.5px;line-height:1.7;margin-top:14px}
+  .mathbox .mini{display:inline-grid;grid-template-columns:repeat(3,1fr);gap:3px;vertical-align:middle;margin:0 6px}
+  .mathbox .mini span{width:30px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:11px}
+  .mathbox .nb span{background:#3a342b;color:#efe6d4}
+  .mathbox .kn span{background:#5b2a86;color:#fff}
+  .mathbox .center{outline:2px solid var(--gold)}
+  .mathbox .res{color:var(--gold);font-weight:600;font-size:15px}
+  .ksum{font-family:"IBM Plex Mono";font-size:13px;color:var(--ink-soft);margin-top:10px}
+  .ksum b{color:var(--purple)}
+</style>
+</head>
+<body>
+
+<nav class="toc">
+  <div class="inner">
+    <span class="brand">COMP27112 · WIDGET</span>
+    <a href="../index.html">← Shelf</a>
+    <a href="#play">Playground</a>
+    <a href="#kernels">What each kernel does</a>
+    <a href="#exam">Exam framing</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="deco">∗</div>
+    <div class="kicker">Region Processing · Convolution</div>
+    <h1>Nine numbers,<br><em>any effect.</em></h1>
+    <p class="sub">Blur, sharpen, edge-detect, emboss — every one is the <em>same</em> operation: slide a 3×3 grid of weights over the image and replace each pixel with the weighted sum of its neighbours. Change the nine numbers, change everything.</p>
+    <div class="meta">
+      <span class="chip a">Image Processing</span>
+      <span class="chip">the heart of Week 2+</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- master equation -->
+  <section style="border-bottom:none;padding-bottom:18px">
+    <div class="card">
+      <h3>The one equation behind all of it <span class="tag hi">HIGH-YIELD</span></h3>
+      <div class="eq">I′(x,y) = <span class="hl">Σ</span><sub>i,j</sub> &nbsp;K(i,j) · I(x+i, y+j)&nbsp;&nbsp;&nbsp;<span style="color:#8a7f6a">// i,j ∈ {−1,0,+1}</span></div>
+      <p class="small">Unlike <b>point</b> processing (which sees one pixel), convolution is <b>region</b> processing: the new pixel depends on its <b>neighbours</b>. The 3×3 grid of weights <b>K</b> is the <em>kernel</em> (a.k.a. mask / filter). That's the whole idea — the rest is choosing the nine numbers.</p>
+    </div>
+  </section>
+
+  <!-- ============ PLAYGROUND ============ -->
+  <section id="play">
+    <div class="sec-head"><span class="sec-num">∗</span><h2>The playground</h2></div>
+    <p class="lead">Edit the kernel by hand, or hit a preset. The output recomputes live. <b>Hover the input</b> to watch the exact nine multiply-adds that produce one output pixel.</p>
+
+    <div class="card">
+      <div class="conv-wrap">
+
+        <!-- LEFT: kernel + controls -->
+        <div>
+          <h3 style="font-size:19px;margin-bottom:10px">The 3×3 kernel</h3>
+          <div class="kgrid" id="kgrid"></div>
+
+          <div class="presets" style="margin-top:14px">
+            <button class="toggle on" data-preset="identity">Identity</button>
+            <button class="toggle" data-preset="box">Box blur</button>
+            <button class="toggle" data-preset="gauss">Gaussian</button>
+            <button class="toggle" data-preset="sharpen">Sharpen</button>
+            <button class="toggle" data-preset="laplace">Edge (Laplacian)</button>
+            <button class="toggle" data-preset="sobelx">Sobel X</button>
+            <button class="toggle" data-preset="sobely">Sobel Y</button>
+            <button class="toggle" data-preset="emboss">Emboss</button>
+          </div>
+
+          <div class="control" style="margin-top:16px">
+            <label style="min-width:auto"><input type="checkbox" id="normChk"> normalise (÷ sum)</label>
+          </div>
+          <div class="control" style="margin-top:2px">
+            <label style="min-width:120px">edge display</label>
+            <button class="toggle on" id="dispClip">clip 0–255</button>
+            <button class="toggle" id="dispAbs">|absolute|</button>
+            <button class="toggle" id="dispShift">+128</button>
+          </div>
+
+          <div class="ksum" id="ksum"></div>
+
+          <div class="flag" style="margin-top:14px">
+            <span class="tag note">TRY TO BREAK IT</span>
+            <p class="small" style="margin:6px 0 0">Type a big number like <b>9</b> into the centre with zeros around it, or crank a sharpen. Watch the bright areas slam to flat white — that's the <b>same clipping</b> from Week 1's point processing: values above 255 can't be stored, so they stick at 255.</p>
+          </div>
+        </div>
+
+        <!-- RIGHT: canvases -->
+        <div>
+          <div class="canvases">
+            <div class="canvas-col">
+              <canvas id="inCanvas" width="160" height="160"></canvas>
+              <div class="clab">input (greyscale)</div>
+            </div>
+            <div class="canvas-col">
+              <canvas id="outCanvas" width="160" height="160"></canvas>
+              <div class="clab">output = input ∗ kernel</div>
+            </div>
+          </div>
+          <div class="control" style="margin-top:12px">
+            <label style="min-width:auto">test image</label>
+            <button class="toggle on" data-img="shapes">Shapes</button>
+            <button class="toggle" data-img="text">Edges</button>
+            <button class="toggle" data-img="grad">Gradient</button>
+          </div>
+          <div class="mathbox" id="mathbox">Hover over the <b>input</b> image to see the nine multiply-adds for one pixel.</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHAT EACH KERNEL DOES ============ -->
+  <section id="kernels">
+    <div class="sec-head"><span class="sec-num">i</span><h2>What each kernel <em style="font-style:italic;font-weight:500">does</em>, and why</h2></div>
+
+    <div class="grid3">
+      <div class="card">
+        <h3 style="font-size:19px">Blur (averaging)</h3>
+        <p class="small">All-positive weights that <b>sum to 1</b> (after normalising). Each pixel becomes a mix of its neighbours → high-frequency detail smeared out. Gaussian weights the centre more, for a softer, more natural blur than the box.</p>
+        <p class="small"><b>Use:</b> noise reduction, pre-smoothing before edge detection.</p>
+      </div>
+      <div class="card">
+        <h3 style="font-size:19px">Sharpen</h3>
+        <p class="small">Centre weight <b>&gt; 1</b>, negative neighbours, summing to 1. It <b>amplifies the difference</b> between a pixel and its surroundings — edges get exaggerated. Push it too far and you get halos + clipping.</p>
+        <p class="small"><b>Use:</b> enhancing detail.</p>
+      </div>
+      <div class="card">
+        <h3 style="font-size:19px">Edge detection</h3>
+        <p class="small">Weights <b>sum to 0</b>. On flat regions the sum cancels to 0 (black); only where intensity <em>changes</em> does it fire. <b>Sobel X/Y</b> respond to vertical/horizontal edges; Laplacian to edges in all directions.</p>
+        <p class="small"><b>Use:</b> feature extraction (the CV pipeline's step 2).</p>
+      </div>
+    </div>
+
+    <div class="hook">
+      <span class="lbl">🧠 Hook — read the kernel's sum</span>
+      <p style="margin:6px 0 0">Sum <b>= 1</b> → brightness preserved (blur, sharpen). Sum <b>= 0</b> → flat areas go black, only edges survive (edge detectors). That single check tells you what a mystery kernel will roughly do <em>before</em> you run it.</p>
+    </div>
+  </section>
+
+  <!-- ============ EXAM ============ -->
+  <section id="exam" style="border-bottom:none">
+    <div class="sec-head"><span class="sec-num">?</span><h2>Exam framing</h2></div>
+    <div class="exam-box">
+      <span class="lbl">What gets asked</span>
+      <p style="margin:6px 0 0">"Apply this 3×3 kernel to the centre pixel of the following neighbourhood" — a hand-computation. <b>Method:</b> line the kernel up, multiply each weight by the pixel under it, sum the nine products, divide by the kernel sum if normalising, then <b>clip to [0,255]</b>. Hover the playground to see exactly this arithmetic, then reproduce it on paper.</p>
+    </div>
+    <div class="flag">
+      <span class="tag note">EDGE OF THE IMAGE</span>
+      <p class="small" style="margin:6px 0 0">At the border, part of the 3×3 window falls outside the image. Common fixes: <b>replicate</b> the edge pixel (used here), <b>zero-pad</b>, or simply <b>skip the border</b>. State which one you assume — examiners accept any, but want you to acknowledge the problem exists.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="footer">
+  <div class="wrap">
+    <div class="big">Nine numbers. That's convolution.</div>
+    <p class="small">Drop this widget into a Week 2 page, or keep it as a standalone block. <a href="../index.html">← back to the shelf</a></p>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---- state ----
+  let K = [0,0,0, 0,1,0, 0,0,0];      // kernel (row-major, indices 0..8)
+  let normalise = false;
+  let disp = 'clip';                   // clip | abs | shift
+  let imgKind = 'shapes';
+  const W=160, H=160;
+
+  const inC = document.getElementById('inCanvas'), ictx = inC.getContext('2d');
+  const outC= document.getElementById('outCanvas'), octx = outC.getContext('2d');
+  let gray = new Float32Array(W*H);    // source greyscale 0..255
+
+  // ---- build kernel inputs ----
+  const kgrid = document.getElementById('kgrid');
+  const inputs = [];
+  for(let i=0;i<9;i++){
+    const inp = document.createElement('input');
+    inp.type='number'; inp.value=K[i]; inp.step='1';
+    inp.addEventListener('input',()=>{ K[i]=parseFloat(inp.value)||0; clearPresetHighlight(); run(); });
+    kgrid.appendChild(inp); inputs.push(inp);
+  }
+  function syncInputs(){ for(let i=0;i<9;i++) inputs[i].value = K[i]; }
+
+  // ---- presets ----
+  const PRESETS = {
+    identity:[0,0,0, 0,1,0, 0,0,0],
+    box:     [1,1,1, 1,1,1, 1,1,1],
+    gauss:   [1,2,1, 2,4,2, 1,2,1],
+    sharpen: [0,-1,0, -1,5,-1, 0,-1,0],
+    laplace: [0,1,0, 1,-4,1, 0,1,0],
+    sobelx:  [-1,0,1, -2,0,2, -1,0,1],
+    sobely:  [-1,-2,-1, 0,0,0, 1,2,1],
+    emboss:  [-2,-1,0, -1,1,1, 0,1,2]
+  };
+  const AUTO_NORM = {box:true, gauss:true};
+  const AUTO_ABS  = {laplace:true, sobelx:true, sobely:true};
+
+  function clearPresetHighlight(){ document.querySelectorAll('[data-preset]').forEach(b=>b.classList.remove('on')); }
+  document.querySelectorAll('[data-preset]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const p = btn.dataset.preset;
+      K = PRESETS[p].slice();
+      normalise = !!AUTO_NORM[p];
+      document.getElementById('normChk').checked = normalise;
+      setDisp(AUTO_ABS[p] ? 'abs' : 'clip');
+      clearPresetHighlight(); btn.classList.add('on');
+      syncInputs(); run();
+    });
+  });
+
+  // ---- display-mode buttons ----
+  function setDisp(mode){
+    disp = mode;
+    document.getElementById('dispClip').classList.toggle('on', mode==='clip');
+    document.getElementById('dispAbs').classList.toggle('on', mode==='abs');
+    document.getElementById('dispShift').classList.toggle('on', mode==='shift');
+  }
+  document.getElementById('dispClip').onclick=()=>{ setDisp('clip'); run(); };
+  document.getElementById('dispAbs').onclick =()=>{ setDisp('abs');  run(); };
+  document.getElementById('dispShift').onclick=()=>{ setDisp('shift');run(); };
+  document.getElementById('normChk').onchange=(e)=>{ normalise=e.target.checked; run(); };
+
+  // ---- test images ----
+  document.querySelectorAll('[data-img]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('[data-img]').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on'); imgKind=btn.dataset.img; buildImage(); run();
+    });
+  });
+
+  function buildImage(){
+    // draw onto an offscreen, then read greyscale
+    const tmp = document.createElement('canvas'); tmp.width=W; tmp.height=H;
+    const t = tmp.getContext('2d');
+    t.fillStyle='#404040'; t.fillRect(0,0,W,H);
+    if(imgKind==='shapes'){
+      t.fillStyle='#e8e8e8'; t.beginPath(); t.arc(52,58,30,0,7); t.fill();      // light circle
+      t.fillStyle='#101010'; t.fillRect(86,30,46,46);                            // dark square
+      t.strokeStyle='#d0d0d0'; t.lineWidth=7; t.beginPath(); t.moveTo(20,140); t.lineTo(140,96); t.stroke(); // diagonal
+      t.fillStyle='#b0b0b0'; t.beginPath(); t.arc(118,124,18,0,7); t.fill();
+    } else if(imgKind==='text'){
+      // high-frequency stripes + blocks → edges everywhere
+      for(let i=0;i<W;i+=16){ t.fillStyle = (i/16)%2? '#dcdcdc':'#2a2a2a'; t.fillRect(i,0,8,H); }
+      t.fillStyle='#808080'; t.fillRect(40,40,80,80);
+      t.fillStyle='#f0f0f0'; t.fillRect(60,60,40,40);
+    } else { // gradient
+      for(let x=0;x<W;x++){ const v=Math.round(x/(W-1)*255); t.fillStyle=`rgb(${v},${v},${v})`; t.fillRect(x,0,1,H); }
+      t.fillStyle='#000'; t.beginPath(); t.arc(80,80,26,0,7); t.fill();
+    }
+    const d = t.getImageData(0,0,W,H).data;
+    for(let i=0;i<W*H;i++){
+      // luma greyscale
+      const r=d[i*4], g=d[i*4+1], b=d[i*4+2];
+      gray[i] = 0.299*r + 0.587*g + 0.114*b;
+    }
+    // paint input canvas
+    const im = ictx.createImageData(W,H);
+    for(let i=0;i<W*H;i++){ const v=gray[i]|0; im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=v; im.data[i*4+3]=255; }
+    ictx.putImageData(im,0,0);
+  }
+
+  function px(x,y){ // clamped sample (replicate border)
+    x = x<0?0 : x>=W?W-1 : x;
+    y = y<0?0 : y>=H?H-1 : y;
+    return gray[y*W+x];
+  }
+
+  function kernelSum(){ let s=0; for(let i=0;i<9;i++) s+=K[i]; return s; }
+
+  function display(raw){
+    if(disp==='abs')   return Math.min(255, Math.abs(raw));
+    if(disp==='shift') return Math.min(255, Math.max(0, raw+128));
+    return Math.min(255, Math.max(0, raw));   // clip
+  }
+
+  function run(){
+    const sum = kernelSum();
+    const div = normalise ? (sum===0?1:sum) : 1;
+    const im = octx.createImageData(W,H);
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+      let acc=0, k=0;
+      for(let j=-1;j<=1;j++) for(let i=-1;i<=1;i++){
+        acc += K[k++] * px(x+i, y+j);
+      }
+      const v = display(acc/div)|0;
+      const idx=(y*W+x)*4;
+      im.data[idx]=im.data[idx+1]=im.data[idx+2]=v; im.data[idx+3]=255;
+    }
+    octx.putImageData(im,0,0);
+
+    // readout
+    const ks = document.getElementById('ksum');
+    ks.innerHTML = `kernel sum = <b>${sum}</b> &nbsp;·&nbsp; divisor = <b>${div}</b> &nbsp;·&nbsp; `+
+      (sum===0? 'sum 0 → edge detector (flat areas → black)' :
+       sum===1? 'sum 1 → brightness preserved' :
+       'sum '+sum+' → '+(normalise?'normalised to preserve brightness':'will brighten/darken unless normalised'));
+  }
+
+  // ---- hover → show the nine multiply-adds ----
+  const mathbox = document.getElementById('mathbox');
+  inC.addEventListener('mousemove',(e)=>{
+    const rect=inC.getBoundingClientRect();
+    const x=Math.floor((e.clientX-rect.left)*(W/rect.width));
+    const y=Math.floor((e.clientY-rect.top )*(H/rect.height));
+    showMath(x,y);
+    // redraw input with window outline
+    buildImageOutline(x,y);
+  });
+  inC.addEventListener('mouseleave',()=>{
+    mathbox.innerHTML='Hover over the <b>input</b> image to see the nine multiply-adds for one pixel.';
+    paintInput();
+  });
+
+  function paintInput(){
+    const im = ictx.createImageData(W,H);
+    for(let i=0;i<W*H;i++){ const v=gray[i]|0; im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=v; im.data[i*4+3]=255; }
+    ictx.putImageData(im,0,0);
+  }
+  function buildImageOutline(cx,cy){
+    paintInput();
+    // draw 3x3 window box in canvas pixel space
+    ictx.strokeStyle='#c89b3c'; ictx.lineWidth=1.2;
+    ictx.strokeRect(cx-1.5, cy-1.5, 3, 3);
+  }
+
+  function showMath(cx,cy){
+    const sum=kernelSum(), div=normalise?(sum===0?1:sum):1;
+    let nb=[], prod=[], acc=0, k=0;
+    for(let j=-1;j<=1;j++) for(let i=-1;i<=1;i++){
+      const val=Math.round(px(cx+i,cy+j));
+      nb.push(val); prod.push(K[k]*val); acc+=K[k]*val; k++;
+    }
+    const rawOut = acc/div;
+    const finalOut = display(rawOut)|0;
+    const center = 4;
+    const miniNb  = '<span class="mini nb">'+nb.map((v,i)=>`<span class="${i===center?'center':''}">${v}</span>`).join('')+'</span>';
+    const miniKn  = '<span class="mini kn">'+K.map((v,i)=>`<span class="${i===center?'center':''}">${v}</span>`).join('')+'</span>';
+    const terms = prod.map(p=>Math.round(p)).join(' + ').replace(/\+ -/g,'− ');
+    mathbox.innerHTML =
+      `pixel (x,y) = (${cx}, ${cy})<br>`+
+      `neighbourhood ${miniNb} &nbsp;×&nbsp; kernel ${miniKn}<br>`+
+      `Σ = ${terms} = <b>${Math.round(acc)}</b>`+
+      (div!==1?` &nbsp;÷ ${div} = ${ (acc/div).toFixed(1) }`:'')+
+      `<br>output = <span class="res">${finalOut}</span> `+
+      (disp==='clip' && rawOut>255 ? '<span style="color:#e0a">(clipped from '+Math.round(rawOut)+'!)</span>'
+       : disp==='clip' && rawOut<0 ? '<span style="color:#e0a">(clipped up from '+Math.round(rawOut)+'!)</span>' : '');
+  }
+
+  // ---- init ----
+  buildImage();
+  setDisp('clip');
+  run();
+})();
+</script>
+</body>
+</html>
