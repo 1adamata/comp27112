@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Displays &amp; Images — COMP27112 Visual Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Spline+Sans:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#191920; --bg2:#202028; --panel:#23232c; --panel2:#2b2b35;
+  --ink:#f3efe7; --muted:#a7a2b0; --faint:#6f6a79;
+  --purple:#7b34a8; --wall:#52206f; --pink:#d6456b; --pink2:#ef6a8c;
+  --orange:#f59331; --cyan:#36c5d6; --green:#5fd16a;
+  --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.06);
+  --r:18px;
+  --display:'Bricolage Grotesque',system-ui,sans-serif;
+  --body:'Spline Sans',system-ui,sans-serif;
+  --mono:'Spline Sans Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);
+  font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;
+  background:
+    radial-gradient(900px 600px at 82% -5%, rgba(123,52,168,.28), transparent 60%),
+    radial-gradient(800px 600px at 0% 12%, rgba(214,69,107,.16), transparent 55%),
+    radial-gradient(700px 700px at 50% 110%, rgba(245,147,49,.10), transparent 60%),
+    var(--bg);
+}
+body::after{ /* grain */
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+img{max-width:100%;display:block}
+a{color:var(--pink2);text-decoration:none}
+
+/* ---------- nav ---------- */
+.progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--orange),var(--pink),var(--purple));}
+nav.toc{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;
+  gap:18px;padding:12px 22px;backdrop-filter:blur(12px);
+  background:linear-gradient(180deg,rgba(20,20,26,.86),rgba(20,20,26,.30));
+  border-bottom:1px solid var(--line2);}
+nav.toc .brand{font-family:var(--display);font-weight:800;letter-spacing:-.02em;font-size:15px;
+  display:flex;align-items:center;gap:9px;white-space:nowrap}
+nav.toc .dot{width:11px;height:11px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#fff,var(--pink) 40%,var(--purple));box-shadow:0 0 12px var(--pink)}
+nav.toc .links{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin-left:auto}
+nav.toc .links::-webkit-scrollbar{display:none}
+nav.toc a{color:var(--muted);font-size:12.5px;font-weight:500;padding:6px 11px;border-radius:99px;
+  white-space:nowrap;transition:.25s;border:1px solid transparent}
+nav.toc a:hover{color:var(--ink)}
+nav.toc a.active{color:var(--ink);background:rgba(255,255,255,.07);border-color:var(--line)}
+
+/* ---------- layout ---------- */
+.wrap{max-width:1060px;margin:0 auto;padding:0 22px}
+section{padding:74px 0;border-top:1px solid var(--line2);scroll-margin-top:64px}
+section:first-of-type{border-top:none}
+.kicker{font-family:var(--mono);font-size:12px;letter-spacing:.28em;text-transform:uppercase;
+  color:var(--orange);display:flex;align-items:center;gap:12px;margin:0 0 14px}
+.kicker .num{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;
+  border:1px solid var(--line);color:var(--ink);font-weight:600;letter-spacing:0}
+h1{font-family:var(--display);font-weight:800;letter-spacing:-.035em;line-height:.96;
+  font-size:clamp(42px,8.5vw,104px);margin:0}
+h2{font-family:var(--display);font-weight:800;letter-spacing:-.03em;line-height:1.0;
+  font-size:clamp(30px,5vw,54px);margin:0 0 8px}
+h3{font-family:var(--display);font-weight:600;letter-spacing:-.02em;font-size:25px;margin:34px 0 8px}
+h4{font-family:var(--display);font-weight:600;font-size:19px;margin:20px 0 6px}
+p{margin:0 0 16px;color:#e6e1d8}
+.lead{font-size:20px;color:var(--muted);max-width:60ch}
+.muted{color:var(--muted)}
+strong{color:#fff;font-weight:600}
+.hl{color:var(--orange);font-weight:600}
+.hl-pink{color:var(--pink2);font-weight:600}
+
+/* ---------- hero ---------- */
+.hero{min-height:100svh;display:flex;flex-direction:column;justify-content:center;
+  padding:120px 0 70px;position:relative}
+.hero .tag{font-family:var(--mono);color:var(--muted);font-size:13px;letter-spacing:.2em;
+  text-transform:uppercase;margin-bottom:22px}
+.hero h1{margin-bottom:18px}
+.hero h1 .em{font-style:italic;font-weight:400;
+  background:linear-gradient(120deg,var(--orange),var(--pink2),var(--purple));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .frame{margin-top:38px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+  position:relative;box-shadow:0 40px 120px -40px rgba(0,0,0,.8)}
+.hero .frame img{width:100%}
+.hero .frame .cap{position:absolute;left:0;right:0;bottom:0;padding:22px 24px;
+  background:linear-gradient(0deg,rgba(15,12,20,.92),transparent);font-size:14px;color:var(--muted)}
+.scrollcue{margin-top:42px;display:flex;align-items:center;gap:12px;color:var(--faint);
+  font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase}
+.scrollcue .bar{width:48px;height:1px;background:var(--faint);position:relative;overflow:hidden}
+.scrollcue .bar::after{content:"";position:absolute;inset:0;width:40%;background:var(--orange);
+  animation:slide 1.8s infinite ease-in-out}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(280%)}}
+
+/* ---------- reveal ---------- */
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
+.reveal.in{opacity:1;transform:none}
+
+/* ---------- cards / figures ---------- */
+.grid{display:grid;gap:22px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:760px){.g2,.g3{grid-template-columns:1fr}}
+figure{margin:24px 0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}
+figure img{width:100%}
+figcaption{padding:12px 16px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--line2);
+  display:flex;gap:9px;align-items:flex-start}
+figcaption::before{content:"▸";color:var(--orange);flex:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:24px 26px}
+.card.accent{background:linear-gradient(160deg,rgba(123,52,168,.18),rgba(214,69,107,.08));
+  border-color:rgba(214,69,107,.3)}
+.pill{display:inline-block;font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 10px;border-radius:99px;border:1px solid var(--line);color:var(--muted);margin:0 6px 6px 0}
+.pill.on{color:#fff;border-color:var(--pink);background:rgba(214,69,107,.18)}
+ul.clean{list-style:none;padding:0;margin:8px 0 18px}
+ul.clean li{padding:8px 0 8px 28px;position:relative;border-bottom:1px solid var(--line2);color:#e6e1d8}
+ul.clean li:last-child{border-bottom:none}
+ul.clean li::before{content:"";position:absolute;left:4px;top:16px;width:8px;height:8px;border-radius:2px;
+  background:linear-gradient(135deg,var(--orange),var(--pink))}
+.note{border-left:3px solid var(--orange);padding:4px 0 4px 18px;margin:18px 0;color:var(--muted);font-style:italic}
+kbd,code{font-family:var(--mono);font-size:.9em;background:rgba(255,255,255,.07);padding:2px 7px;border-radius:6px;
+  border:1px solid var(--line2);color:var(--ink)}
+
+/* ---------- interactive panel base ---------- */
+.demo{background:linear-gradient(165deg,var(--panel2),var(--panel));border:1px solid var(--line);
+  border-radius:var(--r);padding:26px;margin:26px 0;position:relative;overflow:hidden}
+.demo .label{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--orange);margin-bottom:4px;display:flex;align-items:center;gap:9px}
+.demo .label .live{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);
+  animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.demo h4{margin-top:2px}
+.controls{display:flex;flex-direction:column;gap:14px;margin-top:18px}
+.slider-row{display:grid;grid-template-columns:64px 1fr 72px;align-items:center;gap:14px}
+.slider-row label{font-family:var(--mono);font-size:13px;font-weight:600}
+.slider-row output{font-family:var(--mono);font-size:14px;text-align:right;color:var(--ink)}
+input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:99px;background:var(--line);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+  background:#fff;cursor:pointer;border:3px solid var(--pink);box-shadow:0 2px 10px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;cursor:pointer;border:3px solid var(--pink)}
+input[type=range].r::-webkit-slider-thumb{border-color:#ff4d4d}
+input[type=range].g::-webkit-slider-thumb{border-color:#3ad14e}
+input[type=range].b::-webkit-slider-thumb{border-color:#4d7dff}
+.btn{font-family:var(--mono);font-size:13px;letter-spacing:.04em;cursor:pointer;color:var(--ink);
+  background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;padding:9px 16px;transition:.2s}
+.btn:hover{background:rgba(255,255,255,.12);border-color:var(--pink)}
+.btn.primary{background:linear-gradient(120deg,var(--orange),var(--pink));border:none;color:#160d05;font-weight:600}
+canvas{display:block;max-width:100%;border-radius:12px;background:#111}
+
+/* swatch */
+.swatch{width:100%;aspect-ratio:16/7;border-radius:12px;border:1px solid var(--line);
+  display:flex;align-items:flex-end;justify-content:space-between;padding:14px;
+  font-family:var(--mono);font-size:13px;color:#000;transition:background .08s linear;font-weight:600}
+.swatch .vals{background:rgba(255,255,255,.7);padding:4px 10px;border-radius:8px}
+
+/* additive lights */
+.additive{display:flex;flex-wrap:wrap;gap:30px;align-items:center;justify-content:center;margin-top:8px}
+.lights{position:relative;width:240px;height:230px;flex:none}
+.lights .c{position:absolute;width:150px;height:150px;border-radius:50%;mix-blend-mode:screen;
+  filter:blur(1px);transition:opacity .3s}
+.lights .cr{background:#ff1f1f;top:0;left:45px}
+.lights .cg{background:#16e23a;bottom:0;left:0}
+.lights .cb{background:#1f5bff;bottom:0;right:0}
+.lights.dim .c{opacity:.12}
+.toggles{display:flex;flex-direction:column;gap:10px}
+.tg{display:flex;align-items:center;gap:11px;cursor:pointer;font-family:var(--mono);font-size:14px;user-select:none}
+.tg .box{width:38px;height:22px;border-radius:99px;background:var(--line);position:relative;transition:.2s}
+.tg .box::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s}
+.tg.on .box::after{left:18px}
+.tg.on.r .box{background:#ff1f1f}.tg.on.g .box{background:#16e23a}.tg.on.b .box{background:#1f5bff}
+
+/* memory calc */
+.calc-out{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+.stat{background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:16px}
+.stat .k{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:var(--display);font-weight:800;font-size:30px;letter-spacing:-.02em;margin-top:4px}
+.stat .v small{font-size:15px;color:var(--muted);font-weight:400}
+
+/* quiz */
+.quiz{counter-reset:q}
+.q{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:24px 26px;margin:18px 0;
+  transition:border-color .3s}
+.q .qhead{display:flex;gap:14px;align-items:flex-start;margin-bottom:16px}
+.q .qnum{counter-increment:q;font-family:var(--display);font-weight:800;font-size:20px;color:var(--orange);flex:none}
+.q .qnum::before{content:"Q" counter(q)}
+.q .qtext{font-weight:500;font-size:18px}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;gap:12px;align-items:center;padding:13px 16px;border:1px solid var(--line);border-radius:12px;
+  cursor:pointer;transition:.18s;background:var(--bg2)}
+.opt:hover{border-color:var(--muted)}
+.opt .mark{width:22px;height:22px;border-radius:50%;border:2px solid var(--faint);flex:none;display:grid;place-items:center;
+  font-size:13px;font-weight:700;transition:.18s}
+.opt.correct{border-color:var(--green);background:rgba(95,209,106,.12)}
+.opt.correct .mark{border-color:var(--green);background:var(--green);color:#06270c}
+.opt.correct .mark::after{content:"✓"}
+.opt.wrong{border-color:var(--pink);background:rgba(214,69,107,.12)}
+.opt.wrong .mark{border-color:var(--pink);background:var(--pink);color:#2a0710}
+.opt.wrong .mark::after{content:"✕"}
+.opt.locked{cursor:default;pointer-events:none;opacity:.85}
+.opt.locked.correct,.opt.locked.wrong{opacity:1}
+.scorebar{position:sticky;bottom:14px;z-index:20;margin-top:24px;display:flex;align-items:center;gap:18px;
+  background:linear-gradient(120deg,rgba(35,35,44,.96),rgba(43,43,53,.96));backdrop-filter:blur(10px);
+  border:1px solid var(--line);border-radius:99px;padding:12px 22px}
+.scorebar .s{font-family:var(--display);font-weight:800;font-size:24px}
+.scorebar .track{flex:1;height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.scorebar .fill{height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--pink),var(--green));transition:width .5s}
+
+/* exam */
+.exam details{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:16px 0;overflow:hidden}
+.exam summary{cursor:pointer;padding:22px 26px;list-style:none;display:flex;gap:16px;align-items:flex-start}
+.exam summary::-webkit-details-marker{display:none}
+.exam summary .yr{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:#160d05;background:var(--orange);
+  padding:5px 11px;border-radius:99px;font-weight:600;flex:none;margin-top:2px}
+.exam summary .qq{font-weight:500;font-size:17px}
+.exam summary .chev{margin-left:auto;color:var(--muted);transition:.3s;flex:none;font-family:var(--mono)}
+.exam details[open] summary .chev{transform:rotate(90deg)}
+.exam .ans{padding:0 26px 24px 26px;color:var(--muted);border-top:1px solid var(--line2);margin-top:0}
+.exam .ans h5{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--orange);
+  margin:20px 0 8px}
+
+/* footer */
+footer{padding:60px 0 90px;text-align:center;color:var(--faint);border-top:1px solid var(--line2)}
+footer .big{font-family:var(--display);font-weight:800;font-size:clamp(30px,6vw,68px);letter-spacing:-.03em;
+  color:var(--ink);margin-bottom:14px;line-height:.95}
+.tooltip-hint{font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:10px}
+@media(max-width:760px){
+  .slider-row{grid-template-columns:54px 1fr 60px}
+  .calc-out{grid-template-columns:1fr}
+  section{padding:54px 0}
+}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<nav class="toc">
+  <span class="brand"><span class="dot"></span>Displays &amp; Images</span>
+  <div class="links" id="navlinks">
+    <a href="#hero">Intro</a>
+    <a href="#vision">Vision</a>
+    <a href="#capture">Capture</a>
+    <a href="#pixels">Pixels</a>
+    <a href="#memory">Memory</a>
+    <a href="#range">Dynamic Range</a>
+    <a href="#formats">Formats</a>
+    <a href="#gamma">Gamma</a>
+    <a href="#quiz">Quiz</a>
+    <a href="#exam">Exam</a>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero wrap" id="hero">
+  <div class="tag reveal">COMP27112 · Computer Graphics &amp; Image Processing · Chapter 2</div>
+  <h1 class="reveal">Displays<br>&amp; <span class="em">Images</span></h1>
+  <p class="lead reveal" style="margin-top:22px">How light leaves a scene, lands in an eye or a camera sensor, becomes a grid of numbers, gets stored, squeezed, and finally lit back up on a display — and the perceptual tricks that make it all look right.</p>
+  <div class="frame reveal">
+    <img src="assets/scene_eye.jpg" alt="The studio scene: teapot, Suzanne monkey, cow and a floating eye lit by a single bulb">
+    <div class="cap">Our recurring scene — a teapot, Suzanne, a cow and a curious floating eye, lit by one bulb. Rays leave the light, reflect off objects, and reach the eye.</div>
+  </div>
+  <div class="scrollcue reveal"><span class="bar"></span>scroll to begin</div>
+</header>
+
+<!-- ============ VISION ============ -->
+<section id="vision" class="wrap">
+  <div class="reveal">
+    <div class="kicker"><span class="num">01</span> How we see</div>
+    <h2>Light, the eye &amp; photoreceptors</h2>
+    <p class="lead">To talk about computer-generated images, we first need to know how a human perceives them.</p>
+  </div>
+
+  <div class="reveal">
+    <p>A bulb shoots <span class="hl">rays</span> into the scene. When a ray hits an object, the object <strong>absorbs some wavelengths</strong> based on its colour and material, and reflects the rest toward the eye. That is why the teapot is perceived as pink at a given point — unless the object is a black hole.</p>
+  </div>
+
+  <figure class="reveal">
+    <img src="assets/eye_anatomy.jpg" alt="Schematic eye: lens refracts light onto the retina; the retina carries photoreceptor cells">
+    <figcaption>The lens (cornea/crystalline lens) refracts incoming light onto the <strong>retina</strong>. The retina is lined with photoreceptor cells that fire when a ray's wavelength matches their type.</figcaption>
+  </figure>
+
+  <div class="grid g2">
+    <div class="card reveal">
+      <h4>Two kinds of photoreceptor</h4>
+      <ul class="clean">
+        <li><strong>Cones</strong> — see colour with high accuracy. Three types tuned to <span class="hl-pink">Short, Medium, Long</span> wavelengths (≈ <span class="hl">RGB</span>).</li>
+        <li><strong>Rods</strong> — twilight / dark vision. No colour, but excellent temporal resolution.</li>
+      </ul>
+      <p class="muted">The number of cone types depends on the species — dogs differ from us, and the mantis shrimp can have up to 16. Most humans have 3; some people can have 4.</p>
+    </div>
+    <figure class="reveal" style="margin:0">
+      <img src="assets/mantis_shrimp.jpg" alt="A mantis shrimp, famous for having up to sixteen photoreceptor types">
+      <figcaption>The mantis shrimp — up to 16 photoreceptor types. Cone variety is species-dependent.</figcaption>
+    </figure>
+  </div>
+
+  <h3 class="reveal">We are not equally sensitive to all colours</h3>
+  <figure class="reveal">
+    <img src="assets/eye_sensitivity.jpg" alt="Sensitivity curve of the human eye peaking around 555nm green">
+    <figcaption>Human sensitivity peaks in the <span style="color:var(--green)">green</span> wavelengths (~555&nbsp;nm). A likely evolutionary reason: lots of green in nature, useful for spotting predators in bushes or red fruit.</figcaption>
+  </figure>
+
+  <figure class="reveal"><img src="assets/colour_blindness.jpg" alt="Balloons simulated under normal, red-green and blue-yellow colour vision">
+    <figcaption>Colour-vision simulations: normal, red-green and blue-yellow. Deficiencies affect <strong>pairs</strong> of colours, not single channels.</figcaption></figure>
+
+  <div class="card accent reveal">
+    <h4>A puzzle worth thinking about</h4>
+    <p class="muted">Colour-blind people usually struggle with <em>pairs</em> — red/green, or less commonly blue/yellow. But if one cone channel failed, you'd expect a single missing colour, not a pair. And we have no "yellow" cone, yet we detect yellow extremely well. Why?</p>
+    <p style="margin:0">The answer is that vision is far more than raw RGB. Lots of processing happens <strong>after</strong> the retina. The <span class="hl">colour-opponent channel</span> theory partly explains both colour blindness and our strong yellow perception. <span class="muted">(Not examinable — but interesting.)</span></p>
+  </div>
+
+  <h3 class="reveal">Eccentricity, the fovea &amp; peripheral vision</h3>
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/fovea.jpg" alt="Fovea, parafovea, perifovea and clinical macula regions of the retina">
+      <figcaption>When you look straight at something, light lands on the <strong>fovea</strong> — the densest patch of photoreceptors (~200,000 cones/mm²).</figcaption></figure>
+    <div class="card reveal">
+      <ul class="clean">
+        <li>The fovea is packed with <strong>colour cones</strong>; the rest of the retina is mostly <strong>rods</strong>.</li>
+        <li>Periphery has <strong>two orders of magnitude fewer</strong> receptors — otherwise the visual cortex would be enormous.</li>
+        <li>Detail drops as <span class="hl">eccentricity</span> from the fovea increases → we lose spatial detail in peripheral vision.</li>
+        <li>At night, look slightly <em>beside</em> a dim star to use peripheral rods — stare straight at it and it vanishes.</li>
+      </ul>
+    </div>
+  </div>
+  <figure class="reveal"><img src="assets/peripheral_foveal.jpg" alt="Peripheral, blend and foveal regions illustrated over a mountain photo">
+    <figcaption>Sharp at the focal point (foveal), blurring outward through a blend zone into low-detail peripheral vision.</figcaption></figure>
+</section>
+
+<!-- ============ CAPTURE ============ -->
+<section id="capture" class="wrap">
+  <div class="reveal">
+    <div class="kicker"><span class="num">02</span> Capturing light</div>
+    <h2>Sensors, primaries &amp; additive colour</h2>
+  </div>
+
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/bayer_filter.jpg" alt="A camera with a Bayer filter mosaic of red, green and blue cells">
+      <figcaption>A <strong>Bayer filter</strong> over the sensor. Notice there are <span style="color:var(--green)">twice as many green cells</span> — matching our heightened green sensitivity. The R/G/B cells mirror our cone types.</figcaption></figure>
+    <div class="card reveal">
+      <h4>From wavelengths to a value</h4>
+      <p>Each sensor cell records a light <strong>intensity</strong>. The combination of wavelengths reaching a region is recorded as a colour. White light through a prism splits into a rainbow — and the reverse, <em>composing</em> wavelengths, gives us colour.</p>
+      <p class="muted" style="margin:0">(Yes — that prism is also the <em>Dark Side of the Moon</em> cover.)</p>
+    </div>
+  </div>
+  <figure class="reveal"><img src="assets/prism.jpg" alt="A prism dispersing white light into a rainbow spectrum">
+    <figcaption>Dispersion: white light separates into a spectrum. Light can be <strong>separated</strong> and equally <strong>composed</strong>.</figcaption></figure>
+
+  <h3 class="reveal">RGB additive colour</h3>
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/rgb_additive.jpg" alt="Additive RGB Venn diagram showing red, green, blue mixing to cyan, magenta, yellow, white">
+      <figcaption>Primaries are <span style="color:#ff5b5b">red</span>, <span style="color:var(--green)">green</span>, <span style="color:#6c8cff">blue</span>. This is <strong>light</strong>, not paint — additive, not the subtractive pigment mixing from school.</figcaption></figure>
+    <div class="card reveal">
+      <h4>Tuples in [0,1]</h4>
+      <p><kbd>1</kbd> means full intensity in a channel:</p>
+      <ul class="clean">
+        <li><code>(1,0,0)</code> = red &nbsp; <code>(0,1,0)</code> = green &nbsp; <code>(0,0,1)</code> = blue</li>
+        <li><code>(1,1,1)</code> = white (recomposing all the light)</li>
+        <li><code>(0,0,0)</code> = black — the surface absorbs light and reflects nothing (the cow's black patches)</li>
+      </ul>
+      <p class="muted" style="margin:0">A true (0,0,0) would need a perfect absorber — essentially a black hole.</p>
+    </div>
+  </div>
+  <figure class="reveal"><img src="assets/rgb_cube.jpg" alt="The RGB colour cube with corners labelled by coordinate tuples from (0,0,0) to (1,1,1)">
+    <figcaption>Every colour is a point in the <strong>RGB cube</strong>, each axis ranging [0,1] — corners give the primaries, white <code>(1,1,1)</code> and black <code>(0,0,0)</code>.</figcaption></figure>
+
+  <!-- INTERACTIVE: additive lights -->
+  <div class="demo reveal">
+    <div class="label"><span class="live"></span>Interactive · toggle the lights</div>
+    <h4>Add light, not paint</h4>
+    <p class="muted">Switch each coloured light on/off. Overlaps screen together: red+green = yellow, green+blue = cyan, red+blue = magenta, all three = white.</p>
+    <div class="additive">
+      <div class="lights dim" id="lights">
+        <div class="c cr" id="lr"></div><div class="c cg" id="lg"></div><div class="c cb" id="lb"></div>
+      </div>
+      <div class="toggles">
+        <div class="tg r" data-ch="r"><span class="box"></span><span>Red light</span></div>
+        <div class="tg g" data-ch="g"><span class="box"></span><span>Green light</span></div>
+        <div class="tg b" data-ch="b"><span class="box"></span><span>Blue light</span></div>
+        <div class="muted" id="mixname" style="font-family:var(--mono);font-size:13px;margin-top:6px">result: black (0,0,0)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERACTIVE: rgb mixer -->
+  <div class="demo reveal">
+    <div class="label"><span class="live"></span>Interactive · pixel colour mixer</div>
+    <h4>One pixel, three channels</h4>
+    <p class="muted">Each channel is stored in <strong>8 bits → 256 levels (0–255)</strong>, which the hardware maps into the [0,1] range. Three channels of 8 bits = <strong>16.7&nbsp;million</strong> colours.</p>
+    <div id="swatch" class="swatch"><span id="hexlabel">#000000</span><span class="vals" id="normvals">[0.00, 0.00, 0.00]</span></div>
+    <div class="controls">
+      <div class="slider-row"><label style="color:#ff5b5b">R</label><input class="r" type="range" min="0" max="255" value="214" id="rR"><output id="oR">214</output></div>
+      <div class="slider-row"><label style="color:var(--green)">G</label><input class="g" type="range" min="0" max="255" value="69" id="rG"><output id="oG">69</output></div>
+      <div class="slider-row"><label style="color:#6c8cff">B</label><input class="b" type="range" min="0" max="255" value="107" id="rB"><output id="oB">107</output></div>
+    </div>
+    <p class="tooltip-hint">Try (255,0,0) → pure red · (255,255,255) → white · (0,0,0) → black</p>
+  </div>
+</section>
+
+<!-- ============ PIXELS ============ -->
+<section id="pixels" class="wrap">
+  <div class="reveal">
+    <div class="kicker"><span class="num">03</span> Scene → pixels</div>
+    <h2>Rasterisation, resolution &amp; PPI</h2>
+  </div>
+
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/teapot_photo.jpg" alt="A photographed render of the pink teapot">
+      <figcaption>Take a photo of the teapot…</figcaption></figure>
+    <figure class="reveal" style="margin:0"><img src="assets/rasterisation.jpg" alt="The teapot overlaid with a grid of pixels labelled rasterisation">
+      <figcaption>…and overlay a grid. Turning 3D objects into a flat 2D array of cells is <strong>rasterisation</strong>.</figcaption></figure>
+  </div>
+
+  <div class="card reveal">
+    <h4><span class="hl">Pixel</span> = Picture Element</h4>
+    <ul class="clean">
+      <li>Each pixel holds <strong>RGB</strong> data, each channel in [0,1].</li>
+      <li>We can't store infinite continuous values, so we <strong>quantise</strong>: 8 bits → 256 levels (0–255) per channel.</li>
+      <li>If hardware can't do colour (no RGB LEDs/plasma), you see greyscale — pixels carry a single value.</li>
+    </ul>
+  </div>
+
+  <div class="grid g3">
+    <figure class="reveal" style="margin:0"><img src="assets/pixel_sliders.jpg" alt="A single pixel set to red with RGB sliders showing 255,0,0 and hex FF0000">
+      <figcaption>One pixel = R,G,B value, e.g. <code>FF0000</code>.</figcaption></figure>
+    <figure class="reveal" style="margin:0"><img src="assets/eight_bits.jpg" alt="Text explaining 8 bits per channel give 256 values">
+      <figcaption>8 bits/channel → 256 values → 16.7M colours.</figcaption></figure>
+    <figure class="reveal" style="margin:0"><img src="assets/resolution.jpg" alt="Grid labelled height and width">
+      <figcaption><code>resolution = height × width</code>.</figcaption></figure>
+  </div>
+
+  <h3 class="reveal">Pixels are point samples, not little squares</h3>
+  <figure class="reveal"><img src="assets/box_filter.jpg" alt="Pixels shown as dimensionless point samples reconstructed with a box filter">
+    <figcaption>A pixel is a <strong>dimensionless point sample</strong> of a continuous space. It only <em>looks</em> square because we paint it with a <strong>box filter</strong> — squares are cheap to compute and to build into displays.</figcaption></figure>
+
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/pixel_distance.jpg" alt="Grid showing constant distance between pixels">
+      <figcaption>Distance between pixels is generally constant.</figcaption></figure>
+    <figure class="reveal" style="margin:0"><img src="assets/ppi.jpg" alt="Comparison of two grids showing pixels per inch determines quality">
+      <figcaption><strong>PPI</strong> = pixels per inch. Higher PPI → higher quality. Raise it by adding pixels <em>or</em> shrinking the image.</figcaption></figure>
+  </div>
+  <div class="note reveal">But our eyes have a resolution too — past a point, a tiny high-PPI image holds detail your retina simply can't recover.</div>
+
+  <!-- INTERACTIVE: PPI pixelate -->
+  <div class="demo reveal">
+    <div class="label"><span class="live"></span>Interactive · drag to change resolution</div>
+    <h4>Rasterise the teapot yourself</h4>
+    <p class="muted">Slide left for a low-resolution grid (few large pixels) and right for high resolution. Watch each cell fill with a single colour — the box filter at work.</p>
+    <canvas id="ppiCanvas" width="640" height="420"></canvas>
+    <div class="controls">
+      <div class="slider-row"><label>res</label><input type="range" min="6" max="220" value="22" id="ppiRange"><output id="ppiOut">22×14</output></div>
+    </div>
+  </div>
+
+  <!-- INTERACTIVE: memory calc -->
+  <div class="demo reveal">
+    <div class="label"><span class="live"></span>Interactive · raw image memory</div>
+    <h4>How big is a raw image?</h4>
+    <p class="muted">Uncompressed (e.g. PPM) stores every pixel independently. Memory = <code>width × height × channels × bits</code>. A 12-megapixel RGB image needs ~36&nbsp;MB raw.</p>
+    <div class="controls">
+      <div class="slider-row"><label>MP</label><input type="range" min="1" max="48" value="12" id="mpRange"><output id="mpOut">12</output></div>
+      <div class="slider-row"><label>bits</label><input type="range" min="1" max="32" step="1" value="8" id="bitRange"><output id="bitOut">8</output></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span class="pill on" data-ch="3" id="rgbPill">RGB · 3 channels</span>
+        <span class="pill" data-ch="1" id="greyPill">Greyscale · 1 channel</span>
+      </div>
+    </div>
+    <div class="calc-out">
+      <div class="stat"><div class="k">Total pixels</div><div class="v" id="pxStat">12.0<small> M</small></div></div>
+      <div class="stat"><div class="k">Raw size</div><div class="v" id="memStat">36.0<small> MB</small></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MEMORY ============ -->
+<section id="memory" class="wrap">
+  <div class="reveal">
+    <div class="kicker"><span class="num">04</span> Storing pixels</div>
+    <h2>Scanlines, planes &amp; Z-order</h2>
+  </div>
+
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/raster_grid.jpg" alt="Teapot grid beside a grid of RGB labels">
+      <figcaption>A <strong>raster image</strong> stores RGB for every pixel.</figcaption></figure>
+    <figure class="reveal" style="margin:0"><img src="assets/scanline.jpg" alt="Grid of RGB cells read in scanline order">
+      <figcaption>Stored in a <strong>1-D array</strong>, read in <strong>scanline order</strong>: across a row, then start the next.</figcaption></figure>
+  </div>
+
+  <div class="grid g2">
+    <div class="card reveal">
+      <h4>Where scanlines come from</h4>
+      <p>Rasterisation descends from <strong>cathode-ray-tube TVs</strong>, where a beam swept across the screen line by line. A mis-calibrated analog signal produced that trippy noise — the little hook structures are the line endings (new scanlines).</p>
+    </div>
+    <figure class="reveal" style="margin:0"><img src="assets/crt_noise.jpg" alt="A noisy CRT television screen">
+      <figcaption>CRT static: the horizontal structure reveals scanlines.</figcaption></figure>
+  </div>
+
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/planar_interleaved.jpg" alt="Interleaved RGB versus separate R, G, B planes">
+      <figcaption><strong>Interleaved</strong> (RGB RGB…) vs <strong>planar</strong> (all R, then all G, then all B).</figcaption></figure>
+    <div class="card reveal">
+      <h4>Interleaved vs planar</h4>
+      <p>Interleaved keeps each pixel together. <strong>Planar</strong> separates channels into tables — handy for compression or colour-system swaps.</p>
+      <p class="muted" style="margin:0">Want a gloomier movie? With planar storage you tweak just the blue plane instead of touching every pixel tuple.</p>
+    </div>
+  </div>
+
+  <h3 class="reveal">Swizzling &amp; Z-order curves</h3>
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/swizzling.jpg" alt="Z-order space-filling curve at increasing levels of recursion">
+      <figcaption>A <strong>Z-order (Morton) curve</strong> — a fractal read order that visits local screen regions together.</figcaption></figure>
+    <div class="card reveal">
+      <h4>Why bother? <span class="hl">Spatial coherency</span></h4>
+      <p>In a scene (and in your room) stuff clusters together — a busy desk, then lots of empty wall. Scanline order scatters a single object across distant memory.</p>
+      <p style="margin:0">Z-order reads pixels in a <strong>localised</strong> order, exploiting that clustering to speed up searches or region edits.</p>
+    </div>
+  </div>
+  <figure class="reveal"><img src="assets/spatial_coherency.jpg" alt="Z-order curve traced over the scene grid showing spatial coherency">
+    <figcaption>Z-curves trace the image in compact blocks — neighbouring pixels stay close in memory.</figcaption></figure>
+
+  <!-- INTERACTIVE: read order -->
+  <div class="demo reveal">
+    <div class="label"><span class="live"></span>Interactive · read-order animation</div>
+    <h4>Scanline vs Z-order</h4>
+    <p class="muted">Press play and watch how each ordering visits an 8×8 grid of pixels. Scanline marches row by row; the Z-order curve keeps neighbours together.</p>
+    <canvas id="orderCanvas" width="640" height="320"></canvas>
+    <div class="controls" style="flex-direction:row;flex-wrap:wrap;gap:10px">
+      <button class="btn primary" id="playOrder">▶ Play</button>
+      <button class="btn" id="modeScan">Scanline</button>
+      <button class="btn" id="modeZ">Z-order</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DYNAMIC RANGE ============ -->
+<section id="range" class="wrap">
+  <div class="reveal">
+    <div class="kicker"><span class="num">05</span> Dynamic range</div>
+    <h2>From clipping to HDR</h2>
+  </div>
+  <div class="reveal">
+    <p class="lead"><strong>Dynamic range</strong> = the difference between the brightest and darkest parts of an image.</p>
+  </div>
+
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/bright_scene.jpg" alt="The scene rendered brighter, colours washing toward white">
+      <figcaption>Crank the light intensity and bright areas race toward white.</figcaption></figure>
+    <figure class="reveal" style="margin:0"><img src="assets/overexposed.jpg" alt="The scene massively overexposed, almost entirely white with lost detail">
+      <figcaption>Push further and values <strong>clip</strong> at the maximum — colour information is lost forever.</figcaption></figure>
+  </div>
+
+  <div class="grid g2">
+    <div class="card reveal">
+      <h4>LDR — Low Dynamic Range</h4>
+      <ul class="clean">
+        <li>Values live in [0,1]; <strong>white is the maximum</strong>.</li>
+        <li>Typically <strong>8 bits</strong>/channel (16 if pushing it; 1 &amp; 24 also exist, 24 rare).</li>
+        <li>Multiplying everything ×2 just clamps the bright pixels to white → lost values.</li>
+      </ul>
+    </div>
+    <div class="card accent reveal">
+      <h4>HDR — High Dynamic Range</h4>
+      <ul class="clean">
+        <li>Can store information <strong>brighter than white</strong> (go above 1).</li>
+        <li><strong>16 / 32 bits</strong> per channel.</li>
+        <li>Great for matching real life — but images become 2–4× bigger (why film frames render slowly).</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- INTERACTIVE: brightness/clipping -->
+  <div class="demo reveal">
+    <div class="label"><span class="live"></span>Interactive · brightness &amp; clipping</div>
+    <h4>Multiply the light — watch values clip</h4>
+    <p class="muted">In LDR there is nowhere above white to go. As you brighten, highlights flatten to pure white and detail vanishes; darken and your eye recovers detail the bright version had destroyed.</p>
+    <div style="border-radius:12px;overflow:hidden;border:1px solid var(--line)">
+      <img id="brightImg" src="assets/teapot_photo.jpg" alt="Teapot, brightness adjustable" style="width:100%;transition:filter .05s linear">
+    </div>
+    <div class="controls">
+      <div class="slider-row"><label>×light</label><input type="range" min="20" max="320" value="100" id="brightRange"><output id="brightOut">1.00×</output></div>
+    </div>
+    <div id="clipMsg" class="tooltip-hint">No clipping — all values inside [0,1].</div>
+  </div>
+</section>
+
+<!-- ============ FORMATS ============ -->
+<section id="formats" class="wrap">
+  <div class="reveal">
+    <div class="kicker"><span class="num">06</span> File formats</div>
+    <h2>Storing &amp; squeezing images</h2>
+  </div>
+
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/ppm.jpg" alt="PPM grid of independent RGB pixels, very large files">
+      <figcaption><strong>PPM</strong> — Portable Pixmap.</figcaption></figure>
+    <div class="card reveal">
+      <h4>PPM (Portable Pixmap)</h4>
+      <ul class="clean">
+        <li>Header = width, then raw pixel values. <strong>Uncompressed</strong>.</li>
+        <li>8 / 16 / 24 bits/channel · <strong>LDR</strong> · stores each pixel independently.</li>
+        <li>→ <strong>very large files</strong>, even at low resolution. Good for image processing, bad for games.</li>
+        <li><code>.bmp</code> is similar but a bit more space-efficient and better maintained.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/png.jpg" alt="PNG slide listing lossless compression and colour look-up tables">
+      <figcaption><strong>PNG</strong> — lossless.</figcaption></figure>
+    <figure class="reveal" style="margin:0"><img src="assets/png_palette.jpg" alt="A PNG colour palette / look-up table of pinks for the teapot">
+      <figcaption>PNG can build an RGB <strong>colour look-up table</strong> per image; pixels store pointers into it.</figcaption></figure>
+  </div>
+  <div class="card reveal">
+    <h4>PNG (Portable Network Graphics)</h4>
+    <ul class="clean">
+      <li><strong>Lossless</strong> compression — convert PPM→PNG→PPM and recover the original.</li>
+      <li>Traditionally LDR; <strong>HDR added in 2025</strong>. LDR uses 8/16 bits.</li>
+      <li>Per-image colour tables generated → efficient, supports <strong>opacity</strong>. Great for logos &amp; pixel art with few colours.</li>
+      <li>Colours not in the table get clamped to the nearest entry → some loss there.</li>
+    </ul>
+  </div>
+
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/jpeg.jpg" alt="JPEG slide: lossy compression, LDR, up to 24-bit colour">
+      <figcaption><strong>JPEG</strong> — lossy.</figcaption></figure>
+    <figure class="reveal" style="margin:0"><img src="assets/jpeg_quality.jpg" alt="Same statue at 4kb, 11kb and 870kb JPEG quality levels">
+      <figcaption>A quality knob: 4 KB vs 11 KB vs 870 KB of the same image.</figcaption></figure>
+  </div>
+  <div class="grid g2">
+    <div class="card reveal">
+      <h4>JPEG (Joint Photographic Experts Group)</h4>
+      <ul class="clean">
+        <li><strong>Lossy</strong> compression — the original cannot be perfectly recovered.</li>
+        <li>Exploits human perception: we spot <strong>edges</strong> well, so edges stay crisp while smoother areas are compressed.</li>
+        <li>LDR · uses different colour formats for compression · up to <strong>24-bit</strong> colour.</li>
+        <li>Often compress 40×+ before differences are obvious.</li>
+      </ul>
+    </div>
+    <figure class="reveal" style="margin:0"><img src="assets/jpeg_vs_png.jpg" alt="JPEG vs PNG comparison of the statue's wing detail">
+      <figcaption>JPEG (870 KB) vs PNG (470 KB): PNG averages/clamps colours to its table; JPEG holds detail differently.</figcaption></figure>
+  </div>
+
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/gif.jpg" alt="GIF slide: colour tables, LDR, lossless, animated">
+      <figcaption><strong>GIF</strong> — colour tables, LDR, lossless, <strong>animated</strong>. (Older animation format; PNG can animate since 2025.)</figcaption></figure>
+    <figure class="reveal" style="margin:0"><img src="assets/hdr_exr.jpg" alt="HDR10 / OpenEXR slide comparing SDR and HDR landscape">
+      <figcaption><strong>HDR10 / OpenEXR</strong> — lossy or lossless, <strong>16/32 bits</strong>/channel. You avoid quantisation. (Video: HDR10+, Dolby Vision.)</figcaption></figure>
+  </div>
+
+  <h3 class="reveal">Raster vs Vector</h3>
+  <div class="grid g2">
+    <div class="card reveal">
+      <h4>Why does the cow stay sharp when you zoom?</h4>
+      <p>Zoom into a raster image and you hit blocky <strong>box-filter</strong> patterns (aliasing). But a <strong>vector</strong> graphic (SVG) is defined by mathematical functions telling the GPU how to draw shapes.</p>
+      <p style="margin:0">Zoom in or out and the computer <strong>recomputes</strong> the geometry — no blocky pixels, scales infinitely.</p>
+    </div>
+    <figure class="reveal" style="margin:0"><img src="assets/svg.jpg" alt="A vector cow beside its SVG path data of coordinates">
+      <figcaption>SVG cow + its underlying path coordinates. Maths, not pixels.</figcaption></figure>
+  </div>
+  <div class="reveal" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+    <span class="pill on">PPM · raw · LDR</span><span class="pill on">PNG · lossless</span>
+    <span class="pill on">JPEG · lossy</span><span class="pill on">GIF · animated · tables</span>
+    <span class="pill on">HDR10/EXR · 16–32 bit</span><span class="pill on">SVG · vector</span>
+  </div>
+</section>
+
+<!-- ============ GAMMA ============ -->
+<section id="gamma" class="wrap">
+  <div class="reveal">
+    <div class="kicker"><span class="num">07</span> Perception &amp; gamma</div>
+    <h2>Gamma correction</h2>
+  </div>
+  <div class="reveal">
+    <p class="lead">Human brightness perception is <strong>non-linear</strong>: we are far more sensitive to changes in dark tones than in bright ones.</p>
+  </div>
+
+  <div class="grid g2">
+    <figure class="reveal" style="margin:0"><img src="assets/perceived_brightness.jpg" alt="Graph of perceived brightness, eye curve above the linear LED line">
+      <figcaption>An LED's output is roughly linear (dotted line), but the <strong>eye's response</strong> bows upward — we perceive lots of detail in the darks.</figcaption></figure>
+    <figure class="reveal" style="margin:0"><img src="assets/gamma_curve.jpg" alt="Graph adding a gamma 2.2 encoding curve below the linear line">
+      <figcaption>To match perception we encode with a curve, commonly <span class="hl">γ = 2.2</span>, so more code values land in the darks.</figcaption></figure>
+  </div>
+
+  <div class="card reveal">
+    <h4>The transfer function</h4>
+    <p>We map stored values through a power curve before display:</p>
+    <p style="font-family:var(--mono);font-size:22px;text-align:center;color:#fff;margin:10px 0 6px">V<sub>out</sub> = A · V<sub>in</sub><sup>γ</sup></p>
+    <figure style="margin:14px 0 4px;border:none;background:none"><img src="assets/gamma_formula.jpg" alt="Perceived brightness graph with the gamma transfer function V_out = A V_in^gamma" style="border-radius:12px;border:1px solid var(--line)"></figure>
+    <p class="muted" style="margin:0">A common <span class="hl">γ = 2.2</span>, chosen from empirical studies. This packs more representable levels into the darker tones the eye cares about — without losing detail. Most LDR displays do this automatically.</p>
+  </div>
+
+  <!-- INTERACTIVE: gamma -->
+  <div class="demo reveal">
+    <div class="label"><span class="live"></span>Interactive · gamma transfer curve</div>
+    <h4>Bend the curve, remap the tones</h4>
+    <p class="muted">The top strip is a <strong>linear</strong> ramp (0→1). The bottom strip is the same ramp encoded with <code>v<sup>1/γ</sup></code>. As γ rises, more steps are spent on the dark end — exactly where your eye is most sensitive.</p>
+    <canvas id="gammaCanvas" width="640" height="360"></canvas>
+    <div class="controls">
+      <div class="slider-row"><label>γ</label><input type="range" min="100" max="300" value="220" id="gammaRange"><output id="gammaOut">2.20</output></div>
+    </div>
+  </div>
+
+  <figure class="reveal"><img src="assets/gamma_photos.jpg" alt="Two photos: dark uncorrected versus gamma-corrected with recovered shadow detail">
+    <figcaption><strong>Gamma correction</strong> in action — the dynamic range of a darker image is presented more naturally, with shadow detail preserved.</figcaption></figure>
+
+  <div class="card accent reveal">
+    <h4>Does HDR still need gamma correction?</h4>
+    <figure style="margin:14px 0;border:none;background:none"><img src="assets/hdr_gamma.jpg" alt="Two monitors comparing original and HDR image" style="border-radius:12px;border:1px solid var(--line)"></figure>
+    <p style="margin:0"><strong>Yes.</strong> Even with many bits, we want a consistent experience across displays and drivers, so we apply <span class="hl">perceptual quantisation</span> — a valuable tool even in HDR imaging.</p>
+  </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section id="quiz" class="wrap">
+  <div class="reveal">
+    <div class="kicker"><span class="num">08</span> Check yourself</div>
+    <h2>Quiz</h2>
+    <p class="lead">Tap an answer — correct turns green, mistakes turn red and reveal the right one. Drawn from the module's quiz banks.</p>
+  </div>
+  <div class="quiz reveal" id="quiz"></div>
+  <div class="scorebar reveal">
+    <span class="s"><span id="scoreNow">0</span>/<span id="scoreTot">0</span></span>
+    <div class="track"><div class="fill" id="scoreFill"></div></div>
+    <span class="muted" style="font-family:var(--mono);font-size:13px" id="scoreMsg">begin answering</span>
+  </div>
+</section>
+
+<!-- ============ EXAM ============ -->
+<section id="exam" class="wrap">
+  <div class="reveal">
+    <div class="kicker"><span class="num">09</span> Past papers</div>
+    <h2>Exam practice</h2>
+    <p class="lead">Questions from past COMP27112 papers that touch this chapter. Click to reveal study pointers built from these notes.</p>
+  </div>
+  <div class="exam reveal" id="exam"></div>
+  <div class="note reveal" style="margin-top:28px">Pointers are study scaffolding synthesised from this chapter — structure your own full answers and check against the lecture and textbook.</div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="big">Light → numbers → light.</div>
+    <p class="muted">COMP27112 · Displays &amp; Images · interactive visual notes</p>
+    <p class="tooltip-hint">Slide imagery from the module's <em>Displays and Images</em> deck (D. Petrescu). Built for revision.</p>
+  </div>
+</footer>
+
+<script>
+/* ---------- progress + scrollspy ---------- */
+const progress=document.getElementById('progress');
+const navA=[...document.querySelectorAll('#navlinks a')];
+const secs=navA.map(a=>document.querySelector(a.getAttribute('href')));
+function onScroll(){
+  const h=document.documentElement;
+  progress.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';
+  let idx=0;
+  secs.forEach((s,i)=>{ if(s && s.getBoundingClientRect().top<window.innerHeight*0.4) idx=i; });
+  navA.forEach((a,i)=>a.classList.toggle('active',i===idx));
+}
+window.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+
+/* ---------- reveal ---------- */
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* ---------- additive lights ---------- */
+const lightState={r:false,g:false,b:false};
+const lightsEl=document.getElementById('lights');
+const mixname=document.getElementById('mixname');
+const names={'':'black','r':'red','g':'green','b':'blue','rg':'yellow','rb':'magenta','gb':'cyan','rgb':'white'};
+const tuples={'':'(0,0,0)','r':'(1,0,0)','g':'(0,1,0)','b':'(0,0,1)','rg':'(1,1,0)','rb':'(1,0,1)','gb':'(0,1,1)','rgb':'(1,1,1)'};
+document.querySelectorAll('.tg').forEach(tg=>{
+  tg.addEventListener('click',()=>{
+    const ch=tg.dataset.ch; lightState[ch]=!lightState[ch]; tg.classList.toggle('on',lightState[ch]);
+    document.getElementById('l'+ch).style.opacity=lightState[ch]?1:0;
+    const any=lightState.r||lightState.g||lightState.b;
+    lightsEl.classList.toggle('dim',!any);
+    const key=(lightState.r?'r':'')+(lightState.g?'g':'')+(lightState.b?'b':'');
+    mixname.textContent='result: '+names[key]+' '+tuples[key];
+  });
+});
+
+/* ---------- rgb mixer ---------- */
+const rR=document.getElementById('rR'),rG=document.getElementById('rG'),rB=document.getElementById('rB');
+const sw=document.getElementById('swatch');
+function hx(n){return n.toString(16).padStart(2,'0').toUpperCase();}
+function mix(){
+  const r=+rR.value,g=+rG.value,b=+rB.value;
+  document.getElementById('oR').textContent=r;document.getElementById('oG').textContent=g;document.getElementById('oB').textContent=b;
+  sw.style.background=`rgb(${r},${g},${b})`;
+  const lum=(0.299*r+0.587*g+0.114*b);
+  sw.style.color=lum>140?'#000':'#fff';
+  sw.querySelector('.vals').style.color='#000';
+  document.getElementById('hexlabel').textContent='#'+hx(r)+hx(g)+hx(b);
+  document.getElementById('normvals').textContent=`[${(r/255).toFixed(2)}, ${(g/255).toFixed(2)}, ${(b/255).toFixed(2)}]`;
+}
+[rR,rG,rB].forEach(s=>s.addEventListener('input',mix));mix();
+
+/* ---------- PPI pixelation ---------- */
+const ppiC=document.getElementById('ppiCanvas'),ppiX=ppiC.getContext('2d');
+const ppiRange=document.getElementById('ppiRange'),ppiOut=document.getElementById('ppiOut');
+const teapot=new Image();teapot.src='assets/teapot_photo.jpg';
+let teapotReady=false; teapot.onload=()=>{teapotReady=true;drawPPI();};
+function drawPPI(){
+  if(!teapotReady)return;
+  const W=ppiC.width,H=ppiC.height;
+  const cols=+ppiRange.value, rows=Math.round(cols*H/W);
+  ppiOut.textContent=cols+'×'+rows;
+  ppiX.imageSmoothingEnabled=true;
+  // downsample into tiny offscreen
+  const off=document.createElement('canvas');off.width=cols;off.height=rows;
+  off.getContext('2d').drawImage(teapot,0,0,cols,rows);
+  ppiX.imageSmoothingEnabled=false;
+  ppiX.clearRect(0,0,W,H);
+  ppiX.drawImage(off,0,0,cols,rows,0,0,W,H);
+}
+ppiRange.addEventListener('input',drawPPI);
+
+/* ---------- memory calc ---------- */
+const mpRange=document.getElementById('mpRange'),bitRange=document.getElementById('bitRange');
+let channels=3;
+document.getElementById('rgbPill').addEventListener('click',()=>{channels=3;togglePill();});
+document.getElementById('greyPill').addEventListener('click',()=>{channels=1;togglePill();});
+function togglePill(){
+  document.getElementById('rgbPill').classList.toggle('on',channels===3);
+  document.getElementById('greyPill').classList.toggle('on',channels===1);
+  calcMem();
+}
+function calcMem(){
+  const mp=+mpRange.value,bits=+bitRange.value;
+  document.getElementById('mpOut').textContent=mp;
+  document.getElementById('bitOut').textContent=bits;
+  const px=mp*1e6;
+  const bytes=px*channels*bits/8;
+  const mb=bytes/1e6;
+  document.getElementById('pxStat').innerHTML=mp.toFixed(1)+'<small> M</small>';
+  document.getElementById('memStat').innerHTML=(mb>=1000?(mb/1000).toFixed(2)+'<small> GB</small>':mb.toFixed(1)+'<small> MB</small>');
+}
+mpRange.addEventListener('input',calcMem);bitRange.addEventListener('input',calcMem);calcMem();
+
+/* ---------- read-order animation ---------- */
+const oC=document.getElementById('orderCanvas'),oX=oC.getContext('2d');
+const N=8; let cellW,cellH,orderMode='scan',visit=[],step=0,playing=false,raf;
+function buildOrder(){
+  visit=[];
+  if(orderMode==='scan'){ for(let y=0;y<N;y++)for(let x=0;x<N;x++)visit.push([x,y]); }
+  else{ const o=[];(function z(x,y,s){ if(s===1){o.push([x,y]);return;} const h=s/2; z(x,y,h);z(x+h,y,h);z(x,y+h,h);z(x+h,y+h,h); })(0,0,N); visit=o; }
+}
+function sizeOrder(){ cellW=oC.width/N; cellH=oC.height/N; }
+function drawOrder(){
+  oX.clearRect(0,0,oC.width,oC.height);
+  // grid
+  for(let i=0;i<=N;i++){oX.strokeStyle='rgba(255,255,255,.08)';oX.beginPath();oX.moveTo(i*cellW,0);oX.lineTo(i*cellW,oC.height);oX.moveTo(0,i*cellH);oX.lineTo(oC.width,i*cellH);oX.stroke();}
+  // filled cells up to step
+  for(let i=0;i<step&&i<visit.length;i++){
+    const [x,y]=visit[i]; const t=i/visit.length;
+    oX.fillStyle=`hsl(${28+t*300},75%,${38+t*18}%)`;
+    oX.fillRect(x*cellW+2,y*cellH+2,cellW-4,cellH-4);
+  }
+  // path line
+  oX.strokeStyle='rgba(255,255,255,.55)';oX.lineWidth=2;oX.beginPath();
+  for(let i=0;i<step&&i<visit.length;i++){const [x,y]=visit[i];const cx=x*cellW+cellW/2,cy=y*cellH+cellH/2; i===0?oX.moveTo(cx,cy):oX.lineTo(cx,cy);}
+  oX.stroke();
+  // head
+  if(step>0&&step<=visit.length){const [x,y]=visit[step-1];oX.fillStyle='#fff';oX.beginPath();oX.arc(x*cellW+cellW/2,y*cellH+cellH/2,5,0,7);oX.fill();}
+}
+function tick(){ if(!playing)return; step++; if(step>visit.length){playing=false;document.getElementById('playOrder').textContent='▶ Replay';drawOrder();return;} drawOrder(); raf=setTimeout(()=>requestAnimationFrame(tick),70); }
+function setMode(m){orderMode=m;buildOrder();step=0;playing=false;document.getElementById('playOrder').textContent='▶ Play';
+  document.getElementById('modeScan').classList.toggle('primary',m==='scan');
+  document.getElementById('modeZ').classList.toggle('primary',m==='z');drawOrder();}
+document.getElementById('playOrder').addEventListener('click',()=>{ if(playing){playing=false;document.getElementById('playOrder').textContent='▶ Resume';return;} if(step>=visit.length)step=0; playing=true;document.getElementById('playOrder').textContent='❚❚ Pause';tick();});
+document.getElementById('modeScan').addEventListener('click',()=>setMode('scan'));
+document.getElementById('modeZ').addEventListener('click',()=>setMode('z'));
+sizeOrder();setMode('scan');
+
+/* ---------- brightness / clipping ---------- */
+const brightRange=document.getElementById('brightRange'),brightImg=document.getElementById('brightImg'),clipMsg=document.getElementById('clipMsg');
+brightRange.addEventListener('input',()=>{
+  const f=+brightRange.value/100;
+  document.getElementById('brightOut').textContent=f.toFixed(2)+'×';
+  brightImg.style.filter=`brightness(${f})`;
+  if(f>1.15){clipMsg.innerHTML='⚠ Highlights <strong style="color:var(--pink2)">clipping to white</strong> — values pinned at 1, detail lost.';}
+  else if(f<0.85){clipMsg.innerHTML='Darkened — your eye adapts and recovers shadow detail.';}
+  else{clipMsg.textContent='No clipping — all values inside [0,1].';}
+});
+
+/* ---------- gamma curve ---------- */
+const gC=document.getElementById('gammaCanvas'),gX=gC.getContext('2d');
+const gammaRange=document.getElementById('gammaRange'),gammaOut=document.getElementById('gammaOut');
+function drawGamma(){
+  const gamma=+gammaRange.value/100; gammaOut.textContent=gamma.toFixed(2);
+  const W=gC.width,H=gC.height; gX.clearRect(0,0,W,H);
+  const stripH=46, pad=40, plotTop=stripH*2+40, plotH=H-plotTop-30, plotW=W-pad-20, plotL=pad;
+  // linear strip
+  for(let x=0;x<W;x++){const v=x/W;const c=Math.round(v*255);gX.fillStyle=`rgb(${c},${c},${c})`;gX.fillRect(x,8,1,stripH);}
+  // gamma-encoded strip
+  for(let x=0;x<W;x++){const v=x/W;const e=Math.pow(v,1/gamma);const c=Math.round(e*255);gX.fillStyle=`rgb(${c},${c},${c})`;gX.fillRect(x,8+stripH+8,1,stripH);}
+  gX.fillStyle='#a7a2b0';gX.font="12px 'Spline Sans Mono', monospace";
+  gX.fillText('linear ramp (stored)',10,8+stripH-8+ -28+34);
+  gX.fillText('linear ramp (stored values)',8,stripH+2);
+  gX.fillText('gamma-encoded  v^(1/γ)',8,stripH*2+18);
+  // plot axes
+  gX.strokeStyle='rgba(255,255,255,.25)';gX.lineWidth=1;gX.beginPath();
+  gX.moveTo(plotL,plotTop);gX.lineTo(plotL,plotTop+plotH);gX.lineTo(plotL+plotW,plotTop+plotH);gX.stroke();
+  // diagonal (linear)
+  gX.strokeStyle='rgba(255,255,255,.35)';gX.setLineDash([5,5]);gX.beginPath();
+  gX.moveTo(plotL,plotTop+plotH);gX.lineTo(plotL+plotW,plotTop);gX.stroke();gX.setLineDash([]);
+  // encoding curve v^(1/gamma)  (orange)
+  gX.strokeStyle='#f59331';gX.lineWidth=2.5;gX.beginPath();
+  for(let i=0;i<=plotW;i++){const v=i/plotW;const y=Math.pow(v,1/gamma);const px=plotL+i,py=plotTop+plotH-y*plotH; i===0?gX.moveTo(px,py):gX.lineTo(px,py);}
+  gX.stroke();
+  // gamma curve v^gamma (pink)
+  gX.strokeStyle='#ef6a8c';gX.lineWidth=2.5;gX.beginPath();
+  for(let i=0;i<=plotW;i++){const v=i/plotW;const y=Math.pow(v,gamma);const px=plotL+i,py=plotTop+plotH-y*plotH; i===0?gX.moveTo(px,py):gX.lineTo(px,py);}
+  gX.stroke();
+  gX.fillStyle='#f59331';gX.fillText('encode  v^(1/γ)',plotL+10,plotTop+18);
+  gX.fillStyle='#ef6a8c';gX.fillText('display γ='+gamma.toFixed(1),plotL+plotW-118,plotTop+plotH-10);
+}
+gammaRange.addEventListener('input',drawGamma);drawGamma();
+
+/* ---------- QUIZ data + render ---------- */
+const QUIZ=[
+ {q:"A greyscale image is usually stored in an unsigned byte. How many shades of grey can it represent?",
+  o:["Depends on the camera used","65,536","255","256"],a:3},
+ {q:"A 12-megapixel RGB colour image in raw format takes up roughly how much memory?",
+  o:["12 MB","48 MB","36 MB","1.5 MB"],a:2},
+ {q:"How many colours are in the spectrum of visible light?",
+  o:["7","256","Infinitely many","16.8 million"],a:2},
+ {q:"What is a pixel?",
+  o:["The smallest addressable element in a raster image","A type of vector shape used in 2D graphics","A colour model used in printing","A compression format for images"],a:0},
+ {q:"What is rasterisation?",
+  o:["Converting vector geometry into a raster (pixel) image","Tracing rays from a light source through a scene","Compressing an image using lossy algorithms","Converting a raster image to vector paths"],a:0},
+ {q:"Which of the following is a lossless raster image format?",
+  o:["PNG","JPEG","SVG","MP4"],a:0},
+ {q:"What is the key difference between raster and vector images?",
+  o:["Raster = pixels; vector = mathematical curves and shapes","Raster is always higher quality than vector","Vector images cannot be displayed on screen","Raster images scale without loss of quality"],a:0},
+ {q:"Colour is represented using three primaries because…",
+  o:["It's good computer engineering practice","It matches the human visual system","This allows a wide range of colours to be represented","Natural light is composed of three primaries"],a:2},
+ {q:"If the Red channel is extracted from an image, what is the output?",
+  o:["A greyscale image representing the intensity of reds","Only the red pixels in the image","Varying shades of cyan","Black→dark red→light red→white"],a:0},
+ {q:"Images are captured using 256 shades of primary colours or grey because…",
+  o:["It's a convenient computer engineering number","It matches the human's resolution of colour/brightness","It matches conditions in nature","It matches the camera's signal-to-noise ratio"],a:0},
+ {q:"Which colour channels typically represent a pixel in a standard RGB image?",
+  o:["Red, Green, Blue","Cyan, Magenta, Yellow","Hue, Saturation, Value","Luminance, Chrominance-Blue, Chrominance-Red"],a:0},
+ {q:"Perceptual colour spaces are used because…",
+  o:["A small change in colour value generates the same stimulus regardless of the colour","They are backwards compatible with monochrome TV","They give a more compact representation","They separate colour and brightness info"],a:0},
+];
+const quizEl=document.getElementById('quiz');let answered=0,correct=0;
+document.getElementById('scoreTot').textContent=QUIZ.length;
+QUIZ.forEach((item)=>{
+  const card=document.createElement('div');card.className='q';
+  const head=document.createElement('div');head.className='qhead';
+  head.innerHTML=`<span class="qnum"></span><span class="qtext">${item.q}</span>`;
+  const opts=document.createElement('div');opts.className='opts';
+  item.o.forEach((txt,i)=>{
+    const op=document.createElement('div');op.className='opt';
+    op.innerHTML=`<span class="mark"></span><span>${txt}</span>`;
+    op.addEventListener('click',()=>{
+      if(card.dataset.done)return;card.dataset.done=1;answered++;
+      [...opts.children].forEach((c,j)=>{c.classList.add('locked');if(j===item.a)c.classList.add('correct');});
+      if(i===item.a)correct++;else op.classList.add('wrong');
+      updateScore();
+    });
+    opts.appendChild(op);
+  });
+  card.appendChild(head);card.appendChild(opts);quizEl.appendChild(card);
+});
+function updateScore(){
+  document.getElementById('scoreNow').textContent=correct;
+  document.getElementById('scoreFill').style.width=(answered/QUIZ.length*100)+'%';
+  const msg=document.getElementById('scoreMsg');
+  if(answered<QUIZ.length)msg.textContent=answered+' answered';
+  else msg.textContent=correct===QUIZ.length?'perfect — exam ready':(correct>=QUIZ.length*0.7?'solid — review the misses':'revisit the sections above');
+}
+
+/* ---------- EXAM data ---------- */
+const EXAM=[
+ {yr:"2022",q:"Describe three types of resolution that might be considered in image processing (give rough example values). How do different resolution values affect the image or the results of an imaging application?",
+  hints:["<strong>Spatial resolution</strong> — pixels per image / PPI (e.g. 1920×1080, 12 MP). Higher = smaller resolvable detail, larger files. Relates to <code>resolution = height × width</code> and the PPI section.",
+   "<strong>Intensity / radiometric resolution</strong> — bits per channel (e.g. 8 bits → 256 levels). Too few → banding/quantisation; more bits → smoother gradients and HDR.",
+   "<strong>Temporal resolution</strong> — frames per second for video/sequences (e.g. 30/60 fps). Affects motion smoothness.",
+   "Trade-off: more of any resolution → more data to store and process; too little → lost detail, banding, or jerky motion. Also bounded by the eye's own resolution."]},
+ {yr:"2022",q:"Explain what Clipping is. What could happen when manipulating pixel values if clipping isn't used?",
+  hints:["LDR pixel values are bounded (e.g. [0,1] or [0,255]). <strong>Clipping</strong> = clamping any value that falls outside this range to the nearest limit.",
+   "Brighten an image (multiply ×2) and bright pixels exceed the max → clamped to white, so highlight detail is permanently lost (see the over-exposed scene).",
+   "If you <em>don't</em> clip, out-of-range values can wrap/overflow or be stored invalidly, producing wrong colours and artefacts.",
+   "HDR mitigates this by allowing values above white; tone-mapping then brings them back into a displayable range."]},
+ {yr:"2023",q:"JPEG (Joint Photographic Experts Group) compression performs a DCT on 8×8 pixel blocks. (1) What does DCT stand for? (2) Briefly describe a DCT. (3) How is the data reduced for each block?",
+  hints:["<strong>DCT = Discrete Cosine Transform.</strong>",
+   "It transforms an 8×8 block of pixel values from the spatial domain into the frequency domain — expressing the block as a weighted sum of cosine basis patterns (low → high frequency).",
+   "Most image energy concentrates in the low-frequency coefficients. The high-frequency coefficients are <strong>quantised</strong> (divided and rounded), pushing many to zero, then entropy-coded.",
+   "This is <strong>lossy</strong>: humans notice edges more than fine high-frequency texture, so discarding high frequencies saves space with little perceived loss — a quality knob controls how aggressively."]},
+ {yr:"2023",q:"When a camera takes an image, two main methods give a correctly exposed image: aperture and exposure time. Describe what they mean, how they're varied, their effects on image intensities, how they affect each other, and what other effects they produce.",
+  hints:["<strong>Aperture</strong> — size of the lens opening (f-number). Wider aperture = more light per unit time → brighter image; also <em>shallower depth of field</em> (background blur).",
+   "<strong>Exposure time</strong> (shutter speed) — how long the sensor collects light. Longer = brighter image; but longer also = more <em>motion blur</em>.",
+   "They trade off: to keep the same total light (exposure), widening the aperture lets you shorten the exposure time and vice-versa.",
+   "Ties to dynamic range: too much light → clipping to white; too little → values crushed to black."]},
+ {yr:"2019",q:"Discuss the sources of uncertainty in the pixel values of a digital image captured using a digital camera.",
+  hints:["<strong>Sensor / shot noise</strong> — random fluctuation in photon arrival and electronics (often modelled as zero-mean Gaussian).",
+   "<strong>Quantisation</strong> — continuous intensities forced into 256 discrete levels (8-bit) introduces rounding error.",
+   "<strong>Bayer demosaicing</strong> — each cell senses only R, G or B; the missing channels are interpolated, so colour is partly estimated (note the 2× green cells).",
+   "Lossy compression (JPEG), lens/optical effects, and clipping at the bright/dark ends add further uncertainty."]},
+ {yr:"2016",q:"For a driver-assistance system, outline the factors in deciding camera placement, the number of pixels in the image(s), and the field(s) of view so you capture enough detail to recognise lanes, distances and signs.",
+  hints:["<strong>Spatial resolution vs field of view</strong>: for a fixed pixel count, a wider FoV spreads pixels over more scene → smaller objects (distant signs) become unresolvable. This is the resolution/PPI trade-off.",
+   "Smallest resolvable object depends on pixels-per-degree → enough pixels to span the feature at its working distance.",
+   "Placement affects perspective, occlusion and which features are visible; multiple cameras can cover wide + narrow FoV.",
+   "Capture conditions (dynamic range, exposure, noise, clipping) limit detail in bad weather / poor light."]},
+];
+const examEl=document.getElementById('exam');
+EXAM.forEach(e=>{
+  const d=document.createElement('details');
+  d.innerHTML=`<summary><span class="yr">${e.yr}</span><span class="qq">${e.q}</span><span class="chev">▸</span></summary>
+   <div class="ans"><h5>Study pointers</h5><ul class="clean">${e.hints.map(h=>`<li>${h}</li>`).join('')}</ul></div>`;
+  examEl.appendChild(d);
+});
+</script>
+</body>
+</html>
