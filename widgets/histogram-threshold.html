@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- COURSE: COMP27112 | TOPIC: Point Processing / Thresholding | CONCEPT: histogram + threshold -->
+<title>COMP27112 · Histogram &amp; Threshold</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/house.css">
+<style>
+  .hist-wrap{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+  @media(max-width:820px){.hist-wrap{grid-template-columns:1fr}}
+  .canvas-col{display:flex;flex-direction:column;gap:6px}
+  .canvas-col canvas{width:100%;max-width:240px;image-rendering:auto}
+  #histCanvas{width:100%;max-width:480px;cursor:ew-resize;background:#1c1812}
+  .clab{font-family:"IBM Plex Mono";font-size:12px;color:var(--ink-soft);text-align:center}
+  .imgs{display:flex;gap:16px;flex-wrap:wrap}
+  .statbox{background:var(--ink);color:#efe6d4;border-radius:10px;padding:14px 16px;font-family:"IBM Plex Mono";font-size:13px;line-height:1.8;margin-top:14px}
+  .statbox b{color:var(--gold)}
+  .dark-sw{color:#e0a96d}.light-sw{color:#7fd0c9}
+</style>
+</head>
+<body>
+
+<nav class="toc">
+  <div class="inner">
+    <span class="brand">COMP27112 · WIDGET</span>
+    <a href="../index.html">← Shelf</a>
+    <a href="#play">Playground</a>
+    <a href="#read">Reading a histogram</a>
+    <a href="#exam">Exam framing</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="deco">▦</div>
+    <div class="kicker">Point Processing · Thresholding</div>
+    <h1>The histogram<br><em>is the answer.</em></h1>
+    <p class="sub">A histogram counts how many pixels sit at each intensity 0–255. Drag the threshold across it and watch the image split into black &amp; white — then let the <em>iterative</em> method pick the split for you.</p>
+    <div class="meta">
+      <span class="chip a">Image Processing</span>
+      <span class="chip">Week 1 · point processing</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section style="border-bottom:none;padding-bottom:18px">
+    <div class="card">
+      <h3>Two equations, both already in your Week 1 notes</h3>
+      <div class="eq">binary threshold:&nbsp; I′(x,y) = 255 if I(x,y) ≥ <span class="hl">T</span>, else 0</div>
+      <div class="eq">auto-pick T:&nbsp; <span class="hl">θ = (μ<span class="v">L</span> + μ<span class="v">H</span>) / 2</span> &nbsp;&nbsp;<span style="color:#8a7f6a">// iterated until it stops moving</span></div>
+      <p class="small">Thresholding turns a greyscale image into a <b>binary</b> one. The only decision is <b>where</b> to cut — and a well-separated histogram (two humps) makes that decision obvious. The valley between the humps is the natural threshold.</p>
+    </div>
+  </section>
+
+  <!-- ============ PLAYGROUND ============ -->
+  <section id="play">
+    <div class="sec-head"><span class="sec-num">▦</span><h2>The playground</h2></div>
+    <p class="lead"><b>Drag left/right on the histogram</b> (or use the slider) to move the threshold. The output updates live. Hit <b>auto-pick</b> to watch the iterative method converge.</p>
+
+    <div class="card">
+      <div class="hist-wrap">
+
+        <!-- LEFT: images -->
+        <div>
+          <div class="imgs">
+            <div class="canvas-col">
+              <canvas id="inCanvas" width="160" height="160"></canvas>
+              <div class="clab">input (greyscale)</div>
+            </div>
+            <div class="canvas-col">
+              <canvas id="outCanvas" width="160" height="160"></canvas>
+              <div class="clab">output (binary, T applied)</div>
+            </div>
+          </div>
+          <div id="imgRow"></div>
+          <div id="invRow"></div>
+        </div>
+
+        <!-- RIGHT: histogram + controls -->
+        <div>
+          <canvas id="histCanvas" width="480" height="220"></canvas>
+          <div class="clab">intensity 0 → 255 · bar height = pixel count · drag to move T</div>
+          <div id="sliderRow"></div>
+          <div class="control"><button class="btn" id="autoBtn">⚙ auto-pick T (iterative)</button></div>
+          <div class="statbox" id="stat"></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ READING ============ -->
+  <section id="read">
+    <div class="sec-head"><span class="sec-num">i</span><h2>How to <em style="font-style:italic;font-weight:500">read</em> a histogram</h2></div>
+    <div class="grid3">
+      <div class="card">
+        <h3 style="font-size:19px">Two clear humps</h3>
+        <p class="small">A dark object on a light background (try <b>Cells</b>). The two peaks are object vs background; the <b>valley</b> between them is the ideal threshold. Easy, robust segmentation.</p>
+      </div>
+      <div class="card">
+        <h3 style="font-size:19px">All bunched up</h3>
+        <p class="small">A <b>low-contrast</b> image piles every pixel into a narrow band — hard to threshold, washed-out to the eye. The fix is <b>contrast stretching</b>: spread that band back across 0–255.</p>
+      </div>
+      <div class="card">
+        <h3 style="font-size:19px">Flat / spread out</h3>
+        <p class="small">A <b>gradient</b> touches every level roughly equally → a flat histogram. No natural valley, so a single global threshold cuts arbitrarily. This is when you reach for region methods instead.</p>
+      </div>
+    </div>
+
+    <div class="hook">
+      <span class="lbl">🧠 Hook — "the dip is the threshold"</span>
+      <p style="margin:6px 0 0">For a two-hump (bimodal) histogram, put T <b>in the valley</b> between the peaks. The iterative method <span class="mono">θ=(μ<sub>L</sub>+μ<sub>H</sub>)/2</span> is just a way of sliding toward that valley automatically: split, take each side's mean, put T halfway, repeat.</p>
+    </div>
+  </section>
+
+  <!-- ============ EXAM ============ -->
+  <section id="exam" style="border-bottom:none">
+    <div class="sec-head"><span class="sec-num">?</span><h2>Exam framing</h2></div>
+    <div class="exam-box">
+      <span class="lbl">What gets asked</span>
+      <p style="margin:6px 0 0">"Sketch the histogram of this image and choose a threshold" or "describe an automatic threshold-selection method." Answer: a histogram is a <b>count of pixels per intensity</b>; for a bimodal histogram pick T <b>in the valley</b>; an automatic method iterates <span class="mono">T = (μ<sub>L</sub> + μ<sub>H</sub>)/2</span> until T stops changing.</p>
+    </div>
+    <div class="flag">
+      <span class="tag note">DON'T CONFUSE</span>
+      <p class="small" style="margin:6px 0 0">The histogram throws away <b>where</b> pixels are — two very different images can share a histogram. It only describes the <em>distribution</em> of intensities, which is exactly why it's perfect for choosing a global threshold but useless for locating <em>which</em> pixel is which.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="footer">
+  <div class="wrap">
+    <div class="big">Built on the VTK house kit.</div>
+    <p class="small">This whole widget's logic is a few dozen lines thanks to <span class="mono">assets/widget.js</span>. <a href="../index.html">← back to the shelf</a></p>
+  </div>
+</div>
+
+<script src="../assets/widget.js"></script>
+<script>
+(function () {
+  const W = 160, H = 160;
+  const inC = document.getElementById('inCanvas');
+  const outC = document.getElementById('outCanvas');
+  const histC = document.getElementById('histCanvas');
+  const hctx = histC.getContext('2d');
+
+  let gray = VTK.synthImage('cells', W, H);
+  let hist = VTK.histogram(gray);
+  let T = 128, invert = false;
+
+  // --- controls via the kit ---
+  const sld = VTK.slider({
+    label: 'threshold T', min: 0, max: 255, value: T,
+    onInput: v => { T = v; refresh(); }
+  });
+  document.getElementById('sliderRow').appendChild(sld.wrap);
+
+  const imgRow = VTK.toggleRow({
+    label: 'test image', active: 'cells',
+    options: [{ id: 'cells', label: 'Cells (bimodal)' }, { id: 'lowcontrast', label: 'Low contrast' }, { id: 'shapes', label: 'Shapes' }, { id: 'gradient', label: 'Gradient' }],
+    onChange: id => { gray = VTK.synthImage(id, W, H); hist = VTK.histogram(gray); VTK.paintGray(inC, gray); refresh(); }
+  });
+  document.getElementById('imgRow').appendChild(imgRow.wrap);
+
+  const invRow = VTK.toggleRow({
+    label: 'output', active: 'normal',
+    options: [{ id: 'normal', label: 'object = white' }, { id: 'inv', label: 'object = black' }],
+    onChange: id => { invert = (id === 'inv'); refresh(); }
+  });
+  document.getElementById('invRow').appendChild(invRow.wrap);
+
+  // --- histogram drawing ---
+  function drawHist() {
+    const cw = histC.width, ch = histC.height, pad = 8;
+    hctx.fillStyle = '#1c1812'; hctx.fillRect(0, 0, cw, ch);
+    let max = 0; for (let i = 0; i < 256; i++) if (hist[i] > max) max = hist[i];
+    const bw = (cw - pad * 2) / 256;
+    for (let i = 0; i < 256; i++) {
+      const h = max ? (hist[i] / max) * (ch - pad * 2) : 0;
+      const x = pad + i * bw;
+      // colour bars by which side of T they fall (mirrors the binary output)
+      hctx.fillStyle = (i >= T) ? '#7fd0c9' : '#e0a96d';
+      hctx.fillRect(x, ch - pad - h, Math.max(1, bw), h);
+    }
+    // threshold line
+    const tx = pad + T * bw;
+    hctx.strokeStyle = '#a371f7'; hctx.lineWidth = 2;
+    hctx.beginPath(); hctx.moveTo(tx, 2); hctx.lineTo(tx, ch - 2); hctx.stroke();
+    hctx.fillStyle = '#a371f7'; hctx.font = 'bold 12px monospace';
+    hctx.fillText('T=' + T, Math.min(tx + 5, cw - 50), 16);
+    // axis labels
+    hctx.fillStyle = '#8a7f6a'; hctx.font = '10px monospace';
+    hctx.fillText('0', pad, ch - 1); hctx.fillText('255', cw - 24, ch - 1);
+  }
+
+  // --- drag on histogram to set T ---
+  function setTfromEvent(e) {
+    const { x } = VTK.canvasXY(histC, e);
+    const pad = 8, bw = (histC.width - pad * 2) / 256;
+    T = VTK.clamp(Math.round((x - pad) / bw), 0, 255);
+    sld.value = T; refresh();
+  }
+  let dragging = false;
+  histC.addEventListener('mousedown', e => { dragging = true; setTfromEvent(e); });
+  window.addEventListener('mousemove', e => { if (dragging) setTfromEvent(e); });
+  window.addEventListener('mouseup', () => { dragging = false; });
+
+  // --- auto-pick (animated isodata) ---
+  document.getElementById('autoBtn').onclick = () => {
+    // animate the iteration so you see it converge
+    let cur = 127, steps = [];
+    for (let it = 0; it < 60; it++) {
+      let sL = 0, nL = 0, sH = 0, nH = 0;
+      for (let i = 0; i < 256; i++) { if (i < cur) { sL += i * hist[i]; nL += hist[i]; } else { sH += i * hist[i]; nH += hist[i]; } }
+      const muL = nL ? sL / nL : 0, muH = nH ? sH / nH : 0;
+      const nT = Math.round((muL + muH) / 2);
+      steps.push(nT); if (nT === cur) break; cur = nT;
+    }
+    let k = 0;
+    const tick = () => { if (k >= steps.length) return; T = steps[k++]; sld.value = T; refresh(); setTimeout(tick, 220); };
+    tick();
+  };
+
+  // --- refresh everything ---
+  function refresh() {
+    VTK.paintBinary(outC, gray, T, invert);
+    drawHist();
+    let below = 0, above = 0;
+    for (let i = 0; i < 256; i++) (i < T ? below += hist[i] : above += hist[i]);
+    const tot = below + above;
+    document.getElementById('stat').innerHTML =
+      `threshold <b>T = ${T}</b><br>` +
+      `<span class="dark-sw">below T (→ ${invert ? 'white' : 'black'}):</span> ${below.toLocaleString()} px (${(below / tot * 100).toFixed(1)}%)<br>` +
+      `<span class="light-sw">≥ T (→ ${invert ? 'black' : 'white'}):</span> ${above.toLocaleString()} px (${(above / tot * 100).toFixed(1)}%)`;
+  }
+
+  // init
+  VTK.paintGray(inC, gray);
+  refresh();
+})();
+</script>
+</body>
+</html>

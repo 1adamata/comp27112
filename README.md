@@ -19,6 +19,8 @@ visual-textbook/
 │                                     drill cards, equations, pipelines…)
 ├── weeks/
 │   └── comp27112-week1.html        ← Week 1 — "The Image, Decoded"
+├── widgets/
+│   └── convolution-playground.html ← standalone interactive blocks (reusable)
 ├── templates/
 │   └── week-template.html          ← copy this to start a new week
 └── README.md
@@ -115,3 +117,52 @@ range-slider / button controls for interactive widgets.
 ---
 
 *Built as a study tool. Clone it, study it, fork it, improve it.*
+
+---
+
+## ∗ Interactive widgets
+
+`widgets/` holds standalone, pokeable blocks (each links the shared `house.css`).
+They open on their own *or* can be embedded into a week page. First one:
+
+- **`convolution-playground.html`** — edit a 3×3 kernel, watch blur / sharpen /
+  edge-detect / Sobel emerge live, hover any pixel to see the nine multiply-adds.
+- **`histogram-threshold.html`** — drag a threshold across a live histogram, watch
+  the binary output update, and auto-pick T with the iterative method.
+- **`opencv-lab.html`** — real **OpenCV.js** (WebAssembly): upload a photo and run
+  genuine `threshold` / `Canny` / `GaussianBlur` / `Sobel`, with matching C++ code.
+  *(Must be served — `python3 -m http.server` or Vercel — not opened via file://.)*
+
+New widgets are quick to build because of **`assets/widget.js`** (the "VTK" kit):
+vanilla, dependency-free helpers — `synthImage`, `paintGray`, `paintBinary`,
+`histogram`, `isodataThreshold`, `slider`, `toggleRow`, `canvasXY`. They emit DOM
+that `house.css` already styles, so a new widget is a few dozen lines, not a few
+hundred. Load it with `<script src="../assets/widget.js"></script>`.
+
+To embed a widget into a week, copy its `<section>` markup and `<script>` into the
+week file — the styling comes from `house.css` for free.
+
+---
+
+## 🔀 Turn this into a PR / push it up
+
+This zip ships with git **already initialised on a branch** (`add-convolution-widget`)
+with the changes committed. To publish:
+
+```bash
+cd visual-textbook
+
+# point at your GitHub repo (first time only)
+git remote add origin https://github.com/<you>/<repo>.git
+
+# push the feature branch and open a PR
+git push -u origin add-convolution-widget
+# GitHub will print a "Compare & pull request" link — click it.
+```
+
+If you're starting a brand-new repo instead, just:
+
+```bash
+git branch -M main
+git push -u origin main
+```

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- COURSE: COMP27112 | TOPIC: OpenCV | CONCEPT: real OpenCV.js operations -->
+<title>COMP27112 · OpenCV Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/house.css">
+<style>
+  .cv-wrap{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+  @media(max-width:820px){.cv-wrap{grid-template-columns:1fr}}
+  .canvas-col{display:flex;flex-direction:column;gap:6px}
+  .canvas-col canvas{width:100%;max-width:340px;border-radius:8px;border:1px solid var(--line);background:#222;display:block}
+  .clab{font-family:"IBM Plex Mono";font-size:12px;color:var(--ink-soft);text-align:center}
+  #cvStatus{font-family:"IBM Plex Mono";font-size:13px;padding:10px 14px;border-radius:8px;margin:10px 0;display:flex;align-items:center;gap:10px}
+  #cvStatus.loading{background:rgba(200,155,60,.12);border:1px solid var(--gold);color:#8a6a14}
+  #cvStatus.ready{background:rgba(47,125,79,.12);border:1px solid var(--good);color:var(--good)}
+  #cvStatus.err{background:rgba(162,59,45,.12);border:1px solid var(--bad);color:var(--bad)}
+  .spin{width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:sp 0.8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .filebtn{display:inline-block;font-family:"IBM Plex Mono";font-size:13px;font-weight:600;padding:8px 16px;border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:8px;cursor:pointer}
+  .filebtn:hover{background:var(--purple);border-color:var(--purple)}
+  input[type=file]{display:none}
+</style>
+</head>
+<body>
+
+<nav class="toc">
+  <div class="inner">
+    <span class="brand">COMP27112 · WIDGET</span>
+    <a href="../index.html">← Shelf</a>
+    <a href="#lab">The Lab</a>
+    <a href="#cpp">Same code, C++</a>
+    <a href="#exam">Exam framing</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="deco">cv</div>
+    <div class="kicker">OpenCV · the real library</div>
+    <h1>Real OpenCV,<br><em>in the page.</em></h1>
+    <p class="sub">This runs <b>OpenCV.js</b> — the actual OpenCV C++ library compiled to WebAssembly. Upload a photo and call genuine <span class="mono" style="font-size:.85em">cv.threshold</span>, <span class="mono" style="font-size:.85em">cv.Canny</span>, <span class="mono" style="font-size:.85em">cv.GaussianBlur</span> — the exact functions from your C/C++ assignments.</p>
+    <div class="meta">
+      <span class="chip a">Image Processing</span>
+      <span class="chip">WebAssembly · no server</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section id="lab">
+    <div class="sec-head"><span class="sec-num">cv</span><h2>The lab</h2></div>
+    <p class="lead">Pick an operation, tweak its parameters, and the output recomputes with real OpenCV. Upload your own image, or use the built-in one.</p>
+
+    <div id="cvStatus" class="loading"><span class="spin"></span> Loading OpenCV (~8&nbsp;MB, first load only)…</div>
+
+    <div class="flag" style="margin-bottom:16px">
+      <span class="tag note">NEEDS A SERVER</span>
+      <p class="small" style="margin:6px 0 0">WebAssembly won't load by double-clicking the file. Run <span class="mono">python3 -m http.server</span> in the project folder and open <span class="mono">http://localhost:8000/widgets/opencv-lab.html</span>, or just view it on your deployed Vercel site.</p>
+    </div>
+
+    <div class="card">
+      <div class="control">
+        <label class="filebtn" for="fileIn">⬆ Upload an image</label>
+        <input type="file" id="fileIn" accept="image/*">
+        <span class="small" id="fileName">using built-in sample</span>
+      </div>
+
+      <div id="opRow"></div>
+      <div id="paramRow"></div>
+
+      <div class="cv-wrap" style="margin-top:14px">
+        <div class="canvas-col">
+          <canvas id="srcCanvas"></canvas>
+          <div class="clab">input</div>
+        </div>
+        <div class="canvas-col">
+          <canvas id="dstCanvas"></canvas>
+          <div class="clab">output (real OpenCV)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ C++ EQUIVALENT ============ -->
+  <section id="cpp">
+    <div class="sec-head"><span class="sec-num">↔</span><h2>The <em style="font-style:italic;font-weight:500">same</em> code in C++</h2></div>
+    <p class="lead">OpenCV.js mirrors the C++ API almost 1:1. What you just ran is what you'll write for the IP assignment — here it is in the language that's actually marked.</p>
+    <div class="card">
+      <h3 id="cppTitle">Greyscale</h3>
+      <pre id="cppCode"></pre>
+      <p class="small">Same function names, same argument order. The JS differences: you pass <span class="mono">new cv.Size(k,k)</span> instead of <span class="mono">Size(k,k)</span>, constants live on <span class="mono">cv.*</span>, and you must <span class="mono">.delete()</span> every Mat (no garbage collection for WASM memory).</p>
+    </div>
+  </section>
+
+  <!-- ============ EXAM ============ -->
+  <section id="exam" style="border-bottom:none">
+    <div class="sec-head"><span class="sec-num">?</span><h2>Exam framing</h2></div>
+    <div class="exam-box">
+      <span class="lbl">What gets asked</span>
+      <p style="margin:6px 0 0">"Outline the structure of an OpenCV program." Answer: <b>read</b> (<span class="mono">imread</span>) → <b>check it loaded</b> → <b>process</b> (a function call or per-pixel loop over rows then columns) → <b>write/show</b> (<span class="mono">imwrite</span>). Note an image is stored in a <span class="mono">Mat</span>, indexed <b>(row, col)</b>.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="footer">
+  <div class="wrap">
+    <div class="big">That's the real thing.</div>
+    <p class="small">OpenCV.js (WebAssembly), loaded from the official CDN. <a href="../index.html">← back to the shelf</a></p>
+  </div>
+</div>
+
+<script src="../assets/widget.js"></script>
+<script>
+/* ---- operation definitions: live OpenCV + matching C++ ---- */
+const OPS = {
+  grey: {
+    label: 'Greyscale', title: 'Greyscale',
+    params: [],
+    cpp: () =>
+`Mat gray;
+cvtColor(input, gray, COLOR_BGR2GRAY);
+imwrite("out.png", gray);`,
+    run: (src, p) => {
+      const dst = new cv.Mat();
+      cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
+      return dst;
+    }
+  },
+  thresh: {
+    label: 'Threshold', title: 'Binary threshold',
+    params: [{ id: 'T', label: 'threshold T', min: 0, max: 255, value: 128 }],
+    cpp: (p) =>
+`Mat gray, bin;
+cvtColor(input, gray, COLOR_BGR2GRAY);
+threshold(gray, bin, ${p.T}, 255, THRESH_BINARY);`,
+    run: (src, p) => {
+      const gray = new cv.Mat(), dst = new cv.Mat();
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      cv.threshold(gray, dst, p.T, 255, cv.THRESH_BINARY);
+      gray.delete();
+      return dst;
+    }
+  },
+  otsu: {
+    label: 'Otsu (auto T)', title: 'Otsu automatic threshold',
+    params: [],
+    cpp: () =>
+`Mat gray, bin;
+cvtColor(input, gray, COLOR_BGR2GRAY);
+// 0 is ignored; Otsu picks T for you
+threshold(gray, bin, 0, 255, THRESH_BINARY | THRESH_OTSU);`,
+    run: (src) => {
+      const gray = new cv.Mat(), dst = new cv.Mat();
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      cv.threshold(gray, dst, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
+      gray.delete();
+      return dst;
+    }
+  },
+  blur: {
+    label: 'Gaussian blur', title: 'Gaussian blur',
+    params: [{ id: 'k', label: 'kernel (odd)', min: 1, max: 31, value: 9, step: 2 }],
+    cpp: (p) =>
+`Mat out;
+GaussianBlur(input, out, Size(${p.k}, ${p.k}), 0);`,
+    run: (src, p) => {
+      const dst = new cv.Mat();
+      const k = p.k % 2 ? p.k : p.k + 1;
+      cv.GaussianBlur(src, dst, new cv.Size(k, k), 0, 0, cv.BORDER_DEFAULT);
+      return dst;
+    }
+  },
+  canny: {
+    label: 'Canny edges', title: 'Canny edge detection',
+    params: [
+      { id: 'lo', label: 'low threshold', min: 0, max: 255, value: 50 },
+      { id: 'hi', label: 'high threshold', min: 0, max: 255, value: 120 }
+    ],
+    cpp: (p) =>
+`Mat gray, edges;
+cvtColor(input, gray, COLOR_BGR2GRAY);
+Canny(gray, edges, ${p.lo}, ${p.hi});`,
+    run: (src, p) => {
+      const gray = new cv.Mat(), dst = new cv.Mat();
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      cv.Canny(gray, dst, p.lo, p.hi);
+      gray.delete();
+      return dst;
+    }
+  },
+  sobel: {
+    label: 'Sobel', title: 'Sobel gradient (magnitude)',
+    params: [],
+    cpp: () =>
+`Mat gray, gx, gy, mag;
+cvtColor(input, gray, COLOR_BGR2GRAY);
+Sobel(gray, gx, CV_16S, 1, 0);
+Sobel(gray, gy, CV_16S, 0, 1);
+convertScaleAbs(gx, gx);
+convertScaleAbs(gy, gy);
+addWeighted(gx, 0.5, gy, 0.5, 0, mag);`,
+    run: (src) => {
+      const gray = new cv.Mat(), gx = new cv.Mat(), gy = new cv.Mat(),
+            ax = new cv.Mat(), ay = new cv.Mat(), dst = new cv.Mat();
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      cv.Sobel(gray, gx, cv.CV_16S, 1, 0, 3);
+      cv.Sobel(gray, gy, cv.CV_16S, 0, 1, 3);
+      cv.convertScaleAbs(gx, ax);
+      cv.convertScaleAbs(gy, ay);
+      cv.addWeighted(ax, 0.5, ay, 0.5, 0, dst);
+      gray.delete(); gx.delete(); gy.delete(); ax.delete(); ay.delete();
+      return dst;
+    }
+  }
+};
+
+/* ---- state + UI (controls via the VTK kit) ---- */
+let cvReady = false, srcMat = null, curOp = 'grey', params = {};
+const srcCanvas = document.getElementById('srcCanvas');
+const dstCanvas = document.getElementById('dstCanvas');
+
+const opRow = VTK.toggleRow({
+  label: 'operation', active: 'grey',
+  options: Object.keys(OPS).map(id => ({ id, label: OPS[id].label })),
+  onChange: id => { curOp = id; buildParams(); run(); }
+});
+document.getElementById('opRow').appendChild(opRow.wrap);
+
+const paramHost = document.getElementById('paramRow');
+function buildParams() {
+  paramHost.innerHTML = '';
+  params = {};
+  OPS[curOp].params.forEach(pdef => {
+    params[pdef.id] = pdef.value;
+    const s = VTK.slider({
+      label: pdef.label, min: pdef.min, max: pdef.max, value: pdef.value, step: pdef.step || 1,
+      onInput: v => { params[pdef.id] = v; run(); }
+    });
+    paramHost.appendChild(s.wrap);
+  });
+}
+
+/* ---- default sample image (drawn, colourful so ops are meaningful) ---- */
+function drawSample() {
+  const W = 320, H = 240;
+  srcCanvas.width = W; srcCanvas.height = H;
+  const t = srcCanvas.getContext('2d');
+  const g = t.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#4a6fa5'); g.addColorStop(1, '#2a3b54');
+  t.fillStyle = g; t.fillRect(0, 0, W, H);
+  t.fillStyle = '#e8c84a'; t.beginPath(); t.arc(90, 90, 46, 0, 7); t.fill();      // sun
+  t.fillStyle = '#c0392b'; t.fillRect(180, 60, 90, 90);                            // red square
+  t.fillStyle = '#27ae60'; t.beginPath(); t.moveTo(60, 210); t.lineTo(150, 120); t.lineTo(240, 210); t.closePath(); t.fill(); // triangle
+  t.strokeStyle = '#ecf0f1'; t.lineWidth = 6; t.beginPath(); t.moveTo(20, 200); t.lineTo(300, 170); t.stroke(); // line
+}
+
+function loadMatFromCanvas() {
+  if (srcMat) { srcMat.delete(); srcMat = null; }
+  if (cvReady) srcMat = cv.imread(srcCanvas);
+}
+
+/* ---- run the current operation ---- */
+function run() {
+  document.getElementById('cppTitle').textContent = OPS[curOp].title;
+  document.getElementById('cppCode').textContent = OPS[curOp].cpp(params);
+  if (!cvReady || !srcMat) return;
+  let dst;
+  try {
+    dst = OPS[curOp].run(srcMat, params);
+    dstCanvas.width = srcCanvas.width; dstCanvas.height = srcCanvas.height;
+    cv.imshow(dstCanvas, dst);
+  } catch (err) {
+    setStatus('err', 'OpenCV error: ' + err.message);
+  } finally {
+    if (dst) dst.delete();
+  }
+}
+
+/* ---- file upload ---- */
+document.getElementById('fileIn').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  document.getElementById('fileName').textContent = f.name;
+  const img = new Image();
+  img.onload = () => {
+    const maxW = 360, scale = Math.min(1, maxW / img.width);
+    srcCanvas.width = Math.round(img.width * scale);
+    srcCanvas.height = Math.round(img.height * scale);
+    srcCanvas.getContext('2d').drawImage(img, 0, 0, srcCanvas.width, srcCanvas.height);
+    loadMatFromCanvas(); run();
+    URL.revokeObjectURL(img.src);
+  };
+  img.src = URL.createObjectURL(f);
+});
+
+/* ---- status helper ---- */
+function setStatus(kind, html) {
+  const s = document.getElementById('cvStatus');
+  s.className = kind;
+  s.innerHTML = (kind === 'loading' ? '<span class="spin"></span> ' : kind === 'ready' ? '✓ ' : '✕ ') + html;
+}
+
+/* ---- boot ---- */
+drawSample();
+buildParams();
+run(); // shows C++ even before OpenCV finishes loading
+
+function start() {
+  cvReady = true;
+  setStatus('ready', 'OpenCV ready — upload an image or pick an operation.');
+  loadMatFromCanvas();
+  run();
+}
+function onOpenCvReady() {
+  if (typeof cv === 'undefined') { setStatus('err', 'OpenCV failed to load.'); return; }
+  if (cv instanceof Promise) { cv.then(m => { window.cv = m; start(); }); }
+  else if (cv.Mat) { start(); }
+  else { cv['onRuntimeInitialized'] = start; }
+}
+</script>
+<!-- official OpenCV.js (WebAssembly) from the OpenCV CDN -->
+<script async src="https://docs.opencv.org/4.10.0/opencv.js" onload="onOpenCvReady()" onerror="document.getElementById('cvStatus').className='err';document.getElementById('cvStatus').textContent='✕ Could not reach the OpenCV CDN (check your connection).'"></script>
+</body>
+</html>
