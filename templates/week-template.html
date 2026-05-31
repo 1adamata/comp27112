@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMP27112 · Week N — TITLE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/house.css">
+</head>
+<body>
+
+<!-- sticky table of contents -->
+<nav class="toc">
+  <div class="inner">
+    <span class="brand">COMP27112 · WKn</span>
+    <a href="../index.html">← Shelf</a>
+    <a href="#one">Section one</a>
+    <a href="#two">Section two</a>
+  </div>
+</nav>
+
+<!-- hero -->
+<header class="hero">
+  <div class="wrap">
+    <div class="deco">0n</div>
+    <div class="kicker">Topic · Week n</div>
+    <h1>Big title,<br><em>understood.</em></h1>
+    <p class="sub">One sentence on what this week covers and why it matters for the exam.</p>
+    <div class="meta">
+      <span class="chip">key fact</span>
+      <span class="chip a">Image Processing</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ SECTION ============ -->
+  <section id="one">
+    <div class="sec-head"><span class="sec-num">1</span><h2>Section heading</h2></div>
+    <p class="lead">The framing line that tells you what you're about to learn.</p>
+
+    <!-- a content card -->
+    <div class="card">
+      <h3>Card title</h3>
+      <p>Body text. Use <b>bold</b> for the bits the examiner cares about.</p>
+      <ul class="clean small"><li>point one</li><li>point two</li></ul>
+    </div>
+
+    <!-- a formula -->
+    <div class="eq">result = <span class="hl">f</span>(<span class="v">x</span>)   <span style="color:#8a7f6a">// note</span></div>
+
+    <!-- a memory hook -->
+    <div class="hook">
+      <span class="lbl">🧠 Memory hook — "..."</span>
+      <p style="margin:6px 0 0">A mnemonic or one-liner that makes it stick.</p>
+    </div>
+
+    <!-- an exam-framing box -->
+    <div class="exam-box">
+      <span class="lbl">Exam framing</span>
+      <p style="margin:6px 0 0">How this gets asked, and the answer shape that scores marks.</p>
+    </div>
+  </section>
+
+  <!-- ============ EXAM DRILL ============ -->
+  <section id="two">
+    <div class="sec-head"><span class="sec-num">2</span><h2>Exam drill</h2></div>
+    <p class="lead">Click a card to reveal the answer.</p>
+
+    <div class="drill" data-d>
+      <div class="q"><span class="marks">[4]</span><div>A practice question goes here.</div></div>
+      <div class="reveal">▼ click to reveal</div>
+      <div class="a"><div class="inner">The model answer. <ul><li>key point</li><li>key point</li></ul></div></div>
+    </div>
+  </section>
+
+</div>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="big">Week n done.</div>
+    <p class="small"><a href="../index.html">← back to the shelf</a></p>
+  </div>
+</footer>
+
+<script>
+/* drill flashcards — shared behaviour */
+document.querySelectorAll('[data-d]').forEach(d=>{
+  d.addEventListener('click',()=>d.classList.toggle('open'));
+});
+/* add week-specific interactive canvases / sliders below */
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# OS
+.DS_Store
+Thumbs.db
+# editor
+.vscode/
+# deploy
+.vercel
+# node (only if you later add tooling)
+node_modules/

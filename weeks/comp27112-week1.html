@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMP27112 · Week 1 — Visual Computing Study Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/house.css">
+</head>
+<body>
+
+<nav class="toc">
+  <div class="inner">
+    <span class="brand">COMP27112 · WK1</span>
+    <a href="#unit">Unit</a>
+    <a href="#what">What is IP</a>
+    <a href="#history">History</a>
+    <a href="#apps">Applications</a>
+    <a href="#pipeline">CV System</a>
+    <a href="#repr">Representation</a>
+    <a href="#mem">Memory Calc</a>
+    <a href="#rgb">RGB / Grey</a>
+    <a href="#coords">Coordinates</a>
+    <a href="#point">Point Proc</a>
+    <a href="#opencv">OpenCV</a>
+    <a href="#colour">Colour</a>
+    <a href="#drill">Exam Drill</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="deco">01</div>
+    <div class="kicker">Introduction to Visual Computing · Week 1</div>
+    <h1>The Image,<br><em>Decoded.</em></h1>
+    <p class="sub">Everything from the unit intro, Image-Processing Lecture 1 (parts 1.1–1.3), and Tim Morris's handout Chapter 1 — taught so you <em>understand</em> it, then drilled so you can answer it.</p>
+    <div class="meta">
+      <span class="chip">2-hour closed-book exam · 70%</span>
+      <span class="chip p">½ Computer Graphics · ½ Image Processing</span>
+      <span class="chip a">No calculator</span>
+      <span class="chip">~25 questions</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ============ 1. THE UNIT ============ -->
+<section id="unit">
+  <div class="sec-head"><span class="sec-num">1</span><h2>The Unit — the rules of the game</h2></div>
+  <p class="lead">Before any pixels: know how you're graded and what's even examinable. Examiners love a "describe the structure of the unit / what is it composed of" gimme — don't drop free marks.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Two halves, one exam</h3>
+      <div class="split-accent">
+        <div class="ip">
+          <h4 style="color:var(--amber)">Image Processing</h4>
+          <p class="small"><b>Dr Terence Morley.</b> Manipulate a digital image to produce another image. Notes are extracts from <em>Tim Morris's</em> book.</p>
+        </div>
+        <div class="cg">
+          <h4 style="color:var(--teal)">Computer Graphics</h4>
+          <p class="small"><b>Dr David Petrescu.</b> Synthesise images from 3D models. Suggested text: Marschner &amp; Shirley, <em>Fundamentals of Computer Graphics</em>.</p>
+        </div>
+      </div>
+      <p class="small">The exam is split <b>roughly evenly</b> between the two. This guide is the IP side of Week 1, but the unit-level facts below are fair game for either examiner.</p>
+    </div>
+
+    <div class="card">
+      <h3>Assessment weighting</h3>
+      <table>
+        <tr><th>Component</th><th>Weight</th></tr>
+        <tr><td>One 2-hour exam</td><td><b>70%</b></td></tr>
+        <tr><td>2 summative assignments</td><td>15% each (30%)</td></tr>
+        <tr><td>Weekly quizzes</td><td>0% (formative)</td></tr>
+      </table>
+      <ul class="clean small">
+        <li>4 assignments total: 1 formative + 1 summative per half. Do the <b>formative</b> first — you get a model answer, and it makes the summative easier.</li>
+        <li>IP assignments: <b>C/C++ with OpenCV only</b> (Python is allowed in the library, but not for this course's marks).</li>
+        <li><span class="tag note">CRITICAL</span> You are assessed <b>only on content provided on Canvas.</b> Textbooks aid understanding but aren't extra examinable scope.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="hook">
+    <span class="lbl">🧠 Memory hook — "70/15/15/0"</span>
+    <p style="margin:6px 0 0">Exam <b>70</b>, two assignments <b>15</b> each, quizzes <b>0</b>. The two 15s also map to the two halves (IP + CG). One number to remember, everything hangs off it.</p>
+  </div>
+
+  <div class="card">
+    <h3>The whole IP course in one road-map</h3>
+    <p class="small">Lecture 1 previews the four-layer arc you'll spend the term climbing. Knowing where a topic <em>sits</em> helps you give the examiner the right context.</p>
+    <div class="grid2">
+      <div>
+        <h4 style="color:var(--amber);font-size:17px">① Image Representation</h4>
+        <ul class="clean small"><li>History · what can we do?</li><li>Resolution</li><li>Colour</li></ul>
+        <h4 style="color:var(--amber);font-size:17px;margin-top:10px">② Point Processing</h4>
+        <ul class="clean small"><li>Grey-value transforms (brightness, contrast)</li><li>Histogram · Thresholding</li><li>Coordinate transforms — Affine &amp; Non-Affine</li></ul>
+      </div>
+      <div>
+        <h4 style="color:var(--amber);font-size:17px">③ Region Processing</h4>
+        <ul class="clean small"><li>Convolution · Smoothing</li><li>Edge detection · Template matching</li><li>Rank-order filters (e.g. median)</li></ul>
+        <h4 style="color:var(--amber);font-size:17px;margin-top:10px">④ Image Processing (analysis)</h4>
+        <ul class="clean small"><li>Region description</li><li>Finding blobs</li><li>Measurements</li></ul>
+      </div>
+    </div>
+    <p class="small" style="margin-top:8px"><b>The escalation:</b> a <em>point</em> operation looks at one pixel at a time → a <em>region</em> operation looks at a pixel <em>and its neighbours</em> → <em>image</em> analysis looks at whole structures (blobs, regions) and extracts numbers. That "point → region → whole image" ladder is worth stating in an essay.</p>
+  </div>
+
+  <div class="card">
+    <h3>A taste of the maths to come</h3>
+    <p class="small">Lecture 1 flashes three equations to reassure you they "keep it simple." You'll meet all three later — file them now:</p>
+    <div class="eq">I<span class="v">R</span> = k<span class="v">aR</span>·I<span class="v">aR</span> + (I<span class="v">pR</span>/d′)·[ k<span class="v">dR</span>(<span class="hl">N̂·L̂</span>) + k<span class="v">s</span>(<span class="hl">R̂·V̂</span>)<sup>n</sup> ]   <span style="color:#8a7f6a">// the lighting/shading equation (CG)</span></div>
+    <div class="eq">θ = (μ<span class="v">L</span> + μ<span class="v">H</span>) / 2   <span style="color:#8a7f6a">// iterative threshold selection (IP)</span></div>
+    <div class="eq">[x′ y′ z′ 1]ᵀ = diag(S<span class="v">x</span>,S<span class="v">y</span>,S<span class="v">z</span>,1) · [x y z 1]ᵀ   <span style="color:#8a7f6a">// 4×4 scaling matrix (CG)</span></div>
+    <p class="small">Notice IP and CG <b>share mathematical machinery</b> (vectors, matrices, transforms). That overlap — "related and complementary, often used together, e.g. Augmented Reality" — is a classic short-answer.</p>
+  </div>
+</section>
+
+<!-- ============ 2. WHAT IS IP ============ -->
+<section id="what">
+  <div class="sec-head"><span class="sec-num">2</span><h2>What <em style="font-style:italic;font-weight:500">is</em> image processing?</h2></div>
+  <p class="lead">Two layers here: a textbook one-liner (good for a 1-mark definition), and the deeper IP-vs-Computer-Vision distinction from Tim's Chapter 1 (good for a 3–4 mark question that separates students who skimmed from those who read).</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>The definitions <span class="tag exam">1-MARK</span></h3>
+      <p><b>Collins:</b> "the manipulation or modification of a digitized image, esp. in order to enhance its quality."</p>
+      <p class="small" style="margin-top:10px"><b>Encyclopaedia Britannica (fuller):</b> a set of computational techniques for <b>analyzing, enhancing, compressing, and reconstructing</b> images. Three components:</p>
+      <ul class="clean small">
+        <li><b>Importing</b> — capture via scanning or digital photography</li>
+        <li><b>Analysis &amp; manipulation</b> — using specialised software</li>
+        <li><b>Output</b> — to a printer or monitor</li>
+      </ul>
+      <p class="small">Applications: astronomy, medicine, industrial robotics, remote sensing by satellites.</p>
+    </div>
+
+    <div class="card" style="border-color:var(--teal)">
+      <h3>Image Processing vs Computer Vision <span class="tag tim">TIM Ch.1</span></h3>
+      <p class="small">This is the distinction the handout opens with — and it's the cleanest way to define the field.</p>
+      <table>
+        <tr><th>Image Processing</th><th>Computer Vision</th></tr>
+        <tr><td>image <b>in</b> → image <b>out</b></td><td>image <b>in</b> → <b>numbers/symbols</b> out</td></tr>
+        <tr><td>"make a second image that differs from the first"</td><td>"extract numerical or symbolic information"</td></tr>
+      </table>
+      <p class="small"><b>Tim's worked example — weather radar:</b><br>
+      • Convert rainfall-intensity data into a colour image → that's <b>image processing</b>.<br>
+      • Interpret it to recognise high-rainfall / flood-risk areas or weather systems → that's <b>computer vision</b>.</p>
+      <div class="flag" style="margin-top:8px">
+        <span class="tag note">SOURCE NUANCE</span>
+        <p class="small" style="margin:6px 0 0">These are <b>young disciplines with no firm agreed boundary</b> — that's why the two overlap. Tim explicitly says alternative definitions exist. Stating "the boundary is least distinct between IP and CV" shows you read past the slide.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="hook">
+    <span class="lbl">🧠 Memory hook — "Pixels in, pixels out vs Pixels in, knowledge out"</span>
+    <p style="margin:6px 0 0">IP transforms an image into another <em>image</em>. CV squeezes an image into <em>information</em> (a number, a label, "this is an A"). If the answer is still a picture, it's processing; if the answer is a fact, it's vision.</p>
+  </div>
+</section>
+
+<!-- ============ 3. HISTORY ============ -->
+<section id="history">
+  <div class="sec-head"><span class="sec-num">3</span><h2>A short history</h2></div>
+  <p class="lead">Two dates, two drivers. Examiners rarely ask history for many marks, but a date and "why" sentence is cheap insurance and good essay seasoning.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>1920s — across the Atlantic <span class="tag tim">TIM</span></h3>
+      <p>The <b>first digital image</b> appeared in the 1920s: photographs were converted to a <b>numerical format</b> and transmitted by Morse code across the Atlantic by telegraph — the <b>Bartlane</b> system.</p>
+      <ul class="clean small">
+        <li>Photo split into small areas; each given a numerical code based on its brightness distribution.</li>
+        <li>Code transmitted, then photo <b>reconstructed using specially designed printing blocks</b>.</li>
+        <li><b>Why it mattered:</b> hours to code/transmit/print — but the alternative (steamship) took <b>over a week</b>.</li>
+        <li>Conceptually unchanged for ~50 years; only the hardware got faster.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>1960s — the space race</h3>
+      <p>Major advances began in the 1960s. The <b>US and Russian space programmes</b> generated huge amounts of image data that needed:</p>
+      <ul class="clean small">
+        <li><b>Artefacts removed</b> (clean up sensor/transmission damage)</li>
+        <li><b>Enhancement</b> for human viewing</li>
+      </ul>
+      <p class="small">Simultaneously, computers finally became powerful enough to <b>store, process and display</b> images in realistic time. Since then, falling hardware cost pushed IP/CV out of government &amp; university labs into <b>everyday life</b> — entertainment, news, medical devices, science.</p>
+    </div>
+  </div>
+
+  <!-- simple timeline SVG -->
+  <div class="card">
+    <h3>Timeline at a glance</h3>
+    <svg viewBox="0 0 900 130" style="width:100%;height:auto">
+      <line x1="40" y1="80" x2="860" y2="80" stroke="var(--ink)" stroke-width="3"/>
+      <g font-family="IBM Plex Mono" font-size="13">
+        <circle cx="120" cy="80" r="9" fill="var(--amber)"/><text x="120" y="55" text-anchor="middle" font-weight="600">1920s</text><text x="120" y="108" text-anchor="middle" font-size="11" fill="var(--ink-soft)">First digital image</text>
+        <circle cx="420" cy="80" r="9" fill="var(--purple)"/><text x="420" y="55" text-anchor="middle" font-weight="600">1960s</text><text x="420" y="108" text-anchor="middle" font-size="11" fill="var(--ink-soft)">Space-programme boom</text>
+        <circle cx="720" cy="80" r="9" fill="var(--teal)"/><text x="720" y="55" text-anchor="middle" font-weight="600">Today</text><text x="720" y="108" text-anchor="middle" font-size="11" fill="var(--ink-soft)">Phones, medicine, AR</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<!-- ============ 4. APPLICATIONS ============ -->
+<section id="apps">
+  <div class="sec-head"><span class="sec-num">4</span><h2>Sample applications</h2></div>
+  <p class="lead">Tim picks three everyday vision systems. Each one secretly teaches a core technique you'll meet later — so they double as a preview. The slides add medical imaging &amp; forensics.</p>
+
+  <div class="grid3">
+    <div class="card">
+      <h3 style="font-size:20px">① OCR <span class="tag tim">TIM</span></h3>
+      <p class="small">Recognising characters in an image. Three rungs of difficulty:</p>
+      <ul class="clean small">
+        <li><b>Printed text</b> — consistent &amp; regular → recognise by <b>comparison with a prototype/template</b>. (This is <b>template matching</b> — you'll meet it again!) Downside: you need a prototype for <em>every</em> character × case × font × size → a <b>huge</b> number.</li>
+        <li><b>Hand-printed text</b> — lower quality, irregular → can't template it. Instead use <b>structural features</b> (e.g. "A" = a horizontal stroke + two diagonals). Also hard to <b>segment</b> touching/broken characters.</li>
+        <li><b>Cursive (handwritten)</b> — <b>not yet solved</b>: too irregular to template, strokes can't be cleanly isolated.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="font-size:20px">② Biometry <span class="tag tim">TIM</span></h3>
+      <p class="small">Identifying people from physical characteristics in images: fingerprints, face, and notably the <b>iris</b>.</p>
+      <p class="small"><b>Iris pipeline:</b></p>
+      <ul class="clean small">
+        <li>Find the <b>eye</b> in a head-and-shoulders image.</li>
+        <li>Find the iris; <b>resample</b> the annular (ring) region into a rectangle.</li>
+        <li>Resampling uses a <b>constant number of radial samples</b> so pupil dilation (lighting) doesn't change the representation — i.e. <b>size-independent</b>.</li>
+        <li>Numerically transform → a <b>small set of coefficients</b> shown to be unique per person.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="font-size:20px">③ Aerial photography <span class="tag tim">TIM</span></h3>
+      <p class="small">Mapping, land-use analysis &amp; change, etc. Captured from hundreds of metres to hundreds of km.</p>
+      <ul class="clean small">
+        <li>Must record camera <b>location &amp; attitude</b> (where + which way it points).</li>
+        <li>Non-vertical camera → <b>oblique, distorted</b> view.</li>
+        <li><b>Short focal-length (wide) lens</b> distorts periphery — edge objects look larger than they are.</li>
+        <li><b>Mosaic:</b> either fly a level, straight path at regular intervals, or record positions and <b>resample</b> to fake that path; correct optical distortion too.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Plus, from the unit intro — where IP shows up</h3>
+    <p class="small">Medical imaging (MRI/brain scans) · Forensics (lifting fingerprints off documents) · Geometrical transforms · Camera calibration (fish-eye → corrected) · Noise reduction · Edge detection · Connected-component analysis (counting tadpoles!) · Camera exposure (shutter time vs aperture) · Image compression (JPEG quality vs file size) · Hough transform (finding lines &amp; circles). These are the <em>headlines</em> of the whole IP syllabus.</p>
+  </div>
+
+  <div class="hook">
+    <span class="lbl">🧠 Memory hook — "O-B-A" (Oh, Be Aware)</span>
+    <p style="margin:6px 0 0"><b>O</b>CR → templates &amp; features · <b>B</b>iometry → resampling to size-independence · <b>A</b>erial → geometric distortion &amp; mosaicking. Three apps, three foreshadowed techniques.</p>
+  </div>
+</section>
+
+<!-- ============ 5. CV SYSTEM PIPELINE ============ -->
+<section id="pipeline">
+  <div class="sec-head"><span class="sec-num">5</span><h2>The computer-vision system — Tim's road-map</h2></div>
+  <p class="lead">Tim's Figure 1.8: the canonical order of a vision system. This is the skeleton an essay can hang on — "describe the components of an image-processing / vision pipeline" is a very tickable question.</p>
+
+  <div class="pipe">
+    <div class="stage"><div class="n">START</div><h4>Image capture</h4><p>A captured <b>digital image</b>. We discuss capture-device <em>properties</em> but not specific devices. (Ch. 2 = Image Representation: what do we need of the capture device?)</p></div>
+    <div class="stage"><div class="n">STEP 1</div><h4>Enhancement</h4><p>Remove degradations introduced by capture: optical distortion, camera shake/blur, poor illumination, atmospheric loss of clarity.</p></div>
+    <div class="stage"><div class="n">STEP 2</div><h4>Feature extraction</h4><p>Identify structures useful for recognition — e.g. the pixels forming an area, or the straight boundaries between regions.</p></div>
+    <div class="stage"><div class="n">END</div><h4>Feature recognition</h4><p>Use the extracted features to <b>assign a label</b> to the image (or parts of it) by comparing against features from previously labelled objects.</p></div>
+  </div>
+
+  <div class="exam-box">
+    <span class="lbl">Exam framing</span>
+    <p style="margin:6px 0 0">If asked to "outline the stages of a computer-vision system," give the four boxes <b>in order</b> and one line each. Note that <b>enhancement is pure image-processing</b> (image→image), whereas <b>recognition is computer vision</b> (image→label) — tie it back to §2.</p>
+  </div>
+</section>
+
+<!-- ============ 6. IMAGE REPRESENTATION ============ -->
+<section id="repr">
+  <div class="sec-head"><span class="sec-num">6</span><h2>Image representation — resolution &amp; colour depth</h2></div>
+  <p class="lead">An image is a grid of pixels. Two numbers describe it: <b>how many</b> pixels (resolution) and <b>how many bits</b> each pixel carries (colour depth). Everything about memory size falls out of these.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Resolution</h3>
+      <p>The pixel dimensions <b>width × height</b>. The slide's worked example:</p>
+      <div class="eq">12 megapixels → <span class="hl">4272 × 2848</span> = 12,166,656 px</div>
+      <p class="small">"12-megapixel" just means width×height ≈ 12 million. <b>Zooming in far enough reveals the individual pixels</b> — the image is discrete, not continuous. That discreteness is the seed of sampling/aliasing (Week 2+).</p>
+    </div>
+    <div class="card">
+      <h3>Colour depth (bit depth)</h3>
+      <p>How many <b>bits per pixel</b>. 24-bit colour means:</p>
+      <div class="eq">2<sup>24</sup> = <span class="hl">16,777,216</span> colours</div>
+      <p class="small">24-bit = 8 bits each for R, G, B. The number of representable colours is always <b>2<sup>(bit depth)</sup></b>. 8-bit greyscale → 2⁸ = 256 grey levels.</p>
+    </div>
+  </div>
+
+  <div class="hook">
+    <span class="lbl">🧠 The two fundamentals to lock in</span>
+    <p style="margin:6px 0 0"><b>1 byte = 8 bits.</b> &nbsp; <b>An unsigned byte stores 0–255</b> (that's 2⁸ = 256 distinct values, counting from 0). These two facts power every memory-size question on the paper.</p>
+  </div>
+</section>
+
+<!-- ============ 7. MEMORY CALCULATOR ============ -->
+<section id="mem">
+  <div class="sec-head"><span class="sec-num">M</span><h2>Interactive: the memory-size calculator</h2></div>
+  <p class="lead">This calculation recurs across past papers and there's <b>no calculator in the exam</b> — so understand the <em>method</em>, not the answer. Play with it, then practise the worked logic on paper.</p>
+
+  <div class="card">
+    <div class="control"><label>Width (px)</label><input type="number" id="mw" value="4272"><label style="min-width:auto">Height (px)</label><input type="number" id="mh" value="2848"></div>
+    <div class="control"><label>Channels</label>
+      <button class="toggle on" id="chColour">Colour (3 — RGB)</button>
+      <button class="toggle" id="chGrey">Greyscale (1)</button>
+    </div>
+    <div class="control"><label>Bits per channel</label><span class="readout" id="bpcOut">8</span><input type="range" id="bpc" min="1" max="16" value="8"></div>
+    <div id="memWork" class="eq" style="white-space:pre-wrap"></div>
+    <p class="small"><b>Why two MB answers?</b> Decimal MB divides by 1,000,000; binary MiB divides by 1,048,576 (1024×1024). Both appear in exams — quote the one your formula sheet/lecturer uses, and <b>show the working either way</b> for method marks.</p>
+  </div>
+
+  <div class="exam-box">
+    <span class="lbl">The exam-ready recipe (memorise this, not the number)</span>
+    <p style="margin:6px 0 0" class="mono" style="font-size:14px">
+      pixels = W × H<br>
+      bytes&nbsp; = pixels × channels × (bits-per-channel ÷ 8)<br>
+      MB&nbsp;&nbsp;&nbsp;&nbsp;= bytes ÷ 1,048,576&nbsp; (binary)&nbsp; or ÷ 1,000,000 (decimal)
+    </p>
+    <p class="small" style="margin:8px 0 0"><b>Worked, the slide's image:</b> 12,166,656 px × 3 bytes = 36,499,968 bytes ≈ <b>34.8 MiB</b> (÷1,048,576) ≈ <b>36.5 MB</b> (÷1,000,000). Greyscale version is ⅓ of that.</p>
+  </div>
+</section>
+
+<!-- ============ 8. RGB / GREY ============ -->
+<section id="rgb">
+  <div class="sec-head"><span class="sec-num">7</span><h2>RGB &amp; greyscale formats</h2></div>
+  <p class="lead">How the bytes are actually laid out — and why a colour image is exactly three times the size of its greyscale twin.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>RGB — three interleaved channels <span class="tag hi">HIGH-YIELD</span></h3>
+      <p class="small">Per pixel: one byte each for Red, Green, Blue, stored together:</p>
+      <div class="eq">[R G B][R G B][R G B] …  →  <span class="hl">3 bytes / pixel = 24 bits</span></div>
+      <ul class="clean small">
+        <li><b>Bits in a byte?</b> → 8</li>
+        <li><b>Bits per colour pixel?</b> → 24</li>
+        <li><b>A 12 MP colour image?</b> → ≈ 34.8 MiB / 36.5 MB (see calculator)</li>
+      </ul>
+      <p class="small">Splitting an image into R, G, B gives three <b>greyscale</b> images — each shows how much of that primary is present per pixel. A clear blue sky is <b>bright in the blue channel, dark in red</b>.</p>
+      <button class="btn" id="splitBtn" style="margin-top:8px">▶ Show channel split</button>
+      <canvas id="rgbCanvas" width="640" height="180" style="margin-top:12px"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>Greyscale — one intensity channel</h3>
+      <p class="small">A single intensity value <b>I</b> per pixel, <b>1 byte each</b>:</p>
+      <div class="eq">0 ≤ I(x,y) ≤ 255      <span style="color:#8a7f6a">// unsigned byte</span></div>
+      <ul class="clean small">
+        <li><b>0 → black</b>, <b>255 → white</b>, values between → shades of grey.</li>
+        <li><b>Min/max of an unsigned byte?</b> → 0 and 255.</li>
+        <li>⅓ the storage of the RGB version (1 byte vs 3).</li>
+      </ul>
+      <canvas id="greyCanvas" width="320" height="60" style="margin-top:8px"></canvas>
+      <p class="small" style="margin-top:6px">↑ the full 0→255 intensity ramp. Every greyscale pixel is just a point on this strip.</p>
+    </div>
+  </div>
+
+  <div class="flag">
+    <span class="tag note">EASY-TO-CONFUSE</span>
+    <p class="small" style="margin:6px 0 0"><b>Colour depth vs resolution.</b> Resolution = <em>how many</em> pixels (sharpness). Colour depth = <em>how many bits per</em> pixel (range of colours/greys). A huge image at 1-bit depth is still just black-and-white; a tiny image at 24-bit is full-colour.</p>
+  </div>
+</section>
+
+<!-- ============ 9. COORDINATES ============ -->
+<section id="coords">
+  <div class="sec-head"><span class="sec-num">8</span><h2>Origin &amp; coordinates — (x,y) vs (r,c)</h2></div>
+  <p class="lead">A small detail that bites people in code and on the exam. The image origin is the <b>top-left</b>, but there are <em>two</em> conventions for addressing a pixel, and they swap order.</p>
+
+  <div class="card">
+    <div class="control">
+      <button class="toggle on" id="xyBtn">Cartesian (x, y)</button>
+      <button class="toggle" id="rcBtn">Matrix (r, c)</button>
+      <span class="small" style="margin-left:8px">Hover/move over the grid →</span>
+    </div>
+    <div class="grid2" style="align-items:start">
+      <div>
+        <canvas id="coordCanvas" width="420" height="300" style="background:#2a2520;cursor:crosshair"></canvas>
+        <p class="small mono" id="coordReadout" style="margin-top:8px">origin O(0,0) is top-left · move the mouse over the grid</p>
+      </div>
+      <div>
+        <div id="xyExplain">
+          <h3>Cartesian — image as a picture</h3>
+          <ul class="clean small">
+            <li>Origin <b>O(0,0)</b> at top-left. <b>x</b> runs right, <b>y</b> runs <b>down</b>.</li>
+            <li>Pixel address = <b>(x, y)</b> = (column, row).</li>
+            <li>Image size quoted as <b>width × height</b>, e.g. 4272 × 2848.</li>
+          </ul>
+        </div>
+        <div id="rcExplain" style="display:none">
+          <h3>Matrix — image as numbers</h3>
+          <ul class="clean small">
+            <li>Same origin top-left, but indexed <b>(r, c)</b> = (row, column).</li>
+            <li>Size quoted as <b>Rows × Columns</b>, e.g. 2848 × 4272 — the <b>swap</b> of the Cartesian size!</li>
+            <li>This is the convention in <b>Python / OpenCV / NumPy</b> — get it wrong and your x/y are transposed.</li>
+          </ul>
+        </div>
+        <div class="hook" style="margin-top:14px">
+          <span class="lbl">🧠 Mnemonic — "Rhubarb &amp; Custard"</span>
+          <p class="small" style="margin:6px 0 0"><b>R</b>ows before <b>C</b>olumns in matrix form — R comes first, like <b>R</b>hubarb before <b>C</b>ustard. Cartesian (x,y) is the everyday "across-then-up/down"; matrix (r,c) flips to "down-row first." If a question gives <b>2848 × 4272</b>, it's quoting <em>matrix</em> (R×C); the same image as W×H is 4272 × 2848.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10. POINT PROCESSING ============ -->
+<section id="point">
+  <div class="sec-head"><span class="sec-num">9</span><h2>Point processing</h2></div>
+  <p class="lead">The simplest class of operation: the new value of a pixel depends <b>only on its own old value</b> — never its neighbours. That single idea unifies brightness, negative, contrast and thresholding.</p>
+
+  <div class="card">
+    <h3>The master equation <span class="tag hi">HIGH-YIELD</span></h3>
+    <div class="eq">For every pixel (x,y):    I′(x,y) = <span class="hl">F</span>( I(x,y) )</div>
+    <p class="small"><b>F</b> is a mapping function from <em>old intensity</em> to <em>new intensity</em>. Choose F and you choose the effect. Because F ignores neighbours, point processing is fully described by a single <b>input→output graph</b> — which is exactly the playground below.</p>
+  </div>
+
+  <div class="card">
+    <h3>Interactive: the transfer-function playground</h3>
+    <p class="small">Pick an operation and watch two things: the <b>graph of F</b> (how every input grey 0–255 maps to an output) and a real intensity <b>ramp</b> transformed by it. Understanding the graph = understanding the operation.</p>
+    <div class="control">
+      <button class="toggle on ptOp" data-op="identity">Identity</button>
+      <button class="toggle ptOp" data-op="negative">Negative</button>
+      <button class="toggle ptOp" data-op="bright">Brightness +</button>
+      <button class="toggle ptOp" data-op="thresh">Threshold</button>
+    </div>
+    <div class="control" id="brightCtl" style="display:none"><label>Add value</label><span class="readout" id="brightOut">+50</span><input type="range" id="brightSlider" min="-150" max="150" value="50"></div>
+    <div class="control" id="threshCtl" style="display:none"><label>Threshold T</label><span class="readout" id="threshOut">80</span><input type="range" id="threshSlider" min="0" max="255" value="80"></div>
+    <div class="grid2" style="align-items:start">
+      <div>
+        <canvas id="tfCanvas" width="300" height="300"></canvas>
+        <p class="small mono" style="margin-top:6px">F: input intensity → output intensity</p>
+      </div>
+      <div>
+        <p class="small mono">original ramp 0→255:</p>
+        <canvas id="srcRamp" width="320" height="44"></canvas>
+        <p class="small mono" style="margin-top:10px">after F:</p>
+        <canvas id="outRamp" width="320" height="44"></canvas>
+        <div id="opEq" class="eq" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <h3 style="font-size:19px">Negative</h3>
+      <div class="eq" style="font-size:15px">I′ = 255 − I</div>
+      <p class="small">Flips the graph to a downward diagonal. Black↔white, lights become darks. (The graph is a line of slope −1.)</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:19px">Brightness</h3>
+      <div class="eq" style="font-size:15px">I′ = I + 50</div>
+      <p class="small">Shifts the line up. <b>Must clip to [0,255]</b> — values above 255 stick at 255, below 0 stick at 0. That clipping is why the bright ramp's top "saturates" to flat white.</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:19px">Threshold</h3>
+      <div class="eq" style="font-size:15px">I′ = 255 if I ≥ T<br>I′ = 0 otherwise</div>
+      <p class="small">A step function → produces a <b>binary</b> image. The graph is flat-0 then jumps to flat-255 at T. T ∈ [0,255].</p>
+    </div>
+  </div>
+
+  <div class="exam-box">
+    <span class="lbl">The clipping trap — almost always worth a mark</span>
+    <p style="margin:6px 0 0">When adding brightness, a pixel at 230 + 50 = 280 <b>cannot</b> be stored in an unsigned byte. It is <b>clipped to 255</b> (and negatives clip to 0). Forgetting clipping is the single most common point-processing error. State it explicitly: <span class="mono" style="font-size:14px">I′ = min(255, max(0, I+k))</span>.</p>
+  </div>
+
+  <div class="hook">
+    <span class="lbl">🧠 Hook — "Point = only the point"</span>
+    <p style="margin:6px 0 0">If the new pixel needs to know a <em>neighbour's</em> value, it's not point processing — it's <b>region</b> processing (convolution, blur, edges; Week 2+). Point ops can be drawn as one input→output curve; region ops cannot.</p>
+  </div>
+
+  <div class="card">
+    <h3>A real application — segment by thresholding the right channel</h3>
+    <p class="small">The egg-box example: brown eggs are dark in the <b>blue channel</b>. Take the blue channel (a greyscale image 0–255), threshold it, and the eggs pop out as solid blobs separated from the carton. Lesson: <b>choosing the right channel before a simple point op</b> can do real segmentation work — you don't always need fancy methods.</p>
+  </div>
+</section>
+
+<!-- ============ 11. OPENCV ============ -->
+<section id="opencv">
+  <div class="sec-head"><span class="sec-num">10</span><h2>OpenCV — the tool</h2></div>
+  <p class="lead">The library you'll use for IP assignments. Conceptual familiarity is examinable even though deep API memorisation isn't.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>What is it?</h3>
+      <ul class="clean small">
+        <li><b>Open</b> Source <b>C</b>omputer <b>V</b>ision library (opencv.org).</li>
+        <li>Originally developed by <b>Intel</b>; open source.</li>
+        <li>Bindings: <b>C/C++</b>, Python, Android, iOS — but this course <b>must</b> use C/C++.</li>
+        <li>Gives <b>high-level</b> access (call <span class="mono">threshold()</span> rather than touch pixels) — but you <em>can</em> drop to per-pixel loops for operations that don't exist as a function.</li>
+        <li>An image is stored in a <span class="mono">Mat</span> (matrix).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>The skeleton of every program</h3>
+      <ul class="clean small">
+        <li><b>1.</b> Read an image (<span class="mono">imread</span>) — often as greyscale.</li>
+        <li><b>2.</b> <b>Check it loaded</b> (data == NULL → error &amp; exit). Always.</li>
+        <li><b>3.</b> Process (a function call, or a per-pixel loop).</li>
+        <li><b>4.</b> Write out (<span class="mono">imwrite</span>) or display.</li>
+      </ul>
+      <p class="small">Note the <b>(r, c)</b> loop order — rows outer, columns inner — matching the matrix convention from §8.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>The canonical threshold program — C++</h3>
+<pre><span class="c">#include &lt;iostream&gt;
+#include "opencv2/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc.hpp"</span>
+<span class="k">using namespace</span> std;
+<span class="k">using namespace</span> cv;
+
+<span class="k">int</span> <span class="f">main</span>(<span class="k">int</span> argc, <span class="k">char</span> *argv[]) {
+  Mat outputImage;
+  <span class="c">// load as greyscale</span>
+  Mat inputImage = <span class="f">imread</span>(<span class="s">"harley.jpg"</span>, IMREAD_GRAYSCALE);
+  <span class="k">if</span> (inputImage.data == NULL) {                 <span class="c">// always check!</span>
+    cerr &lt;&lt; <span class="s">"Error: Failed to open image file."</span> &lt;&lt; endl;
+    <span class="k">return</span> 1;
+  }
+  <span class="c">// threshold: above 128 -> 255, else 0 (binary)</span>
+  <span class="f">threshold</span>(inputImage, outputImage, 128, 255, THRESH_BINARY);
+  <span class="f">imwrite</span>(<span class="s">"harley_threshold.png"</span>, outputImage);
+  <span class="k">return</span> 0;
+}</pre>
+    <p class="small"><b>threshold() params:</b> source, destination, threshold value (128), max value (255), type (<span class="mono">THRESH_BINARY</span>). <span class="mono">THRESH_BINARY_INV</span> just inverts the result. Bonus: <span class="mono">THRESH_OTSU</span> / <span class="mono">THRESH_TRIANGLE</span> pick the threshold <em>for</em> you (8-bit single-channel only).</p>
+  </div>
+
+  <div class="card">
+    <h3>Per-pixel access (region-of-interest threshold) — C++</h3>
+<pre><span class="k">for</span> (<span class="k">int</span> r = 0; r &lt; inputImage.rows; r++)
+  <span class="k">for</span> (<span class="k">int</span> c = 0; c &lt; inputImage.cols; c++) {
+    uchar&amp; px = inputImage.at&lt;uchar&gt;(r, c);     <span class="c">// reference to pixel</span>
+    <span class="k">if</span> (r &lt; 30 || r &gt; 280 || c &lt; 165 || c &gt; 360) { <span class="c">// outside ROI...</span>
+      <span class="k">if</span> (px &gt; 128) px = 255; <span class="k">else</span> px = 0;          <span class="c">// ...threshold it</span>
+    }                                            <span class="c">// inside ROI: untouched</span>
+  }</pre>
+    <p class="small">Same idea in Python (<span class="mono">cv2.imread</span>, <span class="mono">inputImage[r,c]</span>, <span class="mono">inputImage.shape[0]/[1]</span>) — but remember, <b>Python isn't accepted for this course's marks</b>.</p>
+  </div>
+</section>
+
+<!-- ============ 12. COLOUR (Lecture 2) ============ -->
+<section id="colour">
+  <div class="sec-head"><span class="sec-num">11</span><h2>Colour — perception &amp; colour models</h2></div>
+  <p class="lead">From your own Week 1 notes (Lecture 2). How humans see colour, why we need standardised colour spaces, the main models (RGB, YCrCb, HSV/IHS, Lab), and colour-based segmentation. Lower drill-priority than the core IP above, but classic short-answer fodder.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>How we see colour</h3>
+      <ul class="clean small">
+        <li><b>Newton (~1665):</b> a prism splits white light into 7 colours (R O Y G B I V) → white light is a mixture.</li>
+        <li><b>Young → Helmholtz:</b> three primaries (R, G, B) can approximate most colours → basis of modern displays.</li>
+        <li><b>Eye cells:</b> <b>rods</b> (low-light, no colour) + <b>cones</b> (colour).</li>
+        <li><b>Three cone types:</b> S (short→blue), M (medium→green), L (long→red).</li>
+        <li><b>Distribution:</b> ≈65% red, ≈33% green, ≈2% blue (but blue cones are the most sensitive).</li>
+        <li><b>Absorption peaks:</b> blue ≈445 nm, green ≈535 nm, red ≈575 nm.</li>
+      </ul>
+      <div class="flag" style="margin-top:6px"><span class="tag note">SOURCE NUANCE</span><p class="small" style="margin:6px 0 0">The cone peaks (445/535/575 nm) <b>don't align</b> with the later CIE 1931 standard primaries (B 435.8 / G 546.1 / R 700.0 nm). If asked, note this mismatch — standards are conventions, not the biology.</p></div>
+    </div>
+    <div class="card">
+      <h3>Additive vs subtractive mixing</h3>
+      <svg viewBox="0 0 320 150" style="width:100%;height:auto;margin-bottom:8px">
+        <g style="mix-blend-mode:screen">
+          <circle cx="70" cy="55" r="38" fill="#ff2a2a"/><circle cx="100" cy="55" r="38" fill="#22ff22"/><circle cx="85" cy="90" r="38" fill="#2a2aff"/>
+        </g>
+        <text x="85" y="135" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--ink)">ADDITIVE (light) → white</text>
+        <g style="mix-blend-mode:multiply" transform="translate(160,0)">
+          <circle cx="70" cy="55" r="38" fill="#00ffff"/><circle cx="100" cy="55" r="38" fill="#ff00ff"/><circle cx="85" cy="90" r="38" fill="#ffff00"/>
+        </g>
+        <text x="245" y="135" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--ink)">SUBTRACTIVE (ink) → black</text>
+      </svg>
+      <ul class="clean small">
+        <li><b>Additive (screens):</b> primaries R G B; all three combined → <b>white</b>.</li>
+        <li><b>Subtractive (paint/print):</b> primaries C M Y; all combined → <b>black</b>.</li>
+        <li><b>Why a leaf is green:</b> white sunlight hits it, pigments <b>absorb everything except green</b>, green is reflected, your green cones fire.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Why standardise? CIE &amp; the chromaticity diagram</h3>
+    <div class="grid2" style="align-items:start">
+      <div>
+        <p class="small"><b>The problem:</b> a colour looks right on the monitor but wrong when printed — different devices interpret colour differently. We need a <b>device-independent</b> reference.</p>
+        <ul class="clean small">
+          <li><b>CIE</b> = Commission Internationale de l'Éclairage. Defined the <b>1931 XYZ</b> colour space — the first standard, built from the best human-perception data of the time.</li>
+          <li>Colours represented by <b>tristimulus X, Y, Z</b>; normalise to chromaticity:</li>
+        </ul>
+        <div class="eq" style="font-size:14px">x = X/(X+Y+Z)
+y = Y/(X+Y+Z)
+z = Z/(X+Y+Z)   →   x + y + z = 1</div>
+        <p class="small">So <b>only x and y are needed</b> (z is implied) → a 2D plot: the chromaticity diagram.</p>
+      </div>
+      <div>
+        <!-- stylised chromaticity horseshoe -->
+        <svg viewBox="0 0 240 230" style="width:100%;height:auto">
+          <defs><radialGradient id="g" cx="38%" cy="55%" r="60%">
+            <stop offset="0%" stop-color="#fff"/><stop offset="40%" stop-color="#d8d85a"/><stop offset="70%" stop-color="#5ad85a"/><stop offset="100%" stop-color="#3a3acf"/>
+          </radialGradient></defs>
+          <path d="M40 200 Q20 120 60 50 Q120 5 150 60 Q200 120 175 195 Z" fill="url(#g)" stroke="var(--ink)" stroke-width="1.5"/>
+          <polygon points="70,170 130,60 165,150" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="4 3"/>
+          <text x="118" y="130" font-family="IBM Plex Mono" font-size="9" fill="#fff">RGB gamut</text>
+          <circle cx="110" cy="120" r="4" fill="#fff" stroke="#000"/><text x="116" y="123" font-family="IBM Plex Mono" font-size="9" fill="#000">white</text>
+          <text x="20" y="222" font-family="IBM Plex Mono" font-size="10" fill="var(--ink)">x →</text>
+          <text x="6" y="40" font-family="IBM Plex Mono" font-size="10" fill="var(--ink)">y</text>
+        </svg>
+        <p class="small"><b>Boundary</b> = pure, fully-saturated colours. <b>Centre</b> = white / desaturated. The <b>triangle</b> = a device's <b>gamut</b> (the colours it can actually reproduce). <b>No standard gamut covers everything the eye sees.</b></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>RGB cube &amp; YCrCb</h3>
+      <ul class="clean small">
+        <li><b>RGB</b> is a 3D cube: black (0,0,0) at one corner, white (255,255,255) at the opposite. <b>Greys lie on the diagonal</b> between them (R=G=B).</li>
+        <li><b>YCrCb</b> separates <b>brightness (Y / luma)</b> from <b>colour difference</b> (Cb = blue-diff, Cr = red-diff) — used in broadcast/video.</li>
+      </ul>
+      <div class="eq" style="font-size:13.5px">Y&nbsp; = 0.299R + 0.587G + 0.114B
+Cb = −0.1687R − 0.3313G + 0.5B + 128
+Cr = 0.5R − 0.4187G − 0.0813B + 128</div>
+      <p class="small"><b>Compression win:</b> the eye is poor at colour detail, so store <b>one Cb &amp; one Cr per four Y</b> pixels (chroma subsampling). Notice Y's weights ≈ how a colour→grey conversion works (green dominates).</p>
+    </div>
+    <div class="card">
+      <h3>Perceptual spaces — HSV / IHS &amp; Lab</h3>
+      <p class="small"><b>Why:</b> equal RGB distances ≠ equal <em>perceived</em> colour change. Perceptual spaces separate <b>brightness from chromaticity</b>, which is friendlier for measurement &amp; human description.</p>
+      <ul class="clean small">
+        <li><b>IHS / HSV:</b> Intensity/Value (brightness), Hue (the colour, an angle 0–359°), Saturation (purity; low S = washed out with white).</li>
+        <li><b>Lab (CIELAB):</b> device-independent (Photoshop). <b>L*</b> lightness 0→100; <b>a*</b> green↔red; <b>b*</b> blue↔yellow.</li>
+      </ul>
+      <div class="eq" style="font-size:13px">I = (R+G+B)/3
+S = 1 − [3/(R+G+B)]·min(R,G,B)
+H = θ if B≤G, else 360−θ</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Colour-based segmentation with HSV — "find the yellow balloons" <span class="tag hi">classic Q</span></h3>
+    <div class="grid2" style="align-items:start">
+      <div>
+        <p class="small"><b>Idea:</b> hue isolates a colour <em>regardless</em> of how bright or washed-out it is — far more robust than thresholding RGB. To keep yellow, keep pixels whose <b>hue</b> is near yellow and discard the rest (a <b>hue mask</b>).</p>
+        <ul class="clean small">
+          <li>Yellow hue ≈ <b>60°</b>, i.e. 1/6 of the wheel.</li>
+          <li>OpenCV often scales H to <b>0–255</b>, so 60° → (1/6)×255 ≈ <b>42</b>.</li>
+          <li>So pure yellow ≈ <b>(H,S,V) = (60°,100%,100%) = (42,255,255)</b>.</li>
+          <li>Mask: keep where <b>22 ≤ H ≤ 62</b> → set 255 (keep) else 0 (discard).</li>
+        </ul>
+        <div class="flag"><span class="tag note">SOURCE NUANCE</span><p class="small" style="margin:6px 0 0">Hue's numeric value depends on the <b>scale</b>: degrees (0–359), 0–255 (OpenCV 8-bit), or 0–179 (OpenCV's actual default, halving degrees). Your notes use the 0–255 convention → yellow ≈ 42. State your scale in the answer.</p></div>
+      </div>
+      <div>
+        <!-- hue wheel -->
+        <svg viewBox="0 0 200 200" style="width:100%;height:auto">
+          <defs>
+            <linearGradient id="hw" x1="0" y1="0" x2="1" y2="0"></linearGradient>
+          </defs>
+          <g>
+            <!-- approximate hue wheel via conic segments -->
+            <circle cx="100" cy="100" r="80" fill="none" stroke-width="34"
+              stroke="url(#none)"/>
+            <g stroke-width="34" fill="none">
+              <circle cx="100" cy="100" r="80" pathLength="360"
+                stroke="conic" />
+            </g>
+            <!-- simple colored arcs -->
+            <g transform="translate(100,100)">
+              <circle r="80" fill="none" stroke="#ff0000" stroke-width="34" stroke-dasharray="42 461" transform="rotate(-90)"/>
+              <circle r="80" fill="none" stroke="#ffd000" stroke-width="34" stroke-dasharray="42 461" transform="rotate(-30)"/>
+              <circle r="80" fill="none" stroke="#33d633" stroke-width="34" stroke-dasharray="42 461" transform="rotate(30)"/>
+              <circle r="80" fill="none" stroke="#00cccc" stroke-width="34" stroke-dasharray="42 461" transform="rotate(90)"/>
+              <circle r="80" fill="none" stroke="#2222ff" stroke-width="34" stroke-dasharray="42 461" transform="rotate(150)"/>
+              <circle r="80" fill="none" stroke="#cc22cc" stroke-width="34" stroke-dasharray="42 461" transform="rotate(210)"/>
+            </g>
+            <line x1="100" y1="100" x2="100" y2="14" stroke="#000" stroke-width="2"/>
+            <circle cx="100" cy="100" r="46" fill="var(--paper-2)"/>
+            <text x="100" y="96" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" font-weight="600">Yellow</text>
+            <text x="100" y="112" text-anchor="middle" font-family="IBM Plex Mono" font-size="10">≈60° → 42</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <p class="small" style="margin-top:10px"><b>Colour → greyscale:</b> different programs use different weighted sums of R,G,B (OpenCV vs GIMP vs plain averaging) — so the "same" greyscale can differ between tools. Good example of "there isn't one right answer; conventions vary."</p>
+  </div>
+</section>
+
+<!-- ============ 13. DRILL ============ -->
+<section id="drill">
+  <div class="sec-head"><span class="sec-num">12</span><h2>Exam drill — click to reveal</h2></div>
+  <p class="lead">Mark-weighted, in exam style. Answer in your head <em>first</em>, then click. 1-mark = one line; multi-mark = tick-list the examiner can mark. Past papers are the spine — these mirror their phrasing.</p>
+
+  <div class="drill" data-d>
+    <div class="q"><span class="marks">1</span><div><b>State one difference between image processing and computer vision.</b></div></div>
+    <div class="a"><div class="inner">Image processing takes an image in and produces another <b>image</b> out; computer vision takes an image in and produces <b>numerical or symbolic information</b> (a measurement or label) out.</div></div>
+    <div class="reveal">▼ reveal</div>
+  </div>
+
+  <div class="drill" data-d>
+    <div class="q"><span class="marks">2</span><div><b>How many bits are in a byte, and how many bits represent one pixel of a 24-bit RGB colour image? How many distinct colours can it show?</b></div></div>
+    <div class="a"><div class="inner">8 bits per byte. One RGB pixel = 3 bytes = <b>24 bits</b> (8 per channel). Number of colours = 2²⁴ = <b>16,777,216</b>.</div></div>
+    <div class="reveal">▼ reveal</div>
+  </div>
+
+  <div class="drill" data-d>
+    <div class="q"><span class="marks">3</span><div><b>A camera produces 4272 × 2848 pixel images at 24-bit colour. How much memory does one uncompressed image require? Show your working.</b></div></div>
+    <div class="a"><div class="inner">
+      Pixels = 4272 × 2848 = 12,166,656.<br>
+      Bytes = 12,166,656 × 3 = 36,499,968 bytes.<br>
+      ÷ 1,048,576 ≈ <b>34.8 MiB</b> &nbsp;(or ÷ 1,000,000 ≈ <b>36.5 MB</b>).<br>
+      <span style="color:var(--gold)">Method marks come from the working, not the final digit — always show pixels → bytes → MB.</span>
+    </div></div>
+    <div class="reveal">▼ reveal</div>
+  </div>
+
+  <div class="drill" data-d>
+    <div class="q"><span class="marks">2</span><div><b>What are the minimum and maximum values storable in an unsigned byte, and what do they represent in a greyscale image?</b></div></div>
+    <div class="a"><div class="inner"><b>0 to 255</b> (2⁸ = 256 values). In greyscale: 0 = black, 255 = white, values between = shades of grey.</div></div>
+    <div class="reveal">▼ reveal</div>
+  </div>
+
+  <div class="drill" data-d>
+    <div class="q"><span class="marks">2</span><div><b>An image quoted as "2848 × 4272" — which convention is this, and what is the same image's width × height?</b></div></div>
+    <div class="a"><div class="inner">That's the <b>matrix</b> convention, Rows × Columns (r,c) — "Rhubarb &amp; Custard," rows first. As Cartesian width × height it is <b>4272 × 2848</b> (the two numbers swap).</div></div>
+    <div class="reveal">▼ reveal</div>
+  </div>
+
+  <div class="drill" data-d>
+    <div class="q"><span class="marks">3</span><div><b>Write the general point-processing equation and give the formula for an image negative and for increasing brightness by 50. Note any pitfall.</b></div></div>
+    <div class="a"><div class="inner">
+      General: <span class="mono">I′(x,y) = F(I(x,y))</span> — output depends only on the pixel's own input.<br>
+      Negative: <span class="mono">I′ = 255 − I</span>.<br>
+      Brightness: <span class="mono">I′ = I + 50</span>, <b>clipped to [0,255]</b> → <span class="mono">I′ = min(255, max(0, I+50))</span>. Forgetting to clip is the key error.
+    </div></div>
+    <div class="reveal">▼ reveal</div>
+  </div>
+
+  <div class="drill" data-d>
+    <div class="q"><span class="marks">2</span><div><b>Give the binary-thresholding formula and say what kind of image it produces.</b></div></div>
+    <div class="a"><div class="inner"><span class="mono">I′(x,y) = 255 if I(x,y) ≥ T, else 0</span>, where T ∈ [0,255]. It produces a <b>binary</b> (two-level black/white) image.</div></div>
+    <div class="reveal">▼ reveal</div>
+  </div>
+
+  <div class="drill" data-d>
+    <div class="q"><span class="marks">4</span><div><b>Outline, in order, the stages of a computer-vision system and say which stages are "image processing" vs "computer vision."</b></div></div>
+    <div class="a"><div class="inner">
+      <b>Capture</b> → <b>Enhancement</b> (remove capture degradations: distortion, blur, poor lighting) → <b>Feature extraction</b> (find useful structures: areas, boundaries) → <b>Feature recognition</b> (label by comparison with known objects).<br>
+      Enhancement is <b>image processing</b> (image→image); recognition is <b>computer vision</b> (image→label).
+    </div></div>
+    <div class="reveal">▼ reveal</div>
+  </div>
+
+  <div class="drill" data-d>
+    <div class="q"><span class="marks">3</span><div><b>Why is recognising printed text easier than cursive handwriting? Reference a technique.</b></div></div>
+    <div class="a"><div class="inner">Printed text is <b>consistent and regular</b>, so each character can be recognised by <b>comparison with a prototype/template</b> (template matching). Cursive is too irregular for templates, and its individual strokes <b>can't be reliably isolated/segmented</b> — so the problem remains essentially unsolved. (Hand-printed sits between: use <b>structural stroke features</b>.)</div></div>
+    <div class="reveal">▼ reveal</div>
+  </div>
+
+  <div class="drill" data-d>
+    <div class="q"><span class="marks">3</span><div><b>Why use HSV rather than RGB to segment all the yellow objects in a scene? What hue value is yellow on a 0–255 scale?</b></div></div>
+    <div class="a"><div class="inner">In HSV, <b>hue</b> identifies the colour <em>independently</em> of brightness and saturation, so yellows of different shades/lighting share a similar H — a simple <b>hue mask</b> isolates them, which raw RGB thresholds can't do robustly. Yellow ≈ <b>60°</b>; on a 0–255 scale that's (1/6)×255 ≈ <b>42</b>, so keep e.g. 22 ≤ H ≤ 62.</div></div>
+    <div class="reveal">▼ reveal</div>
+  </div>
+
+  <div class="drill" data-d>
+    <div class="q"><span class="marks">2</span><div><b>Distinguish image resolution from colour depth.</b></div></div>
+    <div class="a"><div class="inner"><b>Resolution</b> = the number of pixels (width × height) — controls spatial detail/sharpness. <b>Colour depth</b> = the number of bits per pixel — controls how many distinct colours/grey levels (2^bits). They're independent.</div></div>
+    <div class="reveal">▼ reveal</div>
+  </div>
+
+  <div class="drill" data-d>
+    <div class="q"><span class="marks">2</span><div><b>In additive vs subtractive colour mixing, what are the primaries and what do "all combined" give?</b></div></div>
+    <div class="a"><div class="inner"><b>Additive (light/screens):</b> R, G, B; all combined → <b>white</b>. <b>Subtractive (pigment/print):</b> C, M, Y; all combined → <b>black</b>.</div></div>
+    <div class="reveal">▼ reveal</div>
+  </div>
+</section>
+
+</div><!-- /wrap -->
+
+<div class="footer">
+  <div class="wrap">
+    <div class="big">That's Week 1, end-to-end.</div>
+    <p>Sources fused: unit intro talk · IP Lecture 1.1–1.3 (slides + transcript) · Tim Morris handout Ch.1 (pp.1–8) · your own Week-1 notes (L1 + L2 Colour).</p>
+    <p class="small" style="margin-top:14px">Highest-yield for the IP half: <b>bits/bytes &amp; memory calc · RGB vs greyscale · (x,y) vs (r,c) · point processing + clipping · thresholding</b>. Drill those till they're automatic — then say "test me on Week 1" and I'll quiz you live.</p>
+  </div>
+</div>
+
+<script>
+/* ---------- TOC active state (light) ---------- */
+
+/* ---------- MEMORY CALCULATOR ---------- */
+(function(){
+  const mw=document.getElementById('mw'), mh=document.getElementById('mh'),
+        bpc=document.getElementById('bpc'), bpcOut=document.getElementById('bpcOut'),
+        out=document.getElementById('memWork'),
+        cC=document.getElementById('chColour'), cG=document.getElementById('chGrey');
+  let channels=3;
+  function fmt(n){return n.toLocaleString('en-US');}
+  function calc(){
+    const w=+mw.value||0, h=+mh.value||0, b=+bpc.value;
+    bpcOut.textContent=b;
+    const px=w*h;
+    const bytes=px*channels*(b/8);
+    const mib=bytes/1048576, mb=bytes/1000000;
+    out.textContent =
+`pixels   = ${fmt(w)} × ${fmt(h)} = ${fmt(px)}
+bytes    = ${fmt(px)} × ${channels} ch × (${b}/8 byte)
+         = ${fmt(Math.round(bytes))} bytes
+size     = ${mib.toFixed(2)} MiB  (÷1,048,576)
+         = ${mb.toFixed(2)} MB   (÷1,000,000)`;
+  }
+  cC.onclick=()=>{channels=3;cC.classList.add('on');cG.classList.remove('on');calc();};
+  cG.onclick=()=>{channels=1;cG.classList.add('on');cC.classList.remove('on');calc();};
+  [mw,mh,bpc].forEach(e=>e.oninput=calc);
+  calc();
+})();
+
+/* ---------- GREY RAMP + RGB SPLIT ---------- */
+(function(){
+  const g=document.getElementById('greyCanvas'), gx=g.getContext('2d');
+  for(let x=0;x<g.width;x++){const v=Math.round(x/(g.width-1)*255);gx.fillStyle=`rgb(${v},${v},${v})`;gx.fillRect(x,0,1,g.height);}
+  gx.fillStyle="#fff";gx.font="11px monospace";gx.fillText("0",3,g.height-6);
+  gx.fillStyle="#000";gx.fillText("255",g.width-26,14);
+
+  // synthetic colour scene for RGB split (sky + sun + grass)
+  const c=document.getElementById('rgbCanvas'), ctx=c.getContext('2d');
+  const W=c.width, H=c.height, cell=W/4; // composite + 3 channels
+  function scene(px,py){ // returns [r,g,b] for normalized 0..1 coords
+    // sky gradient blue, grass green bottom, sun yellow top-right
+    let r,g,b;
+    if(py>0.62){ r=60+py*30; g=150+py*40; b=50; } // grass
+    else { r=70+py*60; g=120+py*70; b=210-py*40; } // sky
+    const dx=px-0.78, dy=py-0.25, d=Math.sqrt(dx*dx+dy*dy);
+    if(d<0.13){ r=255; g=230; b=90; } // sun
+    return [Math.min(255,r),Math.min(255,g),Math.min(255,b)];
+  }
+  function render(split){
+    ctx.clearRect(0,0,W,H);
+    for(let X=0;X<cell;X++)for(let Y=0;Y<H;Y++){
+      const [r,g,b]=scene(X/cell, Y/H);
+      ctx.fillStyle=`rgb(${r|0},${g|0},${b|0})`; ctx.fillRect(X,Y,1,1);
+    }
+    if(split){
+      for(let X=0;X<cell;X++)for(let Y=0;Y<H;Y++){
+        const [r,g,b]=scene(X/cell, Y/H);
+        ctx.fillStyle=`rgb(${r|0},0,0)`; // we show channel as grey actually
+        let v;
+        v=r|0; ctx.fillStyle=`rgb(${v},${v},${v})`; ctx.fillRect(cell+X,Y,1,1);
+        v=g|0; ctx.fillStyle=`rgb(${v},${v},${v})`; ctx.fillRect(cell*2+X,Y,1,1);
+        v=b|0; ctx.fillStyle=`rgb(${v},${v},${v})`; ctx.fillRect(cell*3+X,Y,1,1);
+      }
+      ctx.fillStyle="#fff";ctx.font="bold 12px monospace";
+      ctx.fillText("colour",6,16);
+      ctx.fillStyle="#ff8a8a";ctx.fillText("R",cell+6,16);
+      ctx.fillStyle="#9bff9b";ctx.fillText("G",cell*2+6,16);
+      ctx.fillStyle="#8ab4ff";ctx.fillText("B",cell*3+6,16);
+      // separators
+      ctx.strokeStyle="#000";ctx.lineWidth=2;
+      for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(cell*i,0);ctx.lineTo(cell*i,H);ctx.stroke();}
+    } else {
+      // draw composite across full width
+      for(let X=0;X<W;X++)for(let Y=0;Y<H;Y++){
+        const [r,g,b]=scene(X/W, Y/H);
+        ctx.fillStyle=`rgb(${r|0},${g|0},${b|0})`; ctx.fillRect(X,Y,1,1);
+      }
+      ctx.fillStyle="#fff";ctx.font="11px monospace";
+      ctx.fillText("synthetic scene — click button to split into R / G / B channels",8,H-10);
+    }
+  }
+  let split=false;
+  render(false);
+  document.getElementById('splitBtn').onclick=function(){
+    split=!split; render(split);
+    this.textContent = split? "◀ Show composite" : "▶ Show channel split";
+  };
+})();
+
+/* ---------- COORDINATE TOGGLE ---------- */
+(function(){
+  const c=document.getElementById('coordCanvas'), ctx=c.getContext('2d');
+  const W=c.width,H=c.height,gxn=8,gyn=6,cw=W/gxn,ch=H/gyn;
+  const ro=document.getElementById('coordReadout');
+  let mode='xy';
+  function draw(hx,hy){
+    ctx.clearRect(0,0,W,H);
+    // cells
+    for(let i=0;i<gxn;i++)for(let j=0;j<gyn;j++){
+      ctx.fillStyle=((i+j)%2)? '#34302a':'#2a2520';
+      ctx.fillRect(i*cw,j*ch,cw,ch);
+    }
+    // origin marker
+    ctx.fillStyle="#c89b3c";ctx.beginPath();ctx.arc(0,0,7,0,7);ctx.fill();
+    ctx.fillStyle="#c89b3c";ctx.font="bold 12px monospace";ctx.fillText("O(0,0)",6,18);
+    // axes arrows
+    ctx.strokeStyle="#b5651d";ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(0,2);ctx.lineTo(W-6,2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(2,0);ctx.lineTo(2,H-6);ctx.stroke();
+    ctx.fillStyle="#b5651d";
+    ctx.fillText(mode==='xy'?'x':'c', W-16,16);
+    ctx.fillText(mode==='xy'?'y':'r', 8,H-8);
+    // highlight cell
+    if(hx>=0){
+      ctx.strokeStyle="#fff";ctx.lineWidth=3;
+      ctx.strokeRect(hx*cw,hy*ch,cw,ch);
+      ctx.fillStyle="rgba(91,42,134,.5)";ctx.fillRect(hx*cw,hy*ch,cw,ch);
+      const label = mode==='xy'? `(x,y) = (${hx}, ${hy})` : `(r,c) = (${hy}, ${hx})`;
+      ro.textContent = label + (mode==='xy'? '  · column='+hx+', row='+hy : '  · row='+hy+', column='+hx);
+    }
+  }
+  c.addEventListener('mousemove',e=>{
+    const rect=c.getBoundingClientRect();
+    const sx=(e.clientX-rect.left)*(W/rect.width);
+    const sy=(e.clientY-rect.top)*(H/rect.height);
+    draw(Math.floor(sx/cw),Math.floor(sy/ch));
+  });
+  c.addEventListener('mouseleave',()=>{draw(-1,-1);ro.textContent='origin O(0,0) is top-left · move the mouse over the grid';});
+  const xyB=document.getElementById('xyBtn'),rcB=document.getElementById('rcBtn'),
+        xyE=document.getElementById('xyExplain'),rcE=document.getElementById('rcExplain');
+  xyB.onclick=()=>{mode='xy';xyB.classList.add('on');rcB.classList.remove('on');xyE.style.display='block';rcE.style.display='none';draw(-1,-1);};
+  rcB.onclick=()=>{mode='rc';rcB.classList.add('on');xyB.classList.remove('on');rcE.style.display='block';xyE.style.display='none';draw(-1,-1);};
+  draw(-1,-1);
+})();
+
+/* ---------- POINT-PROCESSING PLAYGROUND ---------- */
+(function(){
+  const tf=document.getElementById('tfCanvas').getContext('2d'),
+        src=document.getElementById('srcRamp').getContext('2d'),
+        outc=document.getElementById('outRamp').getContext('2d'),
+        eq=document.getElementById('opEq');
+  let op='identity', bright=50, thresh=80;
+  const N=300;
+  function F(v){
+    if(op==='identity') return v;
+    if(op==='negative') return 255-v;
+    if(op==='bright')   return Math.min(255,Math.max(0,v+bright));
+    if(op==='thresh')   return v>=thresh?255:0;
+  }
+  function drawTF(){
+    tf.fillStyle="#1c1812";tf.fillRect(0,0,N,N);
+    // grid
+    tf.strokeStyle="rgba(255,255,255,.12)";tf.lineWidth=1;
+    for(let i=0;i<=4;i++){const p=i*N/4;tf.beginPath();tf.moveTo(p,0);tf.lineTo(p,N);tf.moveTo(0,p);tf.lineTo(N,p);tf.stroke();}
+    // identity reference
+    tf.strokeStyle="rgba(127,184,216,.35)";tf.setLineDash([4,4]);
+    tf.beginPath();tf.moveTo(0,N);tf.lineTo(N,0);tf.stroke();tf.setLineDash([]);
+    // F curve
+    tf.strokeStyle="#c89b3c";tf.lineWidth=3;tf.beginPath();
+    for(let x=0;x<=255;x++){
+      const y=F(x);
+      const px=x/255*N, py=N-(y/255*N);
+      if(x===0)tf.moveTo(px,py);else tf.lineTo(px,py);
+    }
+    tf.stroke();
+    // threshold marker
+    if(op==='thresh'){tf.strokeStyle="#9e2b4e";tf.setLineDash([3,3]);tf.beginPath();const tx=thresh/255*N;tf.moveTo(tx,0);tf.lineTo(tx,N);tf.stroke();tf.setLineDash([]);}
+    tf.fillStyle="#8a7f6a";tf.font="10px monospace";
+    tf.fillText("in 0→255",N-66,N-6);tf.save();tf.translate(12,60);tf.rotate(-Math.PI/2);tf.fillText("out 0→255",0,0);tf.restore();
+  }
+  function drawRamps(){
+    const w=320,h=44;
+    for(let x=0;x<w;x++){const v=Math.round(x/(w-1)*255);
+      src.fillStyle=`rgb(${v},${v},${v})`;src.fillRect(x,0,1,h);
+      const o=F(v);outc.fillStyle=`rgb(${o},${o},${o})`;outc.fillRect(x,0,1,h);
+    }
+  }
+  function eqText(){
+    if(op==='identity') return "I′ = I            // no change (reference)";
+    if(op==='negative') return "I′ = 255 − I      // invert";
+    if(op==='bright')   return `I′ = min(255, max(0, I ${bright>=0?'+':'−'} ${Math.abs(bright)}))  // clipped!`;
+    if(op==='thresh')   return `I′ = 255 if I ≥ ${thresh}, else 0   // binary`;
+  }
+  function refresh(){drawTF();drawRamps();eq.textContent=eqText();}
+  document.querySelectorAll('.ptOp').forEach(b=>{
+    b.onclick=()=>{
+      document.querySelectorAll('.ptOp').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); op=b.dataset.op;
+      document.getElementById('brightCtl').style.display = op==='bright'?'flex':'none';
+      document.getElementById('threshCtl').style.display = op==='thresh'?'flex':'none';
+      refresh();
+    };
+  });
+  const bs=document.getElementById('brightSlider'),bo=document.getElementById('brightOut');
+  bs.oninput=()=>{bright=+bs.value;bo.textContent=(bright>=0?'+':'')+bright;refresh();};
+  const ts=document.getElementById('threshSlider'),to=document.getElementById('threshOut');
+  ts.oninput=()=>{thresh=+ts.value;to.textContent=thresh;refresh();};
+  refresh();
+})();
+
+/* ---------- DRILL CARDS ---------- */
+document.querySelectorAll('[data-d]').forEach(d=>{
+  d.addEventListener('click',()=>d.classList.toggle('open'));
+});
+</script>
+</body>
+</html>
