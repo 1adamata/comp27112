@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMP27112 · Week 2 — Sampling, Histograms &amp; Geometry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/house.css">
+<style>
+  /* week-local styles only — every shared component comes from house.css.
+     This block exists solely for the transform matrices, which house.css
+     doesn't define. It adds new classes, it does not restyle shared ones. */
+  .mat-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:"IBM Plex Mono";font-size:16px;margin:12px 0}
+  .mat{display:inline-grid;gap:3px 12px;align-items:center;position:relative;padding:6px 16px}
+  .mat::before,.mat::after{content:"";position:absolute;top:2px;bottom:2px;width:9px;border:2px solid var(--ink)}
+  .mat::before{left:0;border-right:none;border-radius:5px 0 0 5px}
+  .mat::after{right:0;border-left:none;border-radius:0 5px 5px 0}
+  .mat .cell{text-align:center;min-width:30px;padding:2px 2px}
+  .sc{color:var(--teal);font-weight:600}   /* scaling   */
+  .sh{color:var(--amber);font-weight:600}  /* shearing  */
+  .ro{color:var(--rose);font-weight:600}   /* rotation  */
+  .tr{color:var(--purple);font-weight:600} /* translate */
+  .legend{font-family:"IBM Plex Mono";font-size:12.5px;color:var(--ink-soft);margin:8px 0 2px}
+  .legend span{margin-right:16px;white-space:nowrap}
+  .calc-out{background:var(--ink);color:#efe6d4;border-radius:10px;padding:14px 16px;font-family:"IBM Plex Mono";font-size:13.5px;line-height:1.8;white-space:pre-wrap;margin-top:10px}
+  .calc-out b{color:var(--gold)}
+  .swatch{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:middle;margin-right:5px}
+  .demo-canvas{max-width:100%;border-radius:8px;border:1px solid var(--line);background:#1c1812;display:block}
+  #cvStatus{font-family:"IBM Plex Mono";font-size:13px;padding:10px 14px;border-radius:8px;margin:10px 0;display:flex;align-items:center;gap:10px}
+  #cvStatus.loading{background:rgba(200,155,60,.12);border:1px solid var(--gold);color:#8a6a14}
+  #cvStatus.ready{background:rgba(47,125,79,.12);border:1px solid var(--good);color:var(--good)}
+  #cvStatus.err{background:rgba(162,59,45,.12);border:1px solid var(--bad);color:var(--bad)}
+  .spin{width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .filebtn{display:inline-block;font-family:"IBM Plex Mono";font-size:13px;font-weight:600;padding:8px 16px;border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:8px;cursor:pointer}
+  .filebtn:hover{background:var(--purple);border-color:var(--purple)}
+  input[type=file]{display:none}
+  .cvgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  @media(max-width:760px){.cvgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav class="toc">
+  <div class="inner">
+    <span class="brand">COMP27112 · WK2</span>
+    <a href="../index.html">← Shelf</a>
+    <a href="#sources">Sources</a>
+    <a href="#sampling">Sampling</a>
+    <a href="#resolution">Resolution</a>
+    <a href="#noise">Noise</a>
+    <a href="#histogram">Histograms</a>
+    <a href="#bright">Brightness</a>
+    <a href="#mapping">Mapping</a>
+    <a href="#thresh">Thresholding</a>
+    <a href="#transforms">Transforms</a>
+    <a href="#distortion">Distortion</a>
+    <a href="#interp">Interpolation</a>
+    <a href="#lab">OpenCV Lab</a>
+    <a href="#drill">Exam Drill</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="deco">02</div>
+    <div class="kicker">Image Processing · Week 2 · Lectures 3 &amp; 4</div>
+    <h1>From light<br><em>to pixels, and back.</em></h1>
+    <p class="sub">How images are sampled and measured, then the point-processing and geometry tools that act on them — histograms, thresholding, affine matrices, lens distortion and interpolation. Each paired with the live OpenCV call you're marked on.</p>
+    <div class="meta">
+      <span class="chip a">Image Processing</span>
+      <span class="chip">Lectures 3.1–3.3 · 4.1–4.4</span>
+      <span class="chip">live OpenCV.js</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ============ 3.1 SOURCES ============ -->
+<section id="sources">
+  <div class="sec-head"><span class="sec-num">1</span><h2>What is an image — and where do they come from?</h2></div>
+  <p class="lead">An <b>image</b> is any 2-D grid of measurements: each sample sits at a location (x, y) and records some physical property. So "image processing" is far wider than photo filters — it's anything that produces a spatially coherent measurement.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Image ≠ photograph</h3>
+      <p class="small">A sample can measure intensity, temperature, X-ray absorption, reflectance or distance. A 3-D <b>CT volume</b> is as much an "image" as a holiday snap — IP is often about <b>measurement &amp; reconstruction</b>, not just enhancement.</p>
+      <div class="hook">
+        <span class="lbl">🧠 Memory hook — "measure, not photograph"</span>
+        <p style="margin:6px 0 0">Tim's CT-shoulder demo in <b>Mango</b>: many X-ray projections → reconstructed 3-D volume → browse slices or render surfaces. The "image" is the measurement.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Energy sources you can image with</h3>
+      <p class="small"><b>Electromagnetic:</b> gamma · X-ray · visible · infrared · microwave · radio. &nbsp;<b>Other:</b> sound (ultrasound/sonar) · magnetic fields.</p>
+      <div style="margin:8px 0">
+        <span class="chip">γ-ray</span><span class="chip">X-ray / CT</span><span class="chip">UV</span><span class="chip">visible</span><span class="chip">IR</span><span class="chip">radar</span><span class="chip">lidar</span>
+      </div>
+      <p class="small">Different physics → different information: X-ray = absorption <em>through</em> the body; gamma = emission <em>from</em> a radiopharmaceutical; IR makes water look dark (easy rivers/coasts); <b>lidar</b> gives time-of-flight <b>depth</b>.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>A little history — the three the exam likes</h3>
+    <svg viewBox="0 0 900 130" style="width:100%;height:auto">
+      <line x1="40" y1="80" x2="860" y2="80" stroke="var(--ink)" stroke-width="3"/>
+      <g font-family="IBM Plex Mono" font-size="13">
+        <circle cx="130" cy="80" r="9" fill="var(--amber)"/><text x="130" y="55" text-anchor="middle" font-weight="600">1920</text><text x="130" y="108" text-anchor="middle" font-size="11" fill="var(--ink-soft)">Bartlane · ~5 grey levels</text>
+        <circle cx="450" cy="80" r="9" fill="var(--purple)"/><text x="450" y="55" text-anchor="middle" font-weight="600">1964</text><text x="450" y="108" text-anchor="middle" font-size="11" fill="var(--ink-soft)">NASA Ranger 7 · enhance</text>
+        <circle cx="770" cy="80" r="9" fill="var(--teal)"/><text x="770" y="55" text-anchor="middle" font-weight="600">1970s → Nobel '79</text><text x="770" y="108" text-anchor="middle" font-size="11" fill="var(--ink-soft)">CT · Cormack &amp; Hounsfield</text>
+      </g>
+    </svg>
+    <p class="small">Bartlane transmitted photos over submarine telegraph cables with only ~5 grey levels — crippled by <b>limited intensity resolution</b>. Ranger 7 used computers to clean noisy moon images. CT made computation <b>essential, not optional</b>.</p>
+  </div>
+
+  <div class="flag">
+    <span class="tag note">IMAGE NEEDED</span>
+    <p class="small" style="margin:6px 0 0">The CT/Mango shoulder screenshots and the Bartlane/Ranger photos are referenced in your notes (<span class="mono">Pasted image …png</span>) but weren't uploaded, so per the project rules they don't exist to me — I've not invented stand-ins. Drop the PNGs into <span class="mono">assets/img/</span> and tell me the filenames if you want them shown.</p>
+  </div>
+</section>
+
+<!-- ============ 3.2 SAMPLING ============ -->
+<section id="sampling">
+  <div class="sec-head"><span class="sec-num">2</span><h2>From the continuous world to a digital image</h2></div>
+  <p class="lead">The real world is continuous in space <em>and</em> intensity. Making a digital image needs two separate discretisations — and confusing them is a classic exam trap.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Sampling — discretise <em style="font-style:italic;font-weight:500">space</em></h3>
+      <p class="small">Measure the image on a <b>grid of pixels</b> instead of continuous (x, y). 256×256 → 65,536 samples; 1920×1080 → ~2 million. <b>Spatial resolution</b> = how finely you sample space → controls <b>detail / sharpness</b>.</p>
+    </div>
+    <div class="card">
+      <h3>Quantisation — discretise <em style="font-style:italic;font-weight:500">intensity</em></h3>
+      <p class="small">Map continuous brightness to discrete levels. 1 bit → 2 levels; 8 bits → 256 greys; 12 bits → 4096 (common in medical). <b>Intensity resolution</b> = how many distinct values → controls <b>smoothness / contrast</b>.</p>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Concept</th><th>Discretises</th><th>Controls</th><th>Too little →</th></tr>
+    <tr><td>Sampling</td><td>Space (x, y)</td><td>Sharpness / detail</td><td>blocky, blurry, aliasing</td></tr>
+    <tr><td>Quantisation</td><td>Intensity</td><td>Smoothness / contrast</td><td>banding / posterisation</td></tr>
+  </table>
+
+  <div class="exam-box">
+    <span class="lbl">Exam framing — don't mix these up</span>
+    <p style="margin:6px 0 0">Increasing <b>resolution</b> does <em>not</em> fix poor <b>quantisation</b>, and more <b>bit depth</b> does <em>not</em> fix low <b>spatial resolution</b>. They're independent knobs. A digital image is always an <b>approximation</b> of reality.</p>
+  </div>
+
+  <div class="card">
+    <h3>Image as a function</h3>
+    <div class="eq">f(<span class="v">x</span>, <span class="v">y</span>) → intensity            <span style="color:#8a7f6a">// continuous</span>
+f[<span class="v">x</span>, <span class="v">y</span>] ∈ {0, 1, …, <span class="hl">L−1</span>}      <span style="color:#8a7f6a">// digitised · L = levels, e.g. 256</span></div>
+    <p class="small">A colour image is just several greyscale images stacked (usually R, G, B), each with its own sampling + quantisation. Colour models came in Week 1 — this is intuition only.</p>
+  </div>
+</section>
+
+<!-- ============ 3.3 RESOLUTION ============ -->
+<section id="resolution">
+  <div class="sec-head"><span class="sec-num">3</span><h2>Resolution — spatial, angular &amp; ground</h2></div>
+  <p class="lead">Three flavours. The two calculators show every step — there's <b>no calculator in the exam</b>, so the <em>method</em> is what scores.</p>
+
+  <!-- angular -->
+  <div class="card">
+    <h3>Angular resolution — degrees per pixel</h3>
+    <p class="small">Each pixel sees a small slice of the field of view (FOV).</p>
+    <div class="eq">resolution = <span class="hl">FOV</span> ÷ number&nbsp;of&nbsp;pixels</div>
+    <div class="control"><label>FOV (degrees)</label><input type="number" id="ar_fov" value="90"></div>
+    <div class="control"><label>pixels across</label><input type="number" id="ar_px" value="4272"></div>
+    <div class="calc-out" id="ar_out"></div>
+  </div>
+
+  <!-- ground -->
+  <div class="card">
+    <h3>Ground resolution — metres per pixel (aerial)</h3>
+    <div class="eq">ground width = 2 · tan(FOV/2) · altitude
+ground res/px = ground width ÷ pixels</div>
+    <div class="control"><label>altitude (m)</label><input type="number" id="gr_h" value="1000"></div>
+    <div class="control"><label>FOV (degrees)</label><input type="number" id="gr_fov" value="90"></div>
+    <div class="control"><label>pixels across</label><input type="number" id="gr_px" value="4272"></div>
+    <div class="calc-out" id="gr_out"></div>
+    <p class="small" style="margin-top:8px"><b>Workflow:</b> (1) compute ground width, (2) divide by pixel width.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Intensity resolution</h3>
+      <p class="small"><b>b</b> bits → <b>2<sup>b</sup></b> levels. 8-bit grey = 256; 24-bit colour = 16.8M. Humans distinguish only ~<b>40</b> shades of brightness and ~<b>7.5M</b> colours — so 8-bit often <em>looks</em> fine while quietly throwing away levels. Too few → visible <b>banding / posterisation</b>.</p>
+    </div>
+    <div class="card">
+      <h3>Nyquist (intuition only)</h3>
+      <p class="small">Sample at <b>≥ 2 ×</b> the highest frequency present, or information is lost <em>forever</em> and <b>aliasing</b> appears (jagged edges, moiré, wheels spinning backwards).</p>
+      <div class="exam-box" style="margin-top:8px">
+        <span class="lbl">one-liner</span>
+        <p style="margin:6px 0 0" class="small">To <b>detect</b> an object you need ~<b>2 pixels</b> across its smallest feature; to <b>recognise</b> it, more. Aliasing is a <b>sampling</b> problem, <em>not</em> noise.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Why undersampling lies to you</h3>
+    <svg viewBox="0 0 900 200" style="width:100%;height:auto">
+      <line x1="20" y1="100" x2="880" y2="100" stroke="var(--line)" stroke-width="1"/>
+      <path id="nyqTrue" fill="none" stroke="var(--rose)" stroke-width="2.5"/>
+      <path id="nyqAlias" fill="none" stroke="var(--purple)" stroke-width="2.5" stroke-dasharray="6 5"/>
+      <g id="nyqDots"></g>
+    </svg>
+    <p class="legend"><span><span class="swatch" style="background:var(--rose)"></span>true high-frequency signal</span><span><span class="swatch" style="background:var(--purple)"></span>what the (too-few) samples imply</span><span>● sample points</span></p>
+  </div>
+
+  <div class="flag">
+    <span class="tag note">IMAGE NEEDED</span>
+    <p class="small" style="margin:6px 0 0">The slide's resolution down-sampling strip, the FOV diagram and the aerial ground-resolution diagram weren't uploaded. The maths above is fully redrawn; add the PNGs to <span class="mono">assets/img/</span> if you also want the slide figures.</p>
+  </div>
+</section>
+
+<!-- ============ 3.3 NOISE ============ -->
+<section id="noise">
+  <div class="sec-head"><span class="sec-num">4</span><h2>Noise &amp; signal-to-noise ratio</h2></div>
+  <p class="lead">Noise is random variation in pixel values. It worsens in low light because the sensor <b>amplifies a weak signal — and the noise with it</b>.</p>
+
+  <div class="card">
+    <h3>SNR calculator (dB)</h3>
+    <div class="eq">SNR = 20 · log₁₀( <span class="hl">range</span> ÷ <span class="v">σ</span> )</div>
+    <div class="control"><label>signal range</label><input type="number" id="snr_r" value="255"></div>
+    <div class="control"><label>noise σ (std dev)</label><input type="number" id="snr_s" value="8"></div>
+    <div class="calc-out" id="snr_out"></div>
+    <p class="small" style="margin-top:8px">Lecture: intensity 128, Gaussian noise mean 0, σ = 8 → <b>≈ 30 dB</b>. <b>Higher dB = cleaner.</b> Logarithmic scale.</p>
+  </div>
+</section>
+
+<!-- ============ 4.1 HISTOGRAMS ============ -->
+<section id="histogram">
+  <div class="sec-head"><span class="sec-num">5</span><h2>Point processing &amp; the image histogram</h2></div>
+  <p class="lead"><b>Point processing</b> means each output pixel depends only on the <em>corresponding</em> input pixel — never on neighbours (that's region processing, the convolution widget).</p>
+  <div class="eq">g(x,y) = <span class="hl">T</span>( f(x,y) )      <span style="color:#8a7f6a">// T = brightness · contrast · threshold · negative · solarise</span></div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>What a histogram is</h3>
+      <p class="small">x-axis = grey level (0–255); y-axis = number of pixels at that value. Its <b>shape</b> tells you globally whether the image is dark, bright, or well-spread.</p>
+<pre><span class="k">int</span> histogram[<span class="s">256</span>] = {<span class="s">0</span>};
+<span class="k">for</span> (each pixel p in image)
+    histogram[p]++;            <span class="c">// count each grey value</span></pre>
+    </div>
+    <div class="card">
+      <h3>Read the shape</h3>
+      <ul class="clean small">
+        <li><b>Dark image</b> → mass piled near <b>0</b>.</li>
+        <li><b>Bright image</b> → mass piled near <b>255</b>.</li>
+        <li><b>Good contrast</b> → spread across many levels.</li>
+        <li><b>Comb / gaps</b> → only a few distinct levels present (the "64 grey levels" slide looks fine; 32 or 16 starts to band in the sky).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Live histogram — built with the VTK kit</h3>
+    <p class="small">Pick a synthetic image and watch its 256-bin histogram. Bimodal images (Cells) have the two humps that make thresholding easy.</p>
+    <div id="histImgRow"></div>
+    <div class="cvgrid" style="margin-top:8px">
+      <div><canvas id="histImg" width="160" height="160" class="demo-canvas" style="max-width:200px"></canvas></div>
+      <div><canvas id="histPlot" width="480" height="200" class="demo-canvas"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4.1 BRIGHTNESS / CONTRAST / CLIPPING ============ -->
+<section id="bright">
+  <div class="sec-head"><span class="sec-num">6</span><h2>Brightness, contrast &amp; clipping</h2></div>
+  <p class="lead">Two of the simplest mappings — and the bug everyone hits if they forget to clamp the result.</p>
+
+  <div class="card">
+    <h3>Transfer-function playground</h3>
+    <p class="small">Pick an op; watch the <b>graph of T</b> (every input 0–255 mapped to an output) and a real intensity ramp transformed by it. Understanding the graph = understanding the op.</p>
+    <div class="control">
+      <button class="toggle on ptOp" data-op="identity">Identity</button>
+      <button class="toggle ptOp" data-op="bright">Brightness +k</button>
+      <button class="toggle ptOp" data-op="contrast">Contrast ×k</button>
+      <button class="toggle ptOp" data-op="negative">Negative</button>
+    </div>
+    <div class="control" id="brightCtl" style="display:none"><label>add k</label><span class="readout" id="brightOut">+50</span><input type="range" id="brightSlider" min="-150" max="150" value="50"></div>
+    <div class="control" id="contrastCtl" style="display:none"><label>× factor</label><span class="readout" id="contrastOut">1.5</span><input type="range" id="contrastSlider" min="0" max="300" value="150"></div>
+    <div class="control"><label style="min-width:auto"><input type="checkbox" id="clipChk" checked> clip to 0–255 (uncheck to see wraparound)</label></div>
+    <div class="cvgrid" style="align-items:start">
+      <div>
+        <canvas id="tfCanvas" width="300" height="300" class="demo-canvas" style="max-width:300px"></canvas>
+        <p class="small mono" style="margin-top:6px">T: input → output</p>
+      </div>
+      <div>
+        <p class="small mono">original ramp 0→255:</p>
+        <canvas id="srcRamp" width="320" height="40" class="demo-canvas"></canvas>
+        <p class="small mono" style="margin-top:10px">after T:</p>
+        <canvas id="outRamp" width="320" height="40" class="demo-canvas"></canvas>
+        <div class="eq" id="opEq" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>The maps</h3>
+      <div class="eq">brightness: g' = g + k     <span style="color:#8a7f6a">// shift, shape kept</span>
+contrast:   g' = g × k     <span style="color:#8a7f6a">// stretch/compress</span></div>
+      <p class="small"><b>Brightness = shift. Contrast = scale.</b></p>
+    </div>
+    <div class="card">
+      <h3>Clipping (very important)</h3>
+      <p class="small">Results must stay in 0–255. With unsigned bytes, <span class="mono">255 + 1 = 0</span> — it <b>wraps</b>, so a too-bright pixel turns <em>black</em>. Compute in a wider type, then clamp:</p>
+<pre><span class="k">uint8</span> px = <span class="s">250</span>;
+<span class="k">int32</span> p = px;
+p += <span class="s">50</span>;                 <span class="c">// increase brightness</span>
+<span class="k">if</span> (p &gt; <span class="s">255</span>) p = <span class="s">255</span>;
+<span class="k">if</span> (p &lt; <span class="s">0</span>)   p = <span class="s">0</span>;
+px = p;</pre>
+    </div>
+  </div>
+  <div class="exam-box">
+    <span class="lbl">Exam framing</span>
+    <p style="margin:6px 0 0">Adding 50 doesn't only black-out the brightest pixels — values 206→255 <b>wrap</b> to 0→49 unless you clip. State it: <span class="mono">g' = min(255, max(0, g + k))</span>. Forgetting clipping is the single most common point-processing error.</p>
+  </div>
+</section>
+
+<!-- ============ 4.2 MAPPING & LUT ============ -->
+<section id="mapping">
+  <div class="sec-head"><span class="sec-num">7</span><h2>Input–output mapping, LUTs &amp; solarise</h2></div>
+  <p class="lead">Stop thinking "image operation" and think "every input grey level g maps to an output g'." That single curve <em>is</em> the operation.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Two ways to implement a map</h3>
+      <ul class="clean small">
+        <li><b>Formula</b> per pixel: <span class="mono">img[r][c] = img[r][c] * 1.5</span></li>
+        <li><b>Lookup table:</b> precompute <span class="mono">map[256]</span>, then <span class="mono">img[r][c] = map[img[r][c]]</span></li>
+      </ul>
+      <p class="small"><b>LUTs win</b> — constant-time per pixel, and encode <em>any</em> non-linear curve consistently.</p>
+      <div class="eq">map[256] = [0, 2, 3, 5, 6, 8, 9, 11, …]
+g' = map[g]</div>
+    </div>
+    <div class="card">
+      <h3>Linear vs non-linear</h3>
+      <p class="small">A straight line = brightness/contrast. A curve (S-shape, tent) = non-linear. Solarise is the classic piecewise one:</p>
+      <div class="eq">g' = 255 − g   <span style="color:#8a7f6a">if g &gt; T</span>
+g' = g         <span style="color:#8a7f6a">otherwise</span></div>
+      <p class="small">Values above T are inverted; below stay put → the "tent" transfer function.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Solarise tent &amp; min–max stretch ramp (redrawn from the slides)</h3>
+    <div class="grid2" style="align-items:start">
+      <div>
+        <svg viewBox="0 0 260 220" style="width:100%;max-width:260px">
+          <line x1="34" y1="186" x2="240" y2="186" stroke="var(--ink)" stroke-width="1.5"/>
+          <line x1="34" y1="186" x2="34" y2="20" stroke="var(--ink)" stroke-width="1.5"/>
+          <text x="135" y="208" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--ink-soft)">input</text>
+          <text x="14" y="105" transform="rotate(-90 14 105)" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--ink-soft)">output</text>
+          <polyline points="34,186 137,40 240,186" fill="none" stroke="var(--purple)" stroke-width="2.5"/>
+          <line x1="137" y1="186" x2="137" y2="40" stroke="var(--line)" stroke-dasharray="4 4"/>
+          <text x="137" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--ink-soft)">T</text>
+          <text x="120" y="32" font-family="IBM Plex Mono" font-size="12" fill="var(--purple)">Solarise</text>
+        </svg>
+      </div>
+      <div>
+        <svg viewBox="0 0 260 220" style="width:100%;max-width:260px">
+          <line x1="34" y1="186" x2="240" y2="186" stroke="var(--ink)" stroke-width="1.5"/>
+          <line x1="34" y1="186" x2="34" y2="20" stroke="var(--ink)" stroke-width="1.5"/>
+          <text x="135" y="208" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--ink-soft)">input</text>
+          <text x="14" y="105" transform="rotate(-90 14 105)" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--ink-soft)">output</text>
+          <polyline points="34,186 96,186 196,40 240,40" fill="none" stroke="var(--teal)" stroke-width="2.5"/>
+          <line x1="96" y1="186" x2="96" y2="194" stroke="var(--ink)"/>
+          <line x1="196" y1="186" x2="196" y2="194" stroke="var(--ink)"/>
+          <text x="96" y="206" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="var(--ink-soft)">min</text>
+          <text x="196" y="206" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="var(--ink-soft)">max</text>
+          <text x="92" y="32" font-family="IBM Plex Mono" font-size="12" fill="var(--teal)">Min–max stretch</text>
+        </svg>
+      </div>
+    </div>
+    <div class="eq">min–max:  g' = 0                          <span style="color:#8a7f6a">if g &lt; min</span>
+          g' = 255                        <span style="color:#8a7f6a">if g &gt; max</span>
+          g' = (g − min)/(max − min) × 255   <span style="color:#8a7f6a">otherwise</span></div>
+    <p class="small">Use it when intensities only occupy part of the range (e.g. 50–225) and the image looks flat — stretch the used band to fill 0–255. (Try it live in the OpenCV lab as <span class="mono">normalize(..., NORM_MINMAX)</span>.)</p>
+  </div>
+</section>
+
+<!-- ============ 4.2 THRESHOLDING ============ -->
+<section id="thresh">
+  <div class="sec-head"><span class="sec-num">8</span><h2>Thresholding &amp; automatic T</h2></div>
+  <p class="lead">Thresholding turns an image <b>binary</b> to separate object from background. The whole game is choosing T.</p>
+
+  <div class="eq">g' = 255   <span style="color:#8a7f6a">if g ≥ T</span>
+g' = 0     <span style="color:#8a7f6a">otherwise — output has just 2 levels, whatever T is</span></div>
+
+  <div class="grid3">
+    <div class="card">
+      <h3 style="font-size:19px">Manual</h3>
+      <p class="small">If the histogram is bimodal, pick T in the <b>valley</b> between the two humps. Needs a human → not scalable.</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:19px">P-tile <span class="tag tim">lecture</span></h3>
+      <p class="small">Object is a known <b>P%</b> of the image: expected object pixels = P% × total; accumulate the histogram until you reach that count; current grey level = T. Stable under lighting changes (uses <b>proportions</b>). Lecture: biscuit ≈ 41%.</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:19px">Otsu <span class="tag note">OpenCV</span></h3>
+      <p class="small">Automatic. Picks T to <b>maximise between-class variance</b> (≡ minimise within-class). Best on a roughly <b>bimodal</b> histogram. Built into OpenCV.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Mean-splitting / midpoint — the simple automatic idea (≡ your Week-1 isodata)</h3>
+    <div class="eq">for each candidate i:
+   μ<span class="v">l</span> = mean intensity below i
+   μ<span class="v">h</span> = mean intensity above/including i
+   midpoint = (μ<span class="v">l</span> + μ<span class="v">h</span>) / 2
+pick <span class="hl">T = i</span> where midpoint is closest to i</div>
+    <p class="small">The interactive "auto-pick T" in the <a href="../widgets/histogram-threshold.html">histogram &amp; threshold widget</a> animates exactly this convergence.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Otsu in OpenCV C++ <span class="tag note">marked</span></h3>
+<pre><span class="c">// supplied threshold</span>
+<span class="f">threshold</span>(inputImage, outputImage, <span class="s">128</span>, <span class="s">255</span>, THRESH_BINARY);
+
+<span class="c">// automatic Otsu threshold</span>
+<span class="f">threshold</span>(inputImage, outputImage, <span class="s">0</span>, <span class="s">255</span>,
+          THRESH_BINARY | THRESH_OTSU);</pre>
+      <p class="small">Try both live in the <a href="#lab">OpenCV lab</a> below — Otsu reports the T it picked.</p>
+    </div>
+    <div class="card">
+      <h3>Misclassification (the limitation)</h3>
+      <p class="small">When object and background histograms <b>overlap</b>, any single global T misclassifies some pixels both ways — unavoidable with one threshold.</p>
+      <svg viewBox="0 0 280 150" style="width:100%">
+        <line x1="20" y1="125" x2="270" y2="125" stroke="var(--ink)" stroke-width="1.5"/>
+        <path d="M20,125 C70,125 70,40 110,40 C150,40 150,125 200,125" fill="none" stroke="var(--purple)" stroke-width="2"/>
+        <path d="M90,125 C140,125 140,55 175,55 C215,55 215,125 270,125" fill="none" stroke="var(--teal)" stroke-width="2"/>
+        <line x1="150" y1="30" x2="150" y2="125" stroke="var(--ink)" stroke-dasharray="4 4"/>
+        <text x="150" y="143" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--ink-soft)">T</text>
+        <text x="55" y="32" font-family="IBM Plex Mono" font-size="10" fill="var(--purple)">background</text>
+        <text x="205" y="50" font-family="IBM Plex Mono" font-size="10" fill="var(--teal)">objects</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4.3 TRANSFORMS ============ -->
+<section id="transforms">
+  <div class="sec-head"><span class="sec-num">9</span><h2>Geometrical transformations</h2></div>
+  <p class="lead">Point processing changes pixel <em>values</em>; geometry changes pixel <em>positions</em>: (x, y) → (x', y'). Read every matrix as <span class="mono">[new] = [matrix][old]</span> — "row across × column down."</p>
+
+  <p class="legend">
+    <span><span class="swatch" style="background:var(--teal)"></span>scaling (a,e)</span>
+    <span><span class="swatch" style="background:var(--amber)"></span>shearing (b,d)</span>
+    <span><span class="swatch" style="background:var(--rose)"></span>rotation (a,b,d,e)</span>
+    <span><span class="swatch" style="background:var(--purple)"></span>translation (c,f)</span>
+  </p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Scaling</h3>
+      <div class="mat-wrap">
+        <span class="mat" style="grid-template-columns:1fr"><span class="cell">x'</span><span class="cell">y'</span></span>
+        =
+        <span class="mat" style="grid-template-columns:repeat(2,1fr)"><span class="cell sc">sx</span><span class="cell">0</span><span class="cell">0</span><span class="cell sc">sy</span></span>
+        <span class="mat" style="grid-template-columns:1fr"><span class="cell">x</span><span class="cell">y</span></span>
+      </div>
+      <p class="small">sx=sy=2: (1,0)→(2,0), (2,0)→(4,0). Holes appear → see interpolation.</p>
+    </div>
+    <div class="card">
+      <h3>Translation</h3>
+      <div class="mat-wrap">
+        <span class="mat" style="grid-template-columns:1fr"><span class="cell">x'</span><span class="cell">y'</span></span>
+        =
+        <span class="mat" style="grid-template-columns:1fr"><span class="cell">x</span><span class="cell">y</span></span>
+        +
+        <span class="mat" style="grid-template-columns:1fr"><span class="cell tr">tx</span><span class="cell tr">ty</span></span>
+      </div>
+      <p class="small">tx=160, ty=60: (1,0)→(161,60). Translation needs an <em>addition</em> — which is why we move to homogeneous coords ↓</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Homogeneous coordinates — one matrix for everything</h3>
+    <p class="small">Add a 1 and pad to 3×3 so scaling+translation become a single matrix multiply (and matrices can be chained):</p>
+    <div class="mat-wrap">
+      <span class="mat" style="grid-template-columns:1fr"><span class="cell">x'</span><span class="cell">y'</span><span class="cell">1</span></span>
+      =
+      <span class="mat" style="grid-template-columns:repeat(3,1fr)"><span class="cell sc">sx</span><span class="cell">0</span><span class="cell tr">tx</span><span class="cell">0</span><span class="cell sc">sy</span><span class="cell tr">ty</span><span class="cell">0</span><span class="cell">0</span><span class="cell">1</span></span>
+      <span class="mat" style="grid-template-columns:1fr"><span class="cell">x</span><span class="cell">y</span><span class="cell">1</span></span>
+    </div>
+    <div class="exam-box">
+      <span class="lbl">Exam framing</span>
+      <p style="margin:6px 0 0">Matrix multiplication is <b>not commutative</b> → <b>order matters</b>. "Scale then translate" multiplies the matrices in reverse order of application.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Reflection (flip y)</h3>
+      <div class="mat-wrap">
+        <span class="mat" style="grid-template-columns:repeat(3,1fr)"><span class="cell sc">1</span><span class="cell">0</span><span class="cell">0</span><span class="cell">0</span><span class="cell sc">−1</span><span class="cell">0</span><span class="cell">0</span><span class="cell">0</span><span class="cell">1</span></span>
+      </div>
+      <p class="small">Usually translate centre→origin, transform, translate back (height 480 → ty=480).</p>
+    </div>
+    <div class="card">
+      <h3>Shear (λx=0.8)</h3>
+      <div class="mat-wrap">
+        <span class="mat" style="grid-template-columns:repeat(3,1fr)"><span class="cell sc">1</span><span class="cell sh">λx</span><span class="cell">0</span><span class="cell sh">λy</span><span class="cell sc">1</span><span class="cell">0</span><span class="cell">0</span><span class="cell">0</span><span class="cell">1</span></span>
+      </div>
+      <p class="small">→ x' = x + 0.8y, y' = y. The off-diagonal terms do the shearing.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Rotation — drag θ and watch the matrix fill</h3>
+    <div class="control"><label>θ (degrees)</label><span class="readout" id="rotVal">45°</span><input type="range" id="rotT" min="0" max="360" value="45"></div>
+    <div class="cvgrid" style="align-items:center">
+      <div class="mat-wrap" style="font-size:16px">
+        <span class="mat" style="grid-template-columns:repeat(3,1fr)">
+          <span class="cell ro" id="r_cc">cosθ</span><span class="cell ro" id="r_ns">−sinθ</span><span class="cell">0</span>
+          <span class="cell ro" id="r_s">sinθ</span><span class="cell ro" id="r_c">cosθ</span><span class="cell">0</span>
+          <span class="cell">0</span><span class="cell">0</span><span class="cell">1</span></span>
+      </div>
+      <div><canvas id="rotCanvas" width="240" height="240" class="demo-canvas" style="max-width:240px"></canvas></div>
+    </div>
+    <p class="small">For θ=45°: cosθ = sinθ = √2/2 ≈ 0.707. To rotate about the <b>image centre</b>, combine translate→rotate→translate-back into one matrix.</p>
+  </div>
+
+  <div class="card">
+    <h3>Affine transform — the one big view, plus OpenCV</h3>
+    <div class="mat-wrap" style="font-size:16px">
+      <span class="mat" style="grid-template-columns:1fr"><span class="cell">x'</span><span class="cell">y'</span><span class="cell">1</span></span>
+      =
+      <span class="mat" style="grid-template-columns:repeat(3,1fr)"><span class="cell">a</span><span class="cell">b</span><span class="cell">c</span><span class="cell">d</span><span class="cell">e</span><span class="cell">f</span><span class="cell">0</span><span class="cell">0</span><span class="cell">1</span></span>
+      <span class="mat" style="grid-template-columns:1fr"><span class="cell">x</span><span class="cell">y</span><span class="cell">1</span></span>
+    </div>
+    <p class="small"><span class="sc">a,e → scale</span> · <span class="sh">b,d → shear</span> · <span class="ro">a,b,d,e → rotation</span> · <span class="tr">c,f → translation</span>.</p>
+    <div class="exam-box">
+      <span class="lbl">Exam framing — which OpenCV function?</span>
+      <p style="margin:6px 0 0"><span class="mono">warpAffine()</span> takes a <b>2×3</b> matrix (affine); <span class="mono">warpPerspective()</span> takes a <b>3×3</b> matrix (projective/perspective). Try <span class="mono">warpAffine</span> live in the lab.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4.3 LENS DISTORTION ============ -->
+<section id="distortion">
+  <div class="sec-head"><span class="sec-num">10</span><h2>Camera lens distortion &amp; calibration</h2></div>
+  <p class="lead">Real lenses bend straight lines. Two named shapes, two correction models, one OpenCV fix.</p>
+
+  <div class="card">
+    <h3>Barrel vs pincushion (redrawn)</h3>
+    <div class="grid3" style="align-items:center">
+      <div style="text-align:center">
+        <svg viewBox="0 0 120 100" style="width:100%;max-width:120px"><g fill="none" stroke="var(--ink)" stroke-width="2">
+          <rect x="22" y="20" width="76" height="60"/><line x1="22" y1="40" x2="98" y2="40"/><line x1="22" y1="60" x2="98" y2="60"/><line x1="47" y1="20" x2="47" y2="80"/><line x1="73" y1="20" x2="73" y2="80"/></g></svg>
+        <div class="small">No distortion</div>
+      </div>
+      <div style="text-align:center">
+        <svg viewBox="0 0 120 100" style="width:100%;max-width:120px"><g fill="none" stroke="var(--ink)" stroke-width="2">
+          <path d="M22,24 Q60,14 98,24 Q108,50 98,76 Q60,86 22,76 Q12,50 22,24 Z"/><path d="M16,50 Q60,44 104,50"/><path d="M28,18 Q34,50 28,82"/><path d="M92,18 Q86,50 92,82"/></g></svg>
+        <div class="small"><b>Barrel</b> (bulges out)</div>
+      </div>
+      <div style="text-align:center">
+        <svg viewBox="0 0 120 100" style="width:100%;max-width:120px"><g fill="none" stroke="var(--ink)" stroke-width="2">
+          <path d="M22,20 Q60,30 98,20 Q88,50 98,80 Q60,70 22,80 Q32,50 22,20 Z"/><path d="M24,50 Q60,56 96,50"/><path d="M32,22 Q26,50 32,78"/><path d="M88,22 Q94,50 88,78"/></g></svg>
+        <div class="small"><b>Pincushion</b> (pinches in)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Radial distortion</h3>
+      <p class="small">Depends on distance r from centre, r = √(x²+y²):</p>
+      <div class="eq">x_corr = x(1 + k₁r² + k₂r⁴ + k₃r⁶ + …)
+y_corr = y(1 + k₁r² + k₂r⁴ + k₃r⁶ + …)</div>
+    </div>
+    <div class="card">
+      <h3>Tangential distortion</h3>
+      <p class="small">Caused by lens/sensor misalignment:</p>
+      <div class="eq">x_corr = x + 2p₁xy + p₂(r² + 2x²)
+y_corr = y + p₁(r² + 2y²) + 2p₂xy</div>
+    </div>
+  </div>
+
+  <div class="exam-box">
+    <span class="lbl">Exam framing</span>
+    <p style="margin:6px 0 0">OpenCV stores the distortion as <span class="mono">[k₁ k₂ p₁ p₂ k₃]</span>, finds it from multiple <b>chessboard</b> photos (calibration), and corrects with <span class="mono">undistort()</span>. Radial depends on <b>r</b>; tangential on <b>misalignment</b>.</p>
+  </div>
+
+  <div class="flag">
+    <span class="tag note">IMAGE NEEDED</span>
+    <p class="small" style="margin:6px 0 0">The bookshelf barrel/pincushion photos, fisheye road shots and chessboard calibration images are in the slides but weren't uploaded. The geometry diagrams above are redrawn; add the PNGs to <span class="mono">assets/img/</span> for the originals.</p>
+  </div>
+</section>
+
+<!-- ============ 4.4 INTERPOLATION ============ -->
+<section id="interp">
+  <div class="sec-head"><span class="sec-num">11</span><h2>Interpolation &amp; forward/reverse mapping</h2></div>
+  <p class="lead">After a transform, pixel coordinates are usually <b>non-integer</b>, but pixels live on an integer grid. Interpolation fills the gaps; the mapping direction decides whether you get holes.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Interpolation methods</h3>
+      <ul class="clean small">
+        <li><b>Nearest neighbour</b> — copy the closest source pixel. Fastest, lowest quality, <b>blocky/jagged</b>.</li>
+        <li><b>Bilinear</b> — weighted blend of 4 neighbours; smoother.</li>
+        <li><b>Bicubic</b> — more neighbours; smoothest, most expensive.</li>
+      </ul>
+      <div class="exam-box" style="margin-top:8px"><span class="lbl">Exam framing</span><p style="margin:6px 0 0" class="small">Higher quality → more computation. No formulas needed at this stage.</p></div>
+    </div>
+    <div class="card">
+      <h3>Forward vs reverse</h3>
+      <table>
+        <tr><th>Aspect</th><th>Forward</th><th>Reverse</th></tr>
+        <tr><td>Iterate</td><td>source → dest</td><td>dest → source</td></tr>
+        <tr><td>Holes</td><td>Yes</td><td>No</td></tr>
+        <tr><td>Interpolation</td><td>awkward</td><td>natural</td></tr>
+        <tr><td>Used</td><td>rarely</td><td>almost always</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Forward makes holes — reverse fills every pixel</h3>
+    <div class="control"><button class="toggle on" id="frToggle">showing: forward</button><span class="small" id="frCaption" style="margin-left:8px"></span></div>
+    <svg id="frSvg" viewBox="0 0 520 250" style="width:100%;height:auto"></svg>
+  </div>
+
+  <div class="card">
+    <h3>The practical loop (OpenCV, graphics pipelines)</h3>
+    <ul class="clean small">
+      <li>Loop over <b>destination</b> pixels.</li>
+      <li>Apply the <b>inverse</b> transform to find where each came from.</li>
+      <li><b>Interpolate</b> the source image there.</li>
+      <li>Assign the value → every destination pixel gets a value, <b>no holes</b>.</li>
+    </ul>
+    <div class="hook"><span class="lbl">🧠 Memory hook — "ask backwards"</span><p style="margin:6px 0 0">Reverse mapping asks "where did this pixel come from?"; interpolation answers when the answer isn't a whole pixel. The two are <b>inseparable</b>.</p></div>
+  </div>
+</section>
+
+<!-- ============ OPENCV LAB (embedded, reusing the standalone lab's loader pattern) ============ -->
+<section id="lab">
+  <div class="sec-head"><span class="sec-num">cv</span><h2>OpenCV.js lab — really run this week's calls</h2></div>
+  <p class="lead">Real OpenCV C++ compiled to WebAssembly — the same <span class="mono">cv.*</span> functions you're marked on. Threshold, Otsu, min–max stretch and <span class="mono">warpAffine</span> rotation, tied straight to Lectures 4.2–4.3.</p>
+
+  <div id="cvStatus" class="loading"><span class="spin"></span> Loading OpenCV (~8&nbsp;MB, first load only)…</div>
+
+  <div class="flag" style="margin-bottom:16px">
+    <span class="tag note">NEEDS A SERVER</span>
+    <p class="small" style="margin:6px 0 0">WebAssembly won't load by double-clicking. Run <span class="mono">python3 -m http.server</span> in the repo root and open <span class="mono">http://localhost:8000/weeks/comp27112-week2.html</span>, or view it on the deployed site. The full standalone bench is at <a href="../widgets/opencv-lab.html">widgets/opencv-lab.html</a>.</p>
+  </div>
+
+  <div class="card">
+    <div class="control">
+      <label class="filebtn" for="fileIn">⬆ Upload an image</label>
+      <input type="file" id="fileIn" accept="image/*">
+      <span class="small" id="fileName">using built-in sample</span>
+    </div>
+    <div id="opRow"></div>
+    <div id="paramRow"></div>
+    <div class="cvgrid" style="margin-top:14px">
+      <div><canvas id="srcCanvas" class="demo-canvas"></canvas><div class="small mono" style="text-align:center;margin-top:4px">input</div></div>
+      <div><canvas id="dstCanvas" class="demo-canvas"></canvas><div class="small mono" style="text-align:center;margin-top:4px">output (real OpenCV)</div></div>
+    </div>
+    <h3 style="margin-top:14px;font-size:18px" id="cppTitle">Threshold</h3>
+    <pre id="cppCode"></pre>
+  </div>
+</section>
+
+<!-- ============ DRILL ============ -->
+<section id="drill" style="border-bottom:none">
+  <div class="sec-head"><span class="sec-num">?</span><h2>Exam drill — click to reveal</h2></div>
+  <p class="lead">Phrased like the past papers, with mark weights. Answer in your head first, then click.</p>
+
+  <div class="drill" data-d><div class="q"><span class="marks">2</span><div><b>Define point processing and give two examples.</b></div></div><div class="reveal">▼ reveal</div><div class="a"><div class="inner">Each output pixel depends <b>only</b> on the corresponding input pixel, g(x,y)=T(f(x,y)) — no neighbours. Examples: brightness (g+k), contrast (g×k), thresholding, negative, solarise.</div></div></div>
+
+  <div class="drill" data-d><div class="q"><span class="marks">3</span><div><b>Distinguish sampling from quantisation, and state what each controls.</b></div></div><div class="reveal">▼ reveal</div><div class="a"><div class="inner">Sampling discretises <b>space</b> (the pixel grid) → controls detail/sharpness. Quantisation discretises <b>intensity</b> → controls smoothness/contrast. Raising one can't fix a deficiency in the other.</div></div></div>
+
+  <div class="drill" data-d><div class="q"><span class="marks">3</span><div><b>A camera has 90° FOV and 4272 pixels across. Give the angular resolution and show your method.</b></div></div><div class="reveal">▼ reveal</div><div class="a"><div class="inner">resolution = FOV ÷ pixels = 90 ÷ 4272 ≈ <b>0.021° per pixel</b>.</div></div></div>
+
+  <div class="drill" data-d><div class="q"><span class="marks">4</span><div><b>From 1000 m altitude with 90° FOV and 4272 px width, find the ground resolution.</b></div></div><div class="reveal">▼ reveal</div><div class="a"><div class="inner">ground width = 2·tan(45°)·1000 = 2000 m. ground res = 2000 ÷ 4272 ≈ <b>0.47 m/pixel</b>.</div></div></div>
+
+  <div class="drill" data-d><div class="q"><span class="marks">2</span><div><b>State Nyquist in image terms.</b></div></div><div class="reveal">▼ reveal</div><div class="a"><div class="inner">Sample at ≥ 2× the highest frequency present; equivalently you need ~2 pixels across an object's smallest feature to <b>detect</b> it (more to recognise it), or aliasing occurs.</div></div></div>
+
+  <div class="drill" data-d><div class="q"><span class="marks">2</span><div><b>An image has σ=8 noise on a 0–255 range. Compute the SNR in dB.</b></div></div><div class="reveal">▼ reveal</div><div class="a"><div class="inner">SNR = 20·log₁₀(255/8) ≈ 20·log₁₀(31.9) ≈ <b>30 dB</b>. Higher dB = cleaner; log scale.</div></div></div>
+
+  <div class="drill" data-d><div class="q"><span class="marks">3</span><div><b>Why must you clip after a brightness add, and what goes wrong if you don't?</b></div></div><div class="reveal">▼ reveal</div><div class="a"><div class="inner">Unsigned-byte arithmetic <b>wraps</b>: 255+1=0. Without clipping, bright pixels (e.g. 206–255 after +50) wrap to 0–49 → bright areas turn black. Compute in a wider type then clamp to 0–255.</div></div></div>
+
+  <div class="drill" data-d><div class="q"><span class="marks">4</span><div><b>Describe the P-tile thresholding algorithm and one advantage over manual selection.</b></div></div><div class="reveal">▼ reveal</div><div class="a"><div class="inner">Expected object pixels = P% × total; build the histogram; accumulate counts until you reach that number; the current grey level is T. Advantage: automatic and <b>stable under lighting changes</b> because it uses proportions, not absolute values.</div></div></div>
+
+  <div class="drill" data-d><div class="q"><span class="marks">2</span><div><b>What does Otsu's method optimise, and when does it work best?</b></div></div><div class="reveal">▼ reveal</div><div class="a"><div class="inner">It chooses T to <b>maximise between-class variance</b> (≡ minimise within-class variance). Works best on a roughly <b>bimodal</b> histogram.</div></div></div>
+
+  <div class="drill" data-d><div class="q"><span class="marks">3</span><div><b>Write the homogeneous matrix that scales by (sx,sy) and translates by (tx,ty), and say why we use homogeneous coordinates.</b></div></div><div class="reveal">▼ reveal</div><div class="a"><div class="inner">[[sx,0,tx],[0,sy,ty],[0,0,1]]. Homogeneous coords let translation become a matrix multiply, so transforms can be <b>composed</b> into one matrix — but order matters (multiplication isn't commutative).</div></div></div>
+
+  <div class="drill" data-d><div class="q"><span class="marks">2</span><div><b>Which OpenCV function for an affine transform, which for perspective, and what size matrix does each take?</b></div></div><div class="reveal">▼ reveal</div><div class="a"><div class="inner"><span class="mono">warpAffine()</span> — 2×3 (affine). <span class="mono">warpPerspective()</span> — 3×3 (projective).</div></div></div>
+
+  <div class="drill" data-d><div class="q"><span class="marks">4</span><div><b>Why is reverse mapping preferred over forward mapping for rotation/scaling?</b></div></div><div class="reveal">▼ reveal</div><div class="a"><div class="inner">Forward (source→dest) leaves <b>holes</b> because non-integer coords don't land on grid pixels. Reverse (dest→source) iterates over destination pixels, inverse-maps each to the source and interpolates — so <b>every</b> destination pixel gets a value, no holes, and interpolation fits naturally.</div></div></div>
+
+  <div class="drill" data-d><div class="q"><span class="marks">3</span><div><b>Name the two lens-distortion types, what each depends on, and the OpenCV correction function.</b></div></div><div class="reveal">▼ reveal</div><div class="a"><div class="inner"><b>Radial</b> (barrel/pincushion) depends on distance r from centre; <b>tangential</b> on lens/sensor misalignment. Parameters [k₁ k₂ p₁ p₂ k₃] are found by chessboard calibration and applied with <span class="mono">undistort()</span>.</div></div></div>
+</section>
+
+</div><!-- /wrap -->
+
+<div class="footer">
+  <div class="wrap">
+    <div class="big">That's Week 2, end-to-end.</div>
+    <p>Sources fused: IP Lectures 3.1–3.3 &amp; 4.1–4.4 (slides + transcripts) · your Week-2 notes · past-paper phrasing for the drills.</p>
+    <p class="small" style="margin-top:14px">Diagrams redrawn from the slides; copyrighted photos intentionally omitted — run the OpenCV lab on your own image instead. Highest-yield: <b>sampling vs quantisation · resolution calcs · histograms &amp; clipping · thresholding (P-tile/Otsu) · affine matrices · reverse mapping</b>. <a href="../index.html">← back to the shelf</a></p>
+  </div>
+</div>
+
+<script src="../assets/widget.js"></script>
+<script>
+/* ===================== resolution / SNR calculators ===================== */
+const $=id=>document.getElementById(id);
+function arCalc(){const fov=+$('ar_fov').value,px=+$('ar_px').value;
+  $('ar_out').textContent=px?`resolution = ${fov} ÷ ${px} = ${(fov/px).toFixed(4)}° per pixel`:'pixels must be > 0';}
+function grCalc(){const h=+$('gr_h').value,fov=+$('gr_fov').value,px=+$('gr_px').value;
+  const width=2*Math.tan((fov/2)*Math.PI/180)*h, res=px?width/px:NaN;
+  $('gr_out').textContent=`ground width = 2 · tan(${fov}/2°) · ${h} = ${width.toFixed(1)} m\nground res   = ${width.toFixed(1)} ÷ ${px} = ${res.toFixed(3)} m/pixel`;}
+function snrCalc(){const r=+$('snr_r').value,s=+$('snr_s').value;
+  $('snr_out').textContent=s?`SNR = 20·log₁₀(${r} ÷ ${s}) = 20·log₁₀(${(r/s).toFixed(2)}) = ${(20*Math.log10(r/s)).toFixed(1)} dB`:'σ must be > 0';}
+['ar_fov','ar_px'].forEach(i=>$(i).oninput=arCalc);
+['gr_h','gr_fov','gr_px'].forEach(i=>$(i).oninput=grCalc);
+['snr_r','snr_s'].forEach(i=>$(i).oninput=snrCalc);
+arCalc();grCalc();snrCalc();
+
+/* ===================== Nyquist SVG ===================== */
+(function(){const mid=100,trueF=0.075,aliasF=0.0107;let tp='',ap='';
+  for(let x=20;x<=880;x+=2){tp+=(x===20?'M':'L')+x+','+(mid-60*Math.sin(trueF*(x-20))).toFixed(1)+' ';
+    ap+=(x===20?'M':'L')+x+','+(mid-60*Math.sin(aliasF*(x-20))).toFixed(1)+' ';}
+  $('nyqTrue').setAttribute('d',tp);$('nyqAlias').setAttribute('d',ap);
+  let dots='';for(let x=20;x<=880;x+=Math.round(2*Math.PI/aliasF/6)){
+    dots+=`<circle cx="${x}" cy="${(mid-60*Math.sin(aliasF*(x-20))).toFixed(1)}" r="4" fill="var(--ink)"/>`;}
+  $('nyqDots').innerHTML=dots;})();
+
+/* ===================== live histogram (VTK kit) ===================== */
+(function(){
+  const W=160,H=160; let gray=VTK.synthImage('cells',W,H);
+  const img=$('histImg'), plot=$('histPlot');
+  const row=VTK.toggleRow({label:'test image',active:'cells',
+    options:[{id:'cells',label:'Cells (bimodal)'},{id:'lowcontrast',label:'Low contrast'},{id:'shapes',label:'Shapes'},{id:'gradient',label:'Gradient'}],
+    onChange:id=>{gray=VTK.synthImage(id,W,H);VTK.paintGray(img,gray);drawHist();}});
+  $('histImgRow').appendChild(row.wrap);
+  function drawHist(){
+    const hist=VTK.histogram(gray), g=plot.getContext('2d'),cw=plot.width,ch=plot.height,pad=10;
+    g.fillStyle='#1c1812';g.fillRect(0,0,cw,ch);
+    let max=0;for(let i=0;i<256;i++)if(hist[i]>max)max=hist[i];
+    const bw=(cw-pad*2)/256;
+    g.fillStyle='#c89b3c';
+    for(let i=0;i<256;i++){const h=max?hist[i]/max*(ch-pad*2):0;g.fillRect(pad+i*bw,ch-pad-h,Math.max(1,bw),h);}
+    g.fillStyle='#8a7f6a';g.font='10px monospace';
+    [0,64,128,192,255].forEach(t=>g.fillText(t,pad+t*bw-6,ch-1));
+  }
+  VTK.paintGray(img,gray);drawHist();
+})();
+
+/* ===================== point-op playground ===================== */
+(function(){
+  const tf=$('tfCanvas').getContext('2d'),src=$('srcRamp').getContext('2d'),
+        outc=$('outRamp').getContext('2d'),eq=$('opEq');
+  let op='identity',bright=50,contrast=1.5,clip=true;const N=300;
+  function T(v){let o=v;
+    if(op==='bright')o=v+bright; else if(op==='contrast')o=v*contrast; else if(op==='negative')o=255-v;
+    return clip?Math.max(0,Math.min(255,o)):((o%256)+256)%256;}
+  function drawTF(){tf.fillStyle='#1c1812';tf.fillRect(0,0,N,N);
+    tf.strokeStyle='rgba(255,255,255,.12)';tf.lineWidth=1;
+    for(let i=0;i<=4;i++){const p=i*N/4;tf.beginPath();tf.moveTo(p,0);tf.lineTo(p,N);tf.moveTo(0,p);tf.lineTo(N,p);tf.stroke();}
+    tf.strokeStyle='rgba(127,184,216,.35)';tf.setLineDash([4,4]);tf.beginPath();tf.moveTo(0,N);tf.lineTo(N,0);tf.stroke();tf.setLineDash([]);
+    tf.strokeStyle='#c89b3c';tf.lineWidth=3;tf.beginPath();
+    for(let x=0;x<=255;x++){const px=x/255*N,py=N-(T(x)/255*N);x?tf.lineTo(px,py):tf.moveTo(px,py);}tf.stroke();
+    tf.fillStyle='#8a7f6a';tf.font='10px monospace';tf.fillText('in 0→255',N-64,N-6);
+    tf.save();tf.translate(12,64);tf.rotate(-Math.PI/2);tf.fillText('out 0→255',0,0);tf.restore();}
+  function drawRamps(){const w=320,h=40;
+    for(let x=0;x<w;x++){const v=Math.round(x/(w-1)*255);
+      src.fillStyle=`rgb(${v},${v},${v})`;src.fillRect(x,0,1,h);
+      const o=Math.round(T(v));outc.fillStyle=`rgb(${o},${o},${o})`;outc.fillRect(x,0,1,h);}}
+  function eqText(){
+    if(op==='identity')return "g' = g            // no change";
+    if(op==='bright')return `g' = ${clip?'min(255, max(0, ':''}g ${bright>=0?'+':'−'} ${Math.abs(bright)}${clip?'))':''}   // ${clip?'clipped':'WRAPAROUND'}`;
+    if(op==='contrast')return `g' = ${clip?'min(255, max(0, ':''}g × ${contrast.toFixed(2)}${clip?'))':''}`;
+    if(op==='negative')return "g' = 255 − g      // invert";}
+  function refresh(){drawTF();drawRamps();eq.textContent=eqText();}
+  document.querySelectorAll('.ptOp').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.ptOp').forEach(x=>x.classList.remove('on'));b.classList.add('on');op=b.dataset.op;
+    $('brightCtl').style.display=op==='bright'?'flex':'none';
+    $('contrastCtl').style.display=op==='contrast'?'flex':'none';refresh();});
+  const bs=$('brightSlider'),bo=$('brightOut');bs.oninput=()=>{bright=+bs.value;bo.textContent=(bright>=0?'+':'')+bright;refresh();};
+  const cs=$('contrastSlider'),co=$('contrastOut');cs.oninput=()=>{contrast=+cs.value/100;co.textContent=contrast.toFixed(2);refresh();};
+  $('clipChk').onchange=e=>{clip=e.target.checked;refresh();};
+  refresh();
+})();
+
+/* ===================== rotation widget ===================== */
+(function(){
+  function getCSS(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+  function refresh(){const t=+$('rotT').value,r=t*Math.PI/180,c=Math.cos(r),s=Math.sin(r);
+    $('rotVal').textContent=t+'°';
+    $('r_cc').textContent=c.toFixed(3);$('r_c').textContent=c.toFixed(3);
+    $('r_s').textContent=s.toFixed(3);$('r_ns').textContent=(-s).toFixed(3);
+    const cv=$('rotCanvas'),g=cv.getContext('2d'),N=240,cx=N/2,cy=N/2;
+    g.fillStyle='#1c1812';g.fillRect(0,0,N,N);
+    g.strokeStyle='rgba(255,255,255,.18)';g.beginPath();g.moveTo(0,cy);g.lineTo(N,cy);g.moveTo(cx,0);g.lineTo(cx,N);g.stroke();
+    const pts=[[-60,-60],[60,-60],[60,60],[-60,60]];
+    function poly(a,col,dash){g.strokeStyle=col;g.setLineDash(dash||[]);g.lineWidth=2;g.beginPath();
+      a.forEach((p,i)=>{const x=cx+p[0],y=cy-p[1];i?g.lineTo(x,y):g.moveTo(x,y);});g.closePath();g.stroke();g.setLineDash([]);}
+    poly(pts,'rgba(255,255,255,.35)',[5,4]);
+    poly(pts.map(([x,y])=>[x*c-y*s,x*s+y*c]),getCSS('--rose'));
+    g.strokeStyle=getCSS('--gold');g.lineWidth=2;g.beginPath();g.moveTo(cx,cy);g.lineTo(cx+80*c,cy-80*s);g.stroke();}
+  $('rotT').oninput=refresh;refresh();
+})();
+
+/* ===================== forward / reverse toggle ===================== */
+(function(){
+  function getCSS(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+  let fwd=true;const NS='http://www.w3.org/2000/svg',svg=$('frSvg');
+  function draw(){svg.innerHTML='';
+    const grid=(ox,label)=>{for(let r=0;r<4;r++)for(let c=0;c<4;c++){
+        const e=document.createElementNS(NS,'rect');e.setAttribute('x',ox+c*48);e.setAttribute('y',30+r*48);
+        e.setAttribute('width',46);e.setAttribute('height',46);e.setAttribute('fill','#fff');e.setAttribute('stroke','#bbb');svg.appendChild(e);}
+      const t=document.createElementNS(NS,'text');t.setAttribute('x',ox+96);t.setAttribute('y',244);t.setAttribute('text-anchor','middle');
+      t.setAttribute('font-family','IBM Plex Mono');t.setAttribute('font-size','12');t.setAttribute('fill',getCSS('--ink-soft'));t.textContent=label;svg.appendChild(t);};
+    grid(20,'Source');grid(312,'Destination');
+    const fill=(ox,r,c,col)=>{const e=document.createElementNS(NS,'rect');e.setAttribute('x',ox+c*48+1);e.setAttribute('y',30+r*48+1);
+      e.setAttribute('width',44);e.setAttribute('height',44);e.setAttribute('fill',col);svg.appendChild(e);};
+    const cross=(ox,r,c)=>{const e=document.createElementNS(NS,'text');e.setAttribute('x',ox+c*48+23);e.setAttribute('y',30+r*48+30);
+      e.setAttribute('text-anchor','middle');e.setAttribute('fill',getCSS('--rose'));e.setAttribute('font-size','22');e.textContent='✕';svg.appendChild(e);};
+    if(fwd){[[0,1],[1,3],[2,0],[3,2]].forEach(([r,c])=>fill(312,r,c,'#cdb4e6'));
+      [[0,0],[0,2],[0,3],[1,0],[1,1],[1,2],[2,1],[2,2],[2,3],[3,0],[3,1],[3,3]].forEach(([r,c])=>cross(312,r,c));
+      $('frCaption').textContent='source pixels scatter → many destination cells get no value (✕ = hole).';}
+    else{for(let r=0;r<4;r++)for(let c=0;c<4;c++)fill(312,r,c,'#a8ddd6');
+      $('frCaption').textContent='every destination pixel inverse-maps to the source and is interpolated → no holes.';}}
+  $('frToggle').onclick=function(){fwd=!fwd;this.textContent='showing: '+(fwd?'forward':'reverse');draw();};
+  draw();
+})();
+
+/* ===================== drill cards (shared house behaviour) ===================== */
+document.querySelectorAll('[data-d]').forEach(d=>d.addEventListener('click',()=>d.classList.toggle('open')));
+
+/* ===================== embedded OpenCV lab (same pattern as widgets/opencv-lab.html) ===================== */
+const OPS={
+  thresh:{label:'Threshold',title:'Binary threshold',
+    params:[{id:'T',label:'threshold T',min:0,max:255,value:128}],
+    cpp:p=>`Mat gray, bin;\ncvtColor(input, gray, COLOR_BGR2GRAY);\nthreshold(gray, bin, ${p.T}, 255, THRESH_BINARY);`,
+    run:(src,p)=>{const gray=new cv.Mat(),dst=new cv.Mat();cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);
+      cv.threshold(gray,dst,p.T,255,cv.THRESH_BINARY);gray.delete();return dst;}},
+  otsu:{label:'Otsu (auto T)',title:'Otsu automatic threshold',params:[],
+    cpp:()=>`Mat gray, bin;\ncvtColor(input, gray, COLOR_BGR2GRAY);\n// 0 ignored; Otsu picks T for you\ndouble T = threshold(gray, bin, 0, 255,\n                     THRESH_BINARY | THRESH_OTSU);`,
+    run:src=>{const gray=new cv.Mat(),dst=new cv.Mat();cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);
+      const t=cv.threshold(gray,dst,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU);
+      setStatus('ready','Otsu picked T = '+t);gray.delete();return dst;}},
+  stretch:{label:'Min–max stretch',title:'Contrast stretch (normalize MINMAX)',params:[],
+    cpp:()=>`Mat gray, out;\ncvtColor(input, gray, COLOR_BGR2GRAY);\nnormalize(gray, out, 0, 255, NORM_MINMAX);`,
+    run:src=>{const gray=new cv.Mat(),dst=new cv.Mat();cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);
+      cv.normalize(gray,dst,0,255,cv.NORM_MINMAX);gray.delete();return dst;}},
+  rotate:{label:'warpAffine (rotate)',title:'Affine rotation about centre',
+    params:[{id:'ang',label:'angle°',min:-180,max:180,value:30},{id:'sc',label:'scale ×100',min:10,max:200,value:100}],
+    cpp:p=>`Point2f c(input.cols/2.0f, input.rows/2.0f);\nMat M = getRotationMatrix2D(c, ${p.ang}, ${(p.sc/100).toFixed(2)}); // 2x3\nwarpAffine(input, output, M, input.size());`,
+    run:(src,p)=>{const dst=new cv.Mat();const ctr=new cv.Point(src.cols/2,src.rows/2);
+      const M=cv.getRotationMatrix2D(ctr,p.ang,p.sc/100);
+      cv.warpAffine(src,dst,M,new cv.Size(src.cols,src.rows),cv.INTER_LINEAR,cv.BORDER_CONSTANT,new cv.Scalar());
+      M.delete();return dst;}}
+};
+let cvReady=false,srcMat=null,curOp='thresh',params={};
+const srcCanvas=$('srcCanvas'),dstCanvas=$('dstCanvas');
+const opRow=VTK.toggleRow({label:'operation',active:'thresh',
+  options:Object.keys(OPS).map(id=>({id,label:OPS[id].label})),
+  onChange:id=>{curOp=id;buildParams();run();}});
+$('opRow').appendChild(opRow.wrap);
+function buildParams(){const host=$('paramRow');host.innerHTML='';params={};
+  OPS[curOp].params.forEach(pd=>{params[pd.id]=pd.value;
+    const s=VTK.slider({label:pd.label,min:pd.min,max:pd.max,value:pd.value,step:pd.step||1,
+      onInput:v=>{params[pd.id]=v;run();}});host.appendChild(s.wrap);});}
+function drawSample(){const W=320,H=240;srcCanvas.width=W;srcCanvas.height=H;const t=srcCanvas.getContext('2d');
+  const g=t.createLinearGradient(0,0,W,H);g.addColorStop(0,'#4a6fa5');g.addColorStop(1,'#2a3b54');t.fillStyle=g;t.fillRect(0,0,W,H);
+  t.fillStyle='#e8c84a';t.beginPath();t.arc(90,90,46,0,7);t.fill();
+  t.fillStyle='#c0392b';t.fillRect(180,60,90,90);
+  t.fillStyle='#27ae60';t.beginPath();t.moveTo(60,210);t.lineTo(150,120);t.lineTo(240,210);t.closePath();t.fill();
+  t.strokeStyle='#ecf0f1';t.lineWidth=6;t.beginPath();t.moveTo(20,200);t.lineTo(300,170);t.stroke();}
+function loadMat(){if(srcMat){srcMat.delete();srcMat=null;}if(cvReady)srcMat=cv.imread(srcCanvas);}
+function run(){
+  $('cppTitle').textContent=OPS[curOp].title;$('cppCode').textContent=OPS[curOp].cpp(params);
+  if(!cvReady||!srcMat)return;let dst;
+  try{dst=OPS[curOp].run(srcMat,params);dstCanvas.width=srcCanvas.width;dstCanvas.height=srcCanvas.height;cv.imshow(dstCanvas,dst);}
+  catch(err){setStatus('err','OpenCV error: '+err);}finally{if(dst)dst.delete();}}
+$('fileIn').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;
+  $('fileName').textContent=f.name;const img=new Image();
+  img.onload=()=>{const sc=Math.min(1,360/img.width);srcCanvas.width=Math.round(img.width*sc);srcCanvas.height=Math.round(img.height*sc);
+    srcCanvas.getContext('2d').drawImage(img,0,0,srcCanvas.width,srcCanvas.height);loadMat();run();URL.revokeObjectURL(img.src);};
+  img.src=URL.createObjectURL(f);});
+function setStatus(kind,html){const s=$('cvStatus');s.className=kind;
+  s.innerHTML=(kind==='loading'?'<span class="spin"></span> ':kind==='ready'?'✓ ':'✕ ')+html;}
+drawSample();buildParams();run();
+function start(){cvReady=true;setStatus('ready','OpenCV ready — upload an image or pick an operation.');loadMat();run();}
+function onOpenCvReady(){if(typeof cv==='undefined'){setStatus('err','OpenCV failed to load.');return;}
+  if(cv instanceof Promise){cv.then(m=>{window.cv=m;start();});}
+  else if(cv.Mat){start();}else{cv['onRuntimeInitialized']=start;}}
+</script>
+<script async src="https://docs.opencv.org/4.10.0/opencv.js" onload="onOpenCvReady()" onerror="document.getElementById('cvStatus').className='err';document.getElementById('cvStatus').textContent='✕ Could not reach the OpenCV CDN (check your connection).'"></script>
+</body>
+</html>
