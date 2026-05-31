@@ -20,11 +20,25 @@ function onScroll(){
 }
 addEventListener('scroll',onScroll,{passive:true}); onScroll();
 
-/* ---------- scroll reveal ---------- */
-const io = new IntersectionObserver(es=>{
-  es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
-},{threshold:.12});
-$$('.reveal').forEach(el=>io.observe(el));
+/* ---------- scroll reveal (robust) ---------- */
+const revealEls = $$('.reveal');
+let io;
+if ('IntersectionObserver' in window) {
+  io = new IntersectionObserver((entries, obs) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); } });
+  }, { threshold: 0, rootMargin: '0px 0px -4% 0px' });
+} else {
+  // no observer support: reveal immediately, but keep the same API for later callers (e.g. quiz)
+  io = { observe(el){ el.classList.add('in'); }, unobserve(){} };
+}
+revealEls.forEach(el => io.observe(el));
+// reveal anything already on screen at load (covers above-the-fold and #anchor deep links)
+function revealInView(){
+  revealEls.forEach(el => { const r = el.getBoundingClientRect(); if (r.top < innerHeight && r.bottom > 0) el.classList.add('in'); });
+}
+addEventListener('load', revealInView); revealInView();
+// failsafe: never leave content permanently hidden if the observer misses something
+setTimeout(() => revealEls.forEach(el => el.classList.add('in')), 5000);
 
 /* ============================================================
    GRADIENT CALCULATOR
@@ -250,7 +264,7 @@ const Engine = (()=>{
    CANNY PIPELINE STEPPER
    ============================================================ */
 (function cannyStepper(){
-  const wrap=$('#canny_steps'); if(!wrap) return;
+  const dots=$('#canny_dots'); if(!dots) return;
   const cv=$('#canny_canvas');
   const steps=[
     {t:'1\u20132. Gaussian smoothing',d:'Build a Gaussian kernel G(x,y) and convolve the image to get a smoothed image I<sub>s</sub> = G \u2297 I. This removes high-frequency noise <span class="hlp">before</span> any gradients are taken, so spurious pixels are not mistaken for edges.',op:'blur'},
@@ -260,7 +274,7 @@ const Engine = (()=>{
     {t:'7\u20139. Double thresholding',d:'Two thresholds T<sub>L</sub>, T<sub>H</sub>. Below T<sub>L</sub> = not an edge; between = <span class="hl">weak</span>; above T<sub>H</sub> = <span class="hlp">strong</span>. Build binary M<sub>S</sub> and M<sub>W</sub>, then remove the strong pixels from the weak image.',op:'strong'},
     {t:'10\u201311. Hysteresis linking',d:'Assume strong pixels are real edges. For each strong pixel, if any of its 8 neighbours is a weak pixel, promote it. This <span class="hlp">links</span> edges and fills gaps. Canny suggested T<sub>H</sub> \u2248 2\u20133\u00D7 T<sub>L</sub>.',op:'canny'}
   ];
-  const dots=$('#canny_dots'), body=$('#canny_body');
+  const body=$('#canny_body');
   let i=0;
   function show(){
     $$('.step-dot',dots).forEach((d,k)=>d.classList.toggle('on',k===i));
@@ -301,13 +315,13 @@ const Engine = (()=>{
    CONVOLUTION PLAYGROUND (Prewitt-H sliding window)
    ============================================================ */
 (function convPlay(){
-  const stage=$('#conv_stage'); if(!stage) return;
+  const ig=$('#conv_img'); if(!ig) return;
   const GW=8,GH=6;
   // synthetic intensity grid: left dark, right light vertical edge + a bit of noise
   const img=[]; for(let y=0;y<GH;y++){const row=[];for(let x=0;x<GW;x++){let v=x<4?40:200; v+=(Math.random()*20-10)|0; row.push(Math.max(0,Math.min(255,v|0)));}img.push(row);}
   const kernel=[[-1,0,1],[-1,0,1],[-1,0,1]]; // prewitt vertical (finds vertical edge)
   const out=Array.from({length:GH},()=>Array(GW).fill(null));
-  const ig=$('#conv_img'), og=$('#conv_out'), kg=$('#conv_kernel'), calc=$('#conv_calc');
+  const og=$('#conv_out'), kg=$('#conv_kernel'), calc=$('#conv_calc');
   let cx=1,cy=1; // window centre
   function buildGrid(el,data,cls){
     el.innerHTML='';
@@ -442,7 +456,7 @@ const Engine = (()=>{
     card.appendChild(opts);
     const exp=document.createElement('div'); exp.className='exp'; exp.innerHTML='<b>'+(item.e)+'</b>';
     card.appendChild(exp);
-    root.appendChild(card); io.observe(card);
+    root.appendChild(card); io.observe(card); requestAnimationFrame(()=>card.classList.add('in'));
   });
   const sc=$('#quiz_score');
   function updateScore(){sc.innerHTML=`${correct} / ${answered} <span style="font-size:14px;color:var(--mut)">(of ${Q.length})</span>`;}

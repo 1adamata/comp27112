@@ -1,10 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Spectral:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root{
-  --ink:#07142a; --ink2:#0b1730; --panel:#0f1726; --panel2:#0c1320;
-  --line:#f7f9fb; --mut:#8aa0c3; --dim:#6b7f9a;
-  --pur:#ff3bff; --pur-deep:#b200b2; --yel:#ffd166;
-  --neg:#ff6b6b; --pos:#00e5ff; --grid:#182033;
+  --ink:#0f1015; --ink2:#14161e; --panel:#171922; --panel2:#1d2030;
+  --line:#e9e7df; --mut:#8a90a0; --dim:#5b6072;
+  --pur:#9a72e6; --pur-deep:#6b3fa0; --yel:#f4c95d;
+  --neg:#ff8278; --pos:#5cd1e6; --grid:#2a2e3d;
   --maxw:1080px;
   --mono:'JetBrains Mono',ui-monospace,monospace;
   --serif:'Spectral',Georgia,serif;
@@ -21,15 +21,15 @@ body{
 body::before{
   content:""; position:fixed; inset:0; z-index:-2; pointer-events:none;
   background:
-    radial-gradient(900px 600px at 80% -10%, rgba(255,59,255,.16), transparent 60%),
-    radial-gradient(700px 500px at 0% 100%, rgba(255,209,102,.10), transparent 55%),
+    radial-gradient(900px 600px at 80% -10%, rgba(154,114,230,.12), transparent 60%),
+    radial-gradient(700px 500px at 0% 100%, rgba(244,201,93,.06), transparent 55%),
     linear-gradient(var(--grid) 1px, transparent 1px) 0 0/40px 40px,
     linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/40px 40px;
   background-color:var(--ink);
-  opacity:.85;
+  opacity:.5;
 }
 body::after{ /* grain */
-  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.045;
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.035;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 a{color:var(--pur); text-decoration:none}
