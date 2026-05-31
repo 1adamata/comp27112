@@ -24,6 +24,10 @@
     </div>
   </header>
 
+  <!-- ===== PART I — IMAGE PROCESSING ===== -->
+  <div class="sec-head" style="margin-top:30px"><span class="sec-num">A</span><h2 style="font-size:clamp(26px,4vw,38px);font-weight:900">Image Processing</h2></div>
+  <p class="lead">From a raw grid of pixels to measured, described objects — point processing, regions, edges, shape and compression.</p>
+
   <div class="weeks-grid">
 
     <!-- ===== WEEK 1 (live) ===== -->
@@ -136,8 +140,126 @@
 
   </div>
 
+  <!-- ===== PART II — COMPUTER GRAPHICS ===== -->
+  <div class="sec-head" style="margin-top:46px"><span class="sec-num">B</span><h2 style="font-size:clamp(26px,4vw,38px);font-weight:900">Computer Graphics</h2></div>
+  <p class="lead">The other half of the paper — going the other way: from maths and geometry <em>to</em> pixels. Vertices, transforms, projection, the rendering pipeline, lighting and texture.</p>
+
+  <div class="weeks-grid">
+
+    <!-- ===== CG 1 (live) ===== -->
+    <a class="week-card" href="graphics/ch1/index.html">
+      <div class="wk-num">G1</div>
+      <div class="wk-kicker">Computer Graphics · Linear Algebra</div>
+      <h3>Linear Algebra for Graphics</h3>
+      <p>A look under the hood — past the game engines and GPUs — at the maths that runs through the whole graphics &amp; computer vision course. Points, vectors, matrices and coordinates.</p>
+      <div class="tags">
+        <span class="tag note">Vectors</span>
+        <span class="tag hi">Matrices</span>
+        <span class="tag exam">Exam drill</span>
+      </div>
+    </a>
+
+    <!-- ===== CG 2 ===== -->
+    <a class="week-card" href="graphics/cg2-transformations.html">
+      <div class="wk-num">G2</div>
+      <div class="wk-kicker">Computer Graphics · Geometry</div>
+      <h3>3D Transformations</h3>
+      <p>Why 4×4 homogeneous matrices (so we can encode translation too). Scale, rotate, translate; order of multiplication (P′ = M₃M₂M₁P); inverse, composite transforms, scaling about a point and rotating about an arbitrary axis.</p>
+      <div class="tags">
+        <span class="tag note">4×4 matrices</span>
+        <span class="tag hi">Composite</span>
+        <span class="tag exam">Exam drill</span>
+      </div>
+    </a>
+
+    <!-- ===== CG 3 ===== -->
+    <a class="week-card" href="graphics/cg3-viewing-projection.html">
+      <div class="wk-num">G3</div>
+      <div class="wk-kicker">Computer Graphics · Camera</div>
+      <h3>Viewing &amp; Projection</h3>
+      <p>Modelling↔viewing duality, orthographic vs perspective, the view frustum and near/far planes, the canonical view volume, projection normalisation and perspective division.</p>
+      <div class="tags">
+        <span class="tag note">Frustum</span>
+        <span class="tag hi">Perspective</span>
+        <span class="tag exam">Exam drill</span>
+      </div>
+    </a>
+
+    <!-- ===== CG 4 ===== -->
+    <a class="week-card" href="graphics/cg4-clipping-raster.html">
+      <div class="wk-num">G4</div>
+      <div class="wk-kicker">Computer Graphics · Rendering</div>
+      <h3>Clipping &amp; Rasterisation</h3>
+      <p>Clipping to the view volume, scan conversion, double buffering, "polygon soup" and backface culling — turning triangles into pixels efficiently.</p>
+      <div class="tags">
+        <span class="tag note">Scan convert</span>
+        <span class="tag hi">Culling</span>
+        <span class="tag exam">Exam drill</span>
+      </div>
+    </a>
+
+    <!-- ===== CG 5 ===== -->
+    <a class="week-card" href="graphics/cg5-hidden-surfaces.html">
+      <div class="wk-num">G5</div>
+      <div class="wk-kicker">Computer Graphics · Visibility</div>
+      <h3>Hidden Surfaces &amp; the Z-buffer</h3>
+      <p>The hidden-surface problem and how the depth (Z-) buffer solves it: keeping the nearest fragment per pixel as triangles are scan-converted in any order.</p>
+      <div class="tags">
+        <span class="tag note">Depth test</span>
+        <span class="tag hi">Z-buffer</span>
+        <span class="tag exam">Exam drill</span>
+      </div>
+    </a>
+
+    <!-- ===== CG 6 ===== -->
+    <a class="week-card" href="graphics/cg6-illumination-shading.html">
+      <div class="wk-num">G6</div>
+      <div class="wk-kicker">Computer Graphics · Lighting</div>
+      <h3>Illumination &amp; Shading</h3>
+      <p>Local vs global illumination, the Phong model (ambient + diffuse + specular), Lambert's cosine law and the kₛ(R·V)ⁿ term. Flat → Gouraud → Phong shading, Blinn-Phong's halfway vector, and the inverse-transpose normal.</p>
+      <div class="tags">
+        <span class="tag note">Phong model</span>
+        <span class="tag hi">Gouraud vs Phong</span>
+        <span class="tag exam">Exam drill</span>
+      </div>
+    </a>
+
+    <!-- ===== CG 7 ===== -->
+    <a class="week-card" href="graphics/cg7-texturing.html">
+      <div class="wk-num">G7</div>
+      <div class="wk-kicker">Computer Graphics · Surface Detail</div>
+      <h3>Texturing &amp; Bump Mapping</h3>
+      <p>UV coordinates and texture mapping, mipmaps, alpha blending/transparency, and bump mapping — faking surface relief without changing geometry.</p>
+      <div class="tags">
+        <span class="tag note">UV mapping</span>
+        <span class="tag hi">Bump maps</span>
+        <span class="tag exam">Exam drill</span>
+      </div>
+    </a>
+
+    <!-- ===== CG 8 ===== -->
+    <a class="week-card" href="graphics/cg8-antialiasing.html">
+      <div class="wk-num">G8</div>
+      <div class="wk-kicker">Computer Graphics · Quality</div>
+      <h3>Anti-aliasing</h3>
+      <p>Why aliasing happens (Nyquist–Shannon), and the toolbox to fight it: SSAA, MSAA, TAA and variable-rate shading — the cost/quality trade-offs of each.</p>
+      <div class="tags">
+        <span class="tag note">Nyquist</span>
+        <span class="tag hi">MSAA / TAA</span>
+        <span class="tag exam">Exam drill</span>
+      </div>
+    </a>
+
+    <!-- ===== EMPTY SLOT — duplicate a card above for each new CG chapter ===== -->
+    <div class="week-card empty">
+      <div class="plus">+</div>
+      <span>More graphics chapters — coming soon</span>
+    </div>
+
+  </div>
+
   <!-- ===== INTERACTIVE WIDGETS (the reusable block library) ===== -->
-  <div class="sec-head" style="margin-top:30px"><span class="sec-num">∗</span><h2 style="font-size:clamp(26px,4vw,38px);font-weight:900">Interactive widgets</h2></div>
+  <div class="sec-head" style="margin-top:46px"><span class="sec-num">∗</span><h2 style="font-size:clamp(26px,4vw,38px);font-weight:900">Interactive widgets</h2></div>
   <p class="lead">Standalone, pokeable blocks — drop them into any week, or open on their own.</p>
 
   <div class="weeks-grid">
