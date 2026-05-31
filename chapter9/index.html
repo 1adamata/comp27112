@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Hough Transform · COMP27112 Visual Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Spline+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f3ede1;
+  --paper-2:#ece3d3;
+  --ink:#181512;
+  --ink-soft:#4a443c;
+  --purple:#4b2e83;
+  --purple-lite:#7a5bb0;
+  --amber:#d97a16;
+  --amber-soft:#f0a13e;
+  --green:#1f7a55;
+  --red:#c0392b;
+  --line:rgba(24,21,18,.14);
+  --line-strong:rgba(24,21,18,.30);
+  --card:#fbf7ef;
+  --shadow:0 1px 0 rgba(24,21,18,.04), 0 18px 40px -24px rgba(24,21,18,.45);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:'Spline Sans',system-ui,sans-serif;
+  font-size:18px;line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(circle at 12% -5%, rgba(122,91,176,.10), transparent 40%),
+    radial-gradient(circle at 95% 8%, rgba(217,122,22,.08), transparent 38%);
+}
+::selection{background:var(--amber-soft);color:#1a1208}
+h1,h2,h3,h4{font-family:'Fraunces',serif;font-weight:600;line-height:1.07;letter-spacing:-.01em;color:var(--ink)}
+.mono{font-family:'JetBrains Mono',monospace}
+a{color:var(--purple)}
+
+/* progress + nav */
+#progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--purple),var(--amber));width:0;z-index:200}
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:150;
+  display:flex;align-items:center;gap:18px;
+  padding:12px clamp(16px,4vw,46px);
+  background:rgba(243,237,225,.82);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+}
+nav .brand{font-family:'Fraunces',serif;font-weight:700;font-size:17px;letter-spacing:-.01em;white-space:nowrap}
+nav .brand b{color:var(--purple)}
+nav .links{display:flex;gap:4px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+nav .links::-webkit-scrollbar{display:none}
+nav .links a{
+  font-size:13px;text-decoration:none;color:var(--ink-soft);white-space:nowrap;
+  padding:6px 11px;border-radius:30px;transition:.2s;font-weight:500;letter-spacing:.01em
+}
+nav .links a:hover{color:var(--ink);background:var(--paper-2)}
+nav .links a.active{color:#fff;background:var(--purple)}
+
+main{max-width:980px;margin:0 auto;padding:0 clamp(16px,4vw,46px)}
+section{padding:74px 0 14px;scroll-margin-top:70px}
+.kicker{font-family:'JetBrains Mono',monospace;font-size:12.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--amber);font-weight:700;margin:0 0 14px}
+section>h2{font-size:clamp(30px,5.2vw,46px);margin:0 0 8px}
+section>.lede{font-size:clamp(18px,2.4vw,21px);color:var(--ink-soft);max-width:62ch;margin:0 0 30px}
+p{max-width:68ch}
+
+/* HERO */
+header.hero{
+  min-height:100svh;display:flex;flex-direction:column;justify-content:center;
+  max-width:980px;margin:0 auto;padding:120px clamp(16px,4vw,46px) 60px;position:relative
+}
+.hero .tag{font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--purple);font-weight:700}
+.hero h1{font-size:clamp(54px,12vw,128px);line-height:.92;margin:18px 0 0;font-weight:600}
+.hero h1 em{font-style:italic;color:var(--amber)}
+.hero .sub{font-size:clamp(19px,2.6vw,24px);color:var(--ink-soft);max-width:58ch;margin:26px 0 0;font-weight:400}
+.hero .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:34px}
+.chip{font-family:'JetBrains Mono',monospace;font-size:12.5px;letter-spacing:.04em;border:1px solid var(--line-strong);
+  padding:7px 13px;border-radius:30px;color:var(--ink-soft);background:var(--card)}
+.scrollcue{margin-top:54px;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.2em;color:var(--ink-soft);display:flex;align-items:center;gap:10px;text-transform:uppercase}
+.scrollcue .dot{width:8px;height:8px;border-radius:50%;background:var(--amber);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{transform:translateY(0);opacity:1}50%{transform:translateY(6px);opacity:.4}}
+
+/* reveal */
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* figure */
+figure{margin:26px 0;border:1px solid var(--line);background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+figure img{display:block;width:100%;height:auto;background:#fff}
+figure.pad img{padding:14px}
+figcaption{font-size:14px;color:var(--ink-soft);padding:12px 16px;border-top:1px solid var(--line);background:var(--paper-2)}
+figcaption b{color:var(--ink)}
+.fig-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:640px){.fig-2{grid-template-columns:1fr}}
+
+/* equation block */
+.eq{font-family:'JetBrains Mono',monospace;background:var(--ink);color:#f3ede1;border-radius:12px;
+  padding:18px 22px;font-size:clamp(16px,2.4vw,21px);text-align:center;margin:22px 0;letter-spacing:.02em;
+  box-shadow:var(--shadow);position:relative;overflow-x:auto}
+.eq .label{position:absolute;top:8px;right:14px;font-size:11px;color:var(--amber-soft);letter-spacing:.12em}
+.eq em{color:var(--amber-soft);font-style:normal}
+
+/* callout */
+.note{border-left:4px solid var(--purple);background:var(--card);padding:16px 20px;border-radius:0 12px 12px 0;margin:24px 0;box-shadow:var(--shadow)}
+.note.warn{border-color:var(--amber)}
+.note .h{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--purple);font-weight:700;margin-bottom:6px}
+.note.warn .h{color:var(--amber)}
+.note p{margin:0;max-width:none}
+
+/* steps */
+.steps{counter-reset:s;margin:24px 0;display:grid;gap:14px}
+.step{counter-increment:s;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start;
+  background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.step::before{content:counter(s);font-family:'Fraunces',serif;font-weight:600;font-size:22px;
+  width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:var(--purple);color:#fff;flex:none}
+.step h4{margin:0 0 4px;font-size:18px}
+.step p{margin:0;font-size:15.5px;color:var(--ink-soft);max-width:none}
+
+/* interactive shells */
+.lab{border:1px solid var(--line-strong);border-radius:16px;background:var(--card);padding:18px;margin:26px 0;box-shadow:var(--shadow)}
+.lab .labhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.lab .labtag{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  color:#fff;background:var(--amber);padding:4px 9px;border-radius:20px;font-weight:700}
+.lab .labtitle{font-family:'Fraunces',serif;font-weight:600;font-size:19px}
+.lab .labhint{font-size:14px;color:var(--ink-soft);margin:0 0 12px}
+.btn{font-family:'Spline Sans',sans-serif;font-weight:600;font-size:14px;cursor:pointer;border:1px solid var(--line-strong);
+  background:var(--paper);color:var(--ink);padding:9px 16px;border-radius:30px;transition:.18s;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.primary{background:var(--purple);color:#fff;border-color:var(--purple)}
+.btn.primary:hover{background:#3a2466}
+.btn:active{transform:scale(.97)}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+.canvas-wrap{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:680px){.canvas-wrap{grid-template-columns:1fr}}
+.cv-box{position:relative;background:#fdfbf6;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.cv-box .cap{position:absolute;top:8px;left:10px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--ink-soft);background:rgba(253,251,246,.8);padding:2px 7px;border-radius:6px}
+canvas{display:block;width:100%;height:auto}
+.readout{font-family:'JetBrains Mono',monospace;font-size:14px;background:var(--ink);color:#f3ede1;border-radius:8px;padding:10px 14px;margin-top:12px}
+.readout em{color:var(--amber-soft);font-style:normal}
+input[type=range]{accent-color:var(--purple);width:100%}
+.slider-row{display:flex;align-items:center;gap:14px;margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:14px}
+.slider-row span{white-space:nowrap;min-width:120px}
+
+/* stepper */
+.stepper-fig{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.stepper-fig img{display:block;width:100%;height:auto;padding:10px}
+.stepper-cap{font-size:15px;color:var(--ink-soft);padding:12px 16px;border-top:1px solid var(--line);background:var(--paper-2);min-height:54px}
+.stepper-cap b{color:var(--ink);font-family:'JetBrains Mono',monospace}
+.dots{display:flex;gap:7px;align-items:center}
+.dots i{width:9px;height:9px;border-radius:50%;background:var(--line-strong);cursor:pointer;transition:.2s}
+.dots i.on{background:var(--purple);transform:scale(1.25)}
+
+/* quiz */
+.quiz{display:grid;gap:18px;margin-top:8px}
+.q{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;box-shadow:var(--shadow)}
+.q .qn{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;color:var(--amber);font-weight:700}
+.q .qtext{font-weight:600;font-size:17.5px;margin:6px 0 14px}
+.opt{display:block;width:100%;text-align:left;border:1px solid var(--line-strong);background:var(--paper);
+  border-radius:10px;padding:12px 15px;margin:8px 0;cursor:pointer;font-size:15.5px;font-family:inherit;color:var(--ink);transition:.16s;position:relative}
+.opt:hover{border-color:var(--purple);background:#fff}
+.opt.correct{border-color:var(--green);background:rgba(31,122,85,.10);color:#11543a;font-weight:600}
+.opt.wrong{border-color:var(--red);background:rgba(192,57,43,.08);color:#8a261b}
+.opt .mark{float:right;font-weight:700}
+.fb{margin-top:12px;font-size:14.5px;border-radius:10px;padding:12px 15px;display:none}
+.fb.show{display:block}
+.fb.ok{background:rgba(31,122,85,.10);border:1px solid rgba(31,122,85,.4);color:#11543a}
+.fb.no{background:rgba(217,122,22,.10);border:1px solid rgba(217,122,22,.45);color:#8a4d0c}
+
+/* exam */
+.exam{background:var(--ink);color:#efe7d8;border-radius:16px;padding:26px 28px;margin:24px 0;box-shadow:var(--shadow)}
+.exam .src{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.1em;color:var(--amber-soft);text-transform:uppercase}
+.exam h4{color:#fff;margin:8px 0 4px;font-size:21px}
+.exam .marks{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--amber-soft);float:right}
+.exam p{color:#cfc6b6;max-width:none}
+.exam details{margin-top:14px;border-top:1px solid rgba(255,255,255,.14);padding-top:12px}
+.exam summary{cursor:pointer;font-weight:600;color:var(--amber-soft);font-family:'Spline Sans',sans-serif;list-style:none}
+.exam summary::-webkit-details-marker{display:none}
+.exam summary::before{content:'▸ ';color:var(--amber)}
+.exam details[open] summary::before{content:'▾ '}
+.exam .model{font-size:15px;color:#e3dccd;margin-top:10px}
+.exam .model li{margin:6px 0}
+
+ul.tk{list-style:none;padding:0;margin:18px 0;display:grid;gap:10px}
+ul.tk li{padding-left:30px;position:relative;font-size:16px}
+ul.tk li::before{content:'';position:absolute;left:4px;top:9px;width:9px;height:9px;background:var(--amber);transform:rotate(45deg)}
+
+footer{margin-top:80px;border-top:1px solid var(--line);padding:40px clamp(16px,4vw,46px) 70px;color:var(--ink-soft);font-size:14px;max-width:980px;margin-left:auto;margin-right:auto}
+footer b{color:var(--ink)}
+.tldr{background:linear-gradient(135deg,var(--purple),#2f1c54);color:#f1ebdf;border-radius:18px;padding:30px 32px;margin:30px 0;box-shadow:var(--shadow)}
+.tldr h3{color:#fff;font-size:26px;margin:0 0 14px}
+.tldr ul.tk li{font-size:16px}
+.tldr ul.tk li::before{background:var(--amber-soft)}
+.tldr ul.tk li b{color:#fff}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<nav>
+  <div class="brand">COMP27112 · <b>Hough</b></div>
+  <div class="links">
+    <a href="#intro">Problem</a>
+    <a href="#line">Line equation</a>
+    <a href="#duality">Duality lab</a>
+    <a href="#worked">Worked example</a>
+    <a href="#accumulator">Accumulator</a>
+    <a href="#vertical">Vertical lines</a>
+    <a href="#polar">Polar lab</a>
+    <a href="#opencv">OpenCV</a>
+    <a href="#beyond">Beyond lines</a>
+    <a href="#quiz">Quiz</a>
+    <a href="#exam">Exam</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="tag">Image Processing · Lecture 9 · Chapter 3.4</div>
+  <h1>The <em>Hough</em><br>Transform</h1>
+  <p class="sub">How a computer finds straight lines hidden in a scatter of edge pixels — by turning every point into a line, and every line into a vote.</p>
+  <div class="meta">
+    <span class="chip">Terence Morley</span>
+    <span class="chip">Lecture 9.1 + 9.2</span>
+    <span class="chip">Handout §3.4.1, pp. 57–59</span>
+    <span class="chip">5 quizzes · 1 exam Q</span>
+  </div>
+  <div class="scrollcue"><span class="dot"></span> scroll to begin</div>
+</header>
+
+<main>
+
+<!-- PROBLEM -->
+<section id="intro">
+  <div class="reveal">
+  <p class="kicker">01 · The motivation</p>
+  <h2>Finding lines in a sea of pixels</h2>
+  <p class="lede">We run edge detection on a photo and get a binary image — bright edge pixels on a black background. The edges of the building are <em>there</em>, but to the computer it is just a set of disconnected pixels with gaps. How do we recover the actual <b>lines</b>?</p>
+  </div>
+  <figure class="reveal">
+    <div class="fig-2" style="margin:0">
+      <img src="assets/house_original.jpg" alt="Original photo of a house in woods">
+      <img src="assets/edge_detected.png" alt="Edge-detected version">
+    </div>
+    <figcaption><b>Left:</b> original photograph. <b>Right:</b> after edge detection &amp; thresholding. Real edges break into fragments with gaps (caused by trees, similar colours, noise), so we cannot simply "trace" them. The Hough transform tolerates these gaps and points that lie only <em>roughly</em> on a line.</figcaption>
+  </figure>
+  <div class="note reveal">
+    <div class="h">Core idea (Handout §3.4.1)</div>
+    <p>Represent the shape you are looking for with a <b>few parameters</b>. Transform every candidate image point into the <b>set of all parameter combinations</b> it could belong to. After processing every point, the parameter combinations that received <b>many contributions</b> are assumed to be real objects in the image.</p>
+  </div>
+</section>
+
+<!-- LINE EQUATION -->
+<section id="line">
+  <div class="reveal">
+  <p class="kicker">02 · The maths</p>
+  <h2>From image space to parameter space</h2>
+  <p class="lede">A straight line has two parameters: gradient <span class="mono">m</span> and y-intercept <span class="mono">c</span>.</p>
+  </div>
+  <div class="eq reveal"><span class="label">image space</span>y = <em>m</em>x + <em>c</em></div>
+  <p class="reveal">Now the clever flip. We rearrange so that <b>x and y are the constants</b> (they come from a fixed image point) and <b>m and c become the variables</b>:</p>
+  <div class="eq reveal"><span class="label">Hough / parameter space</span><em>c</em> = −x·<em>m</em> + y</div>
+  <p class="reveal">In <span class="mono">(m, c)</span> space this is itself a straight line — with gradient <span class="mono">−x</span> and intercept <span class="mono">y</span>. So a single <b>point</b> in the image becomes a whole <b>line</b> in parameter space. Every <span class="mono">(m, c)</span> along that line is one possible image line passing through the original point.</p>
+  <figure class="reveal pad">
+    <img src="assets/handout_fig340_correspondence.png" alt="Correspondence between a point in the image and a line in the accumulator">
+    <figcaption><b>Handout Fig 3.40.</b> One point in the image (left) maps to one line in the Hough accumulator (right). Different <span class="mono">(m,c)</span> values along that accumulator line are the infinitely many lines that pass through that single image point.</figcaption>
+  </figure>
+  <div class="note reveal">
+    <div class="h">Why the flip works</div>
+    <p>If two image points lie on the <em>same</em> image line, their two parameter-space lines must <b>cross</b> at the single <span class="mono">(m,c)</span> describing that shared line. Collinear points → intersecting parameter lines. That intersection is the answer we hunt for.</p>
+  </div>
+</section>
+
+<!-- DUALITY LAB -->
+<section id="duality">
+  <div class="reveal">
+  <p class="kicker">03 · Interactive</p>
+  <h2>Point–line duality, live</h2>
+  <p class="lede">Click in the image panel to drop edge points. Watch each one become a line in parameter space. When points are collinear, their lines pile up on one crossing — and the winning line snaps back into the image.</p>
+  </div>
+  <div class="lab reveal">
+    <div class="labhead"><span class="labtag">Lab 01</span><span class="labtitle">Image space ⇄ Hough space</span></div>
+    <p class="labhint">Tap / click the left panel to add points. Try to place three in a row.</p>
+    <div class="canvas-wrap">
+      <div class="cv-box"><span class="cap">image space (x, y)</span><canvas id="imgCv" width="440" height="440"></canvas></div>
+      <div class="cv-box"><span class="cap">parameter space (m, c)</span><canvas id="paramCv" width="440" height="440"></canvas></div>
+    </div>
+    <div class="readout" id="dualReadout">Add at least 2 points to see lines cross…</div>
+    <div class="controls">
+      <button class="btn primary" id="loadDemo">↻ Load lecture's 4 points</button>
+      <button class="btn" id="clearPts">Clear</button>
+    </div>
+  </div>
+  <p class="reveal" style="font-size:15px;color:var(--ink-soft)">The four lecture points are <span class="mono">(0,0), (−10,10), (2,4), (8,−8)</span>. Three of them lie on <span class="mono">y = −x</span>, so three parameter lines cross at <span class="mono">m=−1, c=0</span>.</p>
+</section>
+
+<!-- WORKED EXAMPLE -->
+<section id="worked">
+  <div class="reveal">
+  <p class="kicker">04 · The lecture's worked example</p>
+  <h2>Four points, by hand</h2>
+  </div>
+  <figure class="reveal pad">
+    <img src="assets/points_scatter.png" alt="Scatter plot of the four points">
+    <figcaption>Our toy image: points <span class="mono">(0,0), (−10,10), (2,4), (8,−8)</span>. We want to find which of them share a line.</figcaption>
+  </figure>
+  <p class="reveal">Substitute each point into <span class="mono">c = −x·m + y</span> to get its parameter-space line:</p>
+  <div class="steps reveal">
+    <div class="step"><div><h4>Point (0, 0)</h4><p class="mono">c = −0·m + 0  ⟹  c = 0</p></div></div>
+    <div class="step"><div><h4>Point (−10, 10)</h4><p class="mono">c = −(−10)·m + 10  ⟹  c = 10m + 10</p></div></div>
+    <div class="step"><div><h4>Point (2, 4)</h4><p class="mono">c = −2m + 4</p></div></div>
+    <div class="step"><div><h4>Point (8, −8)</h4><p class="mono">c = −8m − 8</p></div></div>
+  </div>
+  <figure class="reveal pad">
+    <img src="assets/param_space_lines.png" alt="The four lines plotted in Hough parameter space">
+    <figcaption>All four lines plotted in Hough space. <b>Three cross at a single point: m = −1, c = 0.</b> The other crossings (where only two lines meet) correspond to lines through just two points, which we ignore.</figcaption>
+  </figure>
+  <div class="eq reveal"><span class="label">read off the crossing</span>m = −1, c = 0  ⟹  y = −1·x + 0  ⟹ <em>y = −x</em></div>
+  <figure class="reveal pad">
+    <img src="assets/line_through_points.png" alt="The line y=-x drawn through three points">
+    <figcaption>And indeed <span class="mono">y = −x</span> passes through three of the four points. The lone point <span class="mono">(2,4)</span> is the outlier.</figcaption>
+  </figure>
+</section>
+
+<!-- ACCUMULATOR -->
+<section id="accumulator">
+  <div class="reveal">
+  <p class="kicker">05 · Doing it programmatically</p>
+  <h2>The accumulator array (voting)</h2>
+  <p class="lede">Drawing graphs by eye doesn't scale. Instead we build a 2-D <b>accumulator</b>: columns are values of <span class="mono">m</span>, rows are values of <span class="mono">c</span>. Every cell starts at zero. For each image point we walk along its parameter line and <b>increment (vote for)</b> every cell it crosses, rounding where needed.</p>
+  </div>
+  <div class="lab reveal">
+    <div class="labhead"><span class="labtag">Lab 02</span><span class="labtitle">Build the accumulator, point by point</span></div>
+    <p class="labhint">Step through each image point's votes. Watch cells reach a count of 3.</p>
+    <div class="stepper-fig">
+      <img id="cartImg" src="assets/cart_grid_empty.png" alt="accumulator state">
+      <div class="stepper-cap" id="cartCap"><b>Empty accumulator.</b> Columns = m (−2 … 2), rows = c (−10 … 10). This coarse range is chosen just for demonstration.</div>
+    </div>
+    <div class="controls" style="justify-content:space-between">
+      <button class="btn" id="cartPrev">← Back</button>
+      <div class="dots" id="cartDots"></div>
+      <button class="btn primary" id="cartNext">Add next point →</button>
+    </div>
+  </div>
+  <div class="steps reveal">
+    <div class="step"><div><h4>Choose a threshold N</h4><p>The minimum votes for a cell to count as a real line. Here we pick N = 3. On a real image you might require 100 or 200.</p></div></div>
+    <div class="step"><div><h4>Find local maxima</h4><p>Search the accumulator for cells whose count meets or exceeds N. Here, one cell hits 3: <span class="mono">m = −1, c = 0</span>.</p></div></div>
+    <div class="step"><div><h4>Read back the line</h4><p>That cell gives <span class="mono">y = −x</span>. Note: the accumulator tells you the line, <b>not its start/end points</b> — those must come from the original image.</p></div></div>
+  </div>
+</section>
+
+<!-- VERTICAL -->
+<section id="vertical">
+  <div class="reveal">
+  <p class="kicker">06 · The catch</p>
+  <h2>What about vertical lines?</h2>
+  <p class="lede">This is the problem the lecture asked you to spot. A vertical line in the image has gradient…</p>
+  </div>
+  <div class="eq reveal"><span class="label">undefined</span>m = ∞</div>
+  <p class="reveal">An infinite gradient (and infinite intercept) <b>cannot be stored</b> in a finite accumulator array. The Cartesian <span class="mono">y = mx + c</span> form simply breaks for vertical lines. The fix is to change how we describe a line entirely — using <b>polar coordinates</b>.</p>
+  <div class="note warn reveal">
+    <div class="h">Exam-favourite</div>
+    <p>"Why are polar coordinates usually used rather than Cartesian for Hough lines?" → <b>Because the gradient of a vertical line cannot be accommodated</b> (m = ∞ can't sit in the accumulator).</p>
+  </div>
+</section>
+
+<!-- POLAR -->
+<section id="polar">
+  <div class="reveal">
+  <p class="kicker">07 · The polar fix</p>
+  <h2>Lines as (r, θ)</h2>
+  <p class="lede">Instead of gradient and intercept, describe a line by the <b>normal from the origin</b>: its perpendicular distance <span class="mono">r</span> and the angle <span class="mono">θ</span> that normal makes with the x-axis. No gradient anywhere — so vertical lines are fine.</p>
+  </div>
+  <div class="fig-2 reveal" style="align-items:start">
+    <figure class="pad" style="margin:0">
+      <img src="assets/polar_diagram.png" alt="Polar representation of a line">
+      <figcaption><b>Lecture diagram.</b> r is the perpendicular (normal) distance from the origin to the line; θ is the normal's angle.</figcaption>
+    </figure>
+    <figure class="pad" style="margin:0">
+      <img src="assets/handout_fig341_line_eq.png" alt="Handout figure 3.41 line equation">
+      <figcaption><b>Handout Fig 3.41.</b> The same construction used to derive the line equation.</figcaption>
+    </figure>
+  </div>
+  <div class="eq reveal"><span class="label">polar line equation</span>r = x·cos(θ) + y·sin(θ)</div>
+  <div class="lab reveal">
+    <div class="labhead"><span class="labtag">Lab 03</span><span class="labtitle">Spin the normal — see (r, θ)</span></div>
+    <p class="labhint">Drag the slider to rotate the normal. The line is always perpendicular to it. Note how even a vertical line (θ = 0) is handled with no infinities.</p>
+    <div class="cv-box" style="max-width:480px;margin:0 auto"><canvas id="polarCv" width="460" height="380"></canvas></div>
+    <div class="slider-row"><span id="thetaLbl">θ = 30°</span><input type="range" id="thetaSlide" min="-90" max="90" value="30" step="1"></div>
+    <div class="slider-row"><span id="rLbl">r = 90 px</span><input type="range" id="rSlide" min="20" max="170" value="90" step="1"></div>
+    <div class="readout" id="polarReadout"></div>
+  </div>
+  <p class="reveal">The accumulator now uses <span class="mono">θ</span> for columns and <span class="mono">r</span> for rows. Each image point votes along a <b>sinusoid</b> rather than a straight line — but the voting logic is identical.</p>
+  <div class="lab reveal">
+    <div class="labhead"><span class="labtag">Lab 04</span><span class="labtitle">Polar accumulator walkthrough</span></div>
+    <p class="labhint">Same four points, now in (θ, r) space.</p>
+    <div class="stepper-fig">
+      <img id="polarImg" src="assets/polar_grid_p1.png" alt="polar accumulator state">
+      <div class="stepper-cap" id="polarCap"></div>
+    </div>
+    <div class="controls" style="justify-content:space-between">
+      <button class="btn" id="polPrev">← Back</button>
+      <div class="dots" id="polDots"></div>
+      <button class="btn primary" id="polNext">Add next point →</button>
+    </div>
+  </div>
+  <div class="eq reveal"><span class="label">highest count</span>θ = 45°, r = 0  →  normal at 45° ⟹ line at −45°, distance 0  ⟹ <em>y = −x</em></div>
+  <div class="note reveal">
+    <div class="h">Reading the polar answer</div>
+    <p>θ is the angle of the <b>normal</b>, so the line itself sits at θ − 90°. A normal at 45° with r = 0 (passing through the origin) gives the line <span class="mono">y = −x</span> — the very same answer as the Cartesian method.</p>
+  </div>
+</section>
+
+<!-- OPENCV -->
+<section id="opencv">
+  <div class="reveal">
+  <p class="kicker">08 · In practice</p>
+  <h2>cv::HoughLines</h2>
+  <p class="lede">OpenCV's built-in function maps directly onto everything above.</p>
+  </div>
+  <figure class="reveal pad">
+    <img src="assets/opencv_function.png" alt="OpenCV HoughLines signature and parameter table">
+    <figcaption>The OpenCV signature, straight from the lecture.</figcaption>
+  </figure>
+  <ul class="tk reveal">
+    <li><b class="mono">image</b> — input, a monochrome / edge-detected image.</li>
+    <li><b class="mono">lines</b> — output array of detected lines.</li>
+    <li><b class="mono">rho</b> — resolution for <span class="mono">r</span>; decides how many <b>rows</b> the accumulator has.</li>
+    <li><b class="mono">theta</b> — resolution for <span class="mono">θ</span>; decides how many <b>columns</b> the accumulator has.</li>
+    <li><b class="mono">threshold</b> — the minimum number of votes for a cell to be accepted as a valid line.</li>
+  </ul>
+</section>
+
+<!-- BEYOND -->
+<section id="beyond">
+  <div class="reveal">
+  <p class="kicker">09 · Generalisation (Handout)</p>
+  <h2>Beyond straight lines</h2>
+  <p class="lede">The handout stresses that the Hough transform works for <b>any analytically defined shape</b> — you just need more parameters.</p>
+  </div>
+  <div class="steps reveal">
+    <div class="step"><div><h4>Circles</h4><p>Use <span class="mono">(x − x₀)² + (y − y₀)² = r²</span>. Three parameters (centre x₀, y₀ and radius r) → a <b>3-D</b> accumulator. Each image point transforms into a <b>conical surface</b> in parameter space.</p></div></div>
+    <div class="step"><div><h4>Arbitrary shapes</h4><p>The <b>Generalised Hough Transform</b> uses a look-up table (R-table) that dictates which cells to increment. Powerful, but rarely used in practice per the handout.</p></div></div>
+  </div>
+  <div class="note warn reveal">
+    <div class="h">Don't forget</div>
+    <p>The accumulator gives you the <b>parameters</b> of a line/shape and how many points voted for it — but <b>no start or end points</b>. Those endpoints must be recovered from the original image data.</p>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="reveal">
+  <p class="kicker">10 · Check yourself</p>
+  <h2>Quiz</h2>
+  <p class="lede">From the COMP27112 visual quizzes. Pick an answer to reveal the feedback.</p>
+  </div>
+  <div class="quiz reveal" id="quizRoot"></div>
+</section>
+
+<!-- EXAM -->
+<section id="exam">
+  <div class="reveal">
+  <p class="kicker">11 · Exam preparation</p>
+  <h2>Past paper</h2>
+  <p class="lede">A directly relevant question from a past COMP27112 paper.</p>
+  </div>
+  <div class="exam reveal">
+    <span class="marks">4 marks</span>
+    <div class="src">Past paper · 2022 · Q32</div>
+    <h4>Describe in detail the Hough Lines transform.</h4>
+    <p>(You may use Cartesian or polar coordinates.)</p>
+    <details>
+      <summary>Show a model-answer skeleton</summary>
+      <div class="model">
+      <ol class="model">
+        <li><b>Purpose:</b> a method to detect lines (linear features) in an edge-detected image, robust to gaps and noise.</li>
+        <li><b>Pre-processing:</b> enhance edges then threshold, giving a set of candidate points — some on lines, some not.</li>
+        <li><b>The transform:</b> a line <span class="mono">y = mx + c</span> is rearranged to <span class="mono">c = −xm + y</span>. A fixed image point (x,y) therefore becomes a line in (m,c) parameter space — every (m,c) on it is a possible line through that point.</li>
+        <li><b>Accumulator / voting:</b> a 2-D array indexed by the parameters; each point's parameter line increments every cell it passes through.</li>
+        <li><b>Detection:</b> after all points, search for local maxima ≥ a chosen threshold N; their coordinates give the line parameters and how many points contributed. Endpoints come from the original image, not the accumulator.</li>
+        <li><b>Polar form:</b> because vertical lines give m = ∞, use <span class="mono">r = x·cos θ + y·sin θ</span> with an (r, θ) accumulator instead.</li>
+        <li><b>Generalisation (bonus):</b> extendable to circles (3-D accumulator) and arbitrary shapes via a look-up table.</li>
+      </ol>
+      </div>
+    </details>
+  </div>
+  <p class="reveal" style="font-size:15px;color:var(--ink-soft)">Related nearby topics that often appear with this chapter: edge detection (Sobel / Canny), convolution kernels, and thresholding — Hough always operates on a <em>thresholded edge image</em>, so these make natural lead-in parts.</p>
+
+  <div class="tldr reveal">
+    <h3>One-screen recap</h3>
+    <ul class="tk">
+      <li><b>Goal:</b> find lines in a noisy, gap-ridden edge image.</li>
+      <li><b>Trick:</b> a point in the image ⇄ a line in parameter space (<span class="mono">c = −xm + y</span>).</li>
+      <li><b>Collinear points</b> → their parameter lines all cross at one <span class="mono">(m,c)</span>.</li>
+      <li><b>Accumulator:</b> 2-D vote array; increment every cell each parameter line crosses.</li>
+      <li><b>Answer:</b> cells with votes ≥ threshold N are lines; read off <span class="mono">(m,c)</span>.</li>
+      <li><b>Vertical-line fix:</b> polar <span class="mono">r = x cos θ + y sin θ</span>, (r, θ) accumulator.</li>
+      <li><b>OpenCV:</b> <span class="mono">HoughLines(image, lines, rho, theta, threshold)</span>.</li>
+      <li><b>Generalises</b> to circles (3-D) and arbitrary shapes; gives lines, not endpoints.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p><b>COMP27112 — Introduction to Visual Computing.</b> Visual notes for the Hough Transform, compiled from Lecture 9.1 &amp; 9.2 (Terence Morley), the Image Processing handout §3.4.1 (pp. 57–59), the module visual quizzes, and the 2022 past paper. All diagrams are the original lecture / handout figures.</p>
+  <p style="margin-top:14px">Interactive labs are built from scratch to mirror the lecture's worked example — study aid only.</p>
+</footer>
+
+<script>
+/* ---------- progress + nav ---------- */
+const prog=document.getElementById('progress');
+const navLinks=[...document.querySelectorAll('nav .links a')];
+const sections=navLinks.map(a=>document.querySelector(a.getAttribute('href')));
+function onScroll(){
+  const h=document.documentElement;
+  prog.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';
+  let idx=0;
+  sections.forEach((s,i)=>{ if(s&&s.getBoundingClientRect().top<140) idx=i; });
+  navLinks.forEach((a,i)=>a.classList.toggle('active',i===idx));
+}
+addEventListener('scroll',onScroll,{passive:true}); onScroll();
+
+/* ---------- reveal ---------- */
+const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* ============================================================
+   LAB 01 — point/line duality
+   ============================================================ */
+(function(){
+  const imgCv=document.getElementById('imgCv'), pCv=document.getElementById('paramCv');
+  const ic=imgCv.getContext('2d'), pc=pCv.getContext('2d');
+  const read=document.getElementById('dualReadout');
+  const W=440,H=440;
+  // image space: x,y in [-12,12]
+  const IX=v=>(v+12)/24*W, IY=v=>H-(v+12)/24*H;
+  const IXi=px=>px/W*24-12, IYi=py=>(H-py)/H*24-12;
+  // param space: m in [-2.5,2.5], c in [-12,12]
+  const PX=m=>(m+2.5)/5*W, PY=c=>H-(c+12)/24*H;
+  let pts=[];
+  const COL=['#4b2e83','#d97a16','#1f7a55','#c0392b','#8e44ad','#16a085'];
+
+  function grid(ctx,xlab,ylab,xr,yr){
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='rgba(24,21,18,.07)';ctx.lineWidth=1;
+    for(let i=0;i<=8;i++){const x=i/8*W,y=i/8*H;
+      ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    // axes
+    ctx.strokeStyle='rgba(24,21,18,.35)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,H/2);ctx.lineTo(W,H/2);ctx.stroke();
+    ctx.fillStyle='rgba(24,21,18,.5)';ctx.font='12px "JetBrains Mono",monospace';
+    ctx.fillText(xlab,W-26,H/2-8);ctx.fillText(ylab,W/2+8,16);
+  }
+  function paramLineFor(p){ // c = -x m + y
+    return m=> -p.x*m + p.y;
+  }
+  function findPeak(){
+    // collect pairwise intersections, cluster
+    const xs=[];
+    for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+      const a=pts[i],b=pts[j];
+      // -a.x m + a.y = -b.x m + b.y  => m(b.x-a.x)=b.y-a.y
+      const denom=(b.x-a.x);
+      let m;
+      if(Math.abs(denom)<1e-9) continue;
+      m=(b.y-a.y)/(b.x-a.x); // wait: -a.x m + a.y = -b.x m + b.y => (-a.x+b.x)m = b.y-a.y
+      m=(b.y-a.y)/(b.x-a.x);
+      const c=-a.x*m+a.y;
+      xs.push({m,c});
+    }
+    if(!xs.length) return null;
+    // cluster by rounding
+    const map={};
+    xs.forEach(o=>{const k=Math.round(o.m*4)/4+'|'+Math.round(o.c)/1;(map[k]=map[k]||{m:0,c:0,n:0});map[k].m+=o.m;map[k].c+=o.c;map[k].n++;});
+    let best=null;
+    Object.values(map).forEach(o=>{if(!best||o.n>best.n)best={m:o.m/o.n,c:o.c/o.n,n:o.n};});
+    return best;
+  }
+  function draw(){
+    // image space
+    grid(ic,'x','y');
+    const peak=findPeak();
+    let votes=0;
+    if(peak){
+      pts.forEach(p=>{ if(Math.abs(p.y-(peak.m*p.x+peak.c))<0.8) votes++; });
+      if(votes>=2){
+        ic.strokeStyle='#d97a16';ic.lineWidth=3;ic.beginPath();
+        const y1=peak.m*-12+peak.c, y2=peak.m*12+peak.c;
+        ic.moveTo(IX(-12),IY(y1));ic.lineTo(IX(12),IY(y2));ic.stroke();
+      }
+    }
+    pts.forEach((p,i)=>{
+      ic.fillStyle=COL[i%COL.length];
+      ic.beginPath();ic.arc(IX(p.x),IY(p.y),6,0,7);ic.fill();
+      ic.strokeStyle='#fff';ic.lineWidth=2;ic.stroke();
+    });
+    // param space
+    grid(pc,'m','c');
+    pts.forEach((p,i)=>{
+      const f=paramLineFor(p);
+      pc.strokeStyle=COL[i%COL.length];pc.lineWidth=2.4;pc.globalAlpha=.9;
+      pc.beginPath();pc.moveTo(PX(-2.5),PY(f(-2.5)));pc.lineTo(PX(2.5),PY(f(2.5)));pc.stroke();
+    });
+    pc.globalAlpha=1;
+    if(peak&&votes>=2){
+      pc.fillStyle='#d97a16';pc.beginPath();pc.arc(PX(peak.m),PY(peak.c),7,0,7);pc.fill();
+      pc.strokeStyle='#181512';pc.lineWidth=2;pc.stroke();
+    }
+    // readout
+    if(pts.length<2){read.innerHTML='Add at least 2 points to see lines cross…';}
+    else if(peak&&votes>=2){
+      read.innerHTML=`Densest crossing → <em>m = ${peak.m.toFixed(2)}, c = ${peak.c.toFixed(2)}</em> with <em>${votes}</em> points on it → line <em>y = ${peak.m.toFixed(2)}x ${peak.c>=0?'+':'−'} ${Math.abs(peak.c).toFixed(2)}</em>`;
+    } else { read.innerHTML='No strong crossing yet — try placing points in a straight row.'; }
+  }
+  imgCv.addEventListener('click',e=>{
+    const r=imgCv.getBoundingClientRect();
+    const px=(e.clientX-r.left)/r.width*W, py=(e.clientY-r.top)/r.height*H;
+    let x=Math.round(IXi(px)), y=Math.round(IYi(py));
+    pts.push({x,y}); if(pts.length>6)pts.shift(); draw();
+  });
+  document.getElementById('loadDemo').onclick=()=>{pts=[{x:0,y:0},{x:-10,y:10},{x:2,y:4},{x:8,y:-8}];draw();};
+  document.getElementById('clearPts').onclick=()=>{pts=[];draw();};
+  draw();
+})();
+
+/* ============================================================
+   Steppers (Cartesian + Polar accumulators)
+   ============================================================ */
+function makeStepper(imgEl,capEl,prevB,nextB,dotsEl,frames){
+  let i=0;
+  dotsEl.innerHTML='';
+  frames.forEach((f,k)=>{const d=document.createElement('i');d.onclick=()=>{i=k;render();};dotsEl.appendChild(d);});
+  function render(){
+    imgEl.style.opacity=0;
+    setTimeout(()=>{imgEl.src=frames[i].src;imgEl.style.opacity=1;},120);
+    capEl.innerHTML=frames[i].cap;
+    [...dotsEl.children].forEach((d,k)=>d.classList.toggle('on',k===i));
+    prevB.disabled=i===0; nextB.disabled=i===frames.length-1;
+    prevB.style.opacity=i===0?.4:1; nextB.style.opacity=i===frames.length-1?.4:1;
+  }
+  prevB.onclick=()=>{if(i>0){i--;render();}};
+  nextB.onclick=()=>{if(i<frames.length-1){i++;render();}};
+  imgEl.style.transition='opacity .15s';
+  render();
+}
+makeStepper(
+  document.getElementById('cartImg'),document.getElementById('cartCap'),
+  document.getElementById('cartPrev'),document.getElementById('cartNext'),document.getElementById('cartDots'),
+  [
+    {src:'assets/cart_grid_empty.png',cap:'<b>Empty accumulator.</b> Columns = m (−2 … 2), rows = c (−10 … 10).'},
+    {src:'assets/cart_grid_p1.png',cap:'<b>Point (0,0): c = 0.</b> The whole c = 0 row is incremented (c = 0 for every m).'},
+    {src:'assets/cart_grid_p2.png',cap:'<b>Point (−10,10): c = 10m + 10.</b> A new diagonal of votes; the cell at (m=−1, c=0) is now <b>2</b>.'},
+    {src:'assets/cart_grid_p3.png',cap:'<b>Point (2,4): c = −2m + 4.</b> Its line also passes through (m=−1, c=0).'},
+    {src:'assets/cart_grid_final.png',cap:'<b>Point (8,−8): c = −8m − 8.</b> All four done. The cell (m=−1, c=0) reaches <b>3</b> — the only cell at our threshold. Answer: y = −x.'},
+  ]
+);
+makeStepper(
+  document.getElementById('polarImg'),document.getElementById('polarCap'),
+  document.getElementById('polPrev'),document.getElementById('polNext'),document.getElementById('polDots'),
+  [
+    {src:'assets/polar_grid_p1.png',cap:'<b>Point (0,0): r = 0</b> for every θ. The whole r = 0 row is incremented.'},
+    {src:'assets/polar_grid_p2.png',cap:'<b>Point (−10,10): r = −10cosθ + 10sinθ.</b> Votes scattered along a sinusoid; (θ=45°, r=0) becomes <b>2</b>.'},
+    {src:'assets/polar_grid_p3.png',cap:'<b>Point (2,4): r = 2cosθ + 4sinθ.</b> Sinusoid added; the (θ=45°, r=0) cell keeps building.'},
+    {src:'assets/polar_grid_final.png',cap:'<b>Point (8,−8): r = 8cosθ − 8sinθ.</b> Done. Highest count is at <b>θ = 45°, r = 0</b> → line y = −x.'},
+  ]
+);
+
+/* ============================================================
+   LAB 03 — polar line explorer
+   ============================================================ */
+(function(){
+  const cv=document.getElementById('polarCv'),ctx=cv.getContext('2d');
+  const tS=document.getElementById('thetaSlide'),rS=document.getElementById('rSlide');
+  const tL=document.getElementById('thetaLbl'),rL=document.getElementById('rLbl');
+  const out=document.getElementById('polarReadout');
+  const W=460,H=380, ox=70, oy=H-60; // origin
+  function draw(){
+    const th=+tS.value, r=+rS.value;
+    const rad=th*Math.PI/180;
+    tL.textContent='θ = '+th+'°'; rL.textContent='r = '+r+' px';
+    ctx.clearRect(0,0,W,H);
+    // axes
+    ctx.strokeStyle='rgba(24,21,18,.3)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(W-10,oy);ctx.stroke(); // x
+    ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox,10);ctx.stroke();   // y
+    ctx.fillStyle='rgba(24,21,18,.55)';ctx.font='13px "JetBrains Mono"';
+    ctx.fillText('x',W-20,oy-8);ctx.fillText('y',ox+8,20);
+    // foot of normal
+    const fx=ox+r*Math.cos(rad), fy=oy-r*Math.sin(rad);
+    // normal
+    ctx.strokeStyle='#4b2e83';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(fx,fy);ctx.stroke();
+    ctx.fillStyle='#4b2e83';ctx.font='13px "JetBrains Mono"';ctx.fillText('r',(ox+fx)/2-12,(oy+fy)/2);
+    // the line: perpendicular to normal at foot
+    const dx=-Math.sin(rad), dy=-Math.cos(rad); // perpendicular dir (screen y up)
+    const L=320;
+    ctx.strokeStyle='#d97a16';ctx.lineWidth=3.2;
+    ctx.beginPath();
+    ctx.moveTo(fx-dx*L, fy-dy*L);
+    ctx.lineTo(fx+dx*L, fy+dy*L);
+    ctx.stroke();
+    // angle arc
+    ctx.strokeStyle='rgba(24,21,18,.5)';ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.arc(ox,oy,30,-rad,0,rad<0);ctx.stroke();
+    ctx.fillStyle='rgba(24,21,18,.7)';ctx.fillText('θ',ox+36,oy-6);
+    // foot dot
+    ctx.fillStyle='#181512';ctx.beginPath();ctx.arc(fx,fy,4,0,7);ctx.fill();
+    out.innerHTML=`Line equation: <em>${r} = x·cos(${th}°) + y·sin(${th}°)</em>. The orange line is always perpendicular to the purple normal — at θ = 0 it is perfectly vertical, yet needs no infinite gradient.`;
+  }
+  tS.oninput=draw; rS.oninput=draw; draw();
+})();
+
+/* ============================================================
+   QUIZ
+   ============================================================ */
+const QUIZ=[
+  {q:"When using Cartesian coordinates, which equation plots a line in Hough space for each image point?",
+   o:["y = mx + c","c = −xm + y","c = y + mx","x = m(y − c)"],a:1,
+   fb:"Rearrange the usual line y = mx + c (m = gradient, c = y-intercept) into c = −xm + y, treating m and c as the variables."},
+  {q:"Why are polar coordinates usually used rather than Cartesian for Hough lines?",
+   o:["Polar coordinates are more efficient to compute","Gradients for vertical lines cannot be accommodated","Gradients for horizontal lines cannot be accommodated","Cartesian cannot use different intervals for gradient and intercept"],a:1,
+   fb:"A vertical line has m = ∞ in y = mx + c, which cannot be stored in the accumulator. Polar (r, θ) avoids gradients entirely."},
+  {q:"What does a line in Hough (parameter) space represent?",
+   o:["The line through any two points in image space","All possible lines in Hough space through a particular point","The line through the required number of image points","All possible lines in image space through a particular point"],a:3,
+   fb:"For a fixed point (x, y), c = −xm + y varies m and c — i.e. it traces every possible image-space line through that one point."},
+  {q:"How do you find lines from the Hough accumulator array?",
+   o:["Find the single highest value of all entries","Find the highest value in a sequence of entries","Choose m and c for any entries exceeding a chosen N (a line must pass through N points)","Choose m and c for any entries that exceed 3"],a:2,
+   fb:"Crossing parameter-lines pile votes into shared cells. Pick cells whose count meets a threshold N that you decide — fixing N=3 is just the demo's choice."},
+  {q:"What is the equation of a line in polar coordinates?",
+   o:["r = x sin(θ) + y cos(θ)","r = x sin(θ) + y sin(θ)","y = mx + c","r = x cos(θ) + y sin(θ)"],a:3,
+   fb:"r = x cos(θ) + y sin(θ): a line perpendicular to the normal that leaves the origin at angle θ and length r."},
+];
+(function(){
+  const root=document.getElementById('quizRoot');
+  QUIZ.forEach((item,qi)=>{
+    const card=document.createElement('div');card.className='q';
+    let opts=item.o.map((t,oi)=>`<button class="opt" data-q="${qi}" data-o="${oi}">${t}<span class="mark"></span></button>`).join('');
+    card.innerHTML=`<div class="qn">Question ${qi+1}</div><div class="qtext">${item.q}</div>${opts}<div class="fb" id="fb${qi}"></div>`;
+    root.appendChild(card);
+  });
+  root.addEventListener('click',e=>{
+    const b=e.target.closest('.opt'); if(!b) return;
+    const qi=+b.dataset.q, oi=+b.dataset.o, item=QUIZ[qi];
+    const card=b.closest('.q'); if(card.dataset.done) return; card.dataset.done='1';
+    [...card.querySelectorAll('.opt')].forEach((opt,k)=>{
+      opt.style.cursor='default';
+      if(k===item.a){opt.classList.add('correct');opt.querySelector('.mark').textContent='✓';}
+    });
+    const fb=document.getElementById('fb'+qi);
+    if(oi===item.a){fb.className='fb show ok';fb.innerHTML='✓ Correct. '+item.fb;}
+    else{b.classList.add('wrong');b.querySelector('.mark').textContent='✗';fb.className='fb show no';fb.innerHTML='Not quite. '+item.fb;}
+  });
+})();
+</script>
+</body>
+</html>
