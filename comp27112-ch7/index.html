@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blobs &amp; Boundaries — COMP27112 Visual Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0c0f14; --panel:#141a22; --panel2:#1b232e; --line:#27313d;
+  --txt:#e8eef4; --muted:#93a1b0; --amber:#ff9442; --amber2:#ffb86b;
+  --teal:#46d6c4; --red:#ef5d5d; --blue:#5b8cff; --grey:#7d8794;
+  --maxw:1080px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--ink); color:var(--txt);
+  font-family:'Hanken Grotesk',system-ui,sans-serif;
+  line-height:1.65; -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+/* pixel grid backdrop */
+body::before{
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(70,214,196,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(70,214,196,.04) 1px,transparent 1px);
+  background-size:34px 34px;
+  mask-image:radial-gradient(circle at 50% 0%,#000 0%,transparent 78%);
+}
+.wrap{position:relative; z-index:1; max-width:var(--maxw); margin:0 auto; padding:0 24px}
+
+/* progress + nav */
+#progress{position:fixed; top:0; left:0; height:3px; width:0%; background:linear-gradient(90deg,var(--amber),var(--teal)); z-index:100; transition:width .1s linear}
+nav{position:fixed; top:0; left:0; right:0; z-index:90; backdrop-filter:blur(12px); background:rgba(12,15,20,.72); border-bottom:1px solid var(--line)}
+nav .inner{max-width:var(--maxw); margin:0 auto; display:flex; align-items:center; justify-content:space-between; padding:11px 24px; gap:14px}
+nav .brand{font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.16em; color:var(--teal); text-transform:uppercase; white-space:nowrap}
+nav .brand b{color:var(--txt)}
+nav .links{display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end}
+nav .links a{font-size:12.5px; color:var(--muted); text-decoration:none; padding:5px 9px; border-radius:7px; transition:.18s; white-space:nowrap}
+nav .links a:hover{color:var(--txt); background:var(--panel2)}
+nav .links a.active{color:var(--ink); background:var(--amber); font-weight:600}
+.menu-toggle{display:none}
+
+/* hero */
+header.hero{min-height:92vh; display:flex; flex-direction:column; justify-content:center; padding:120px 0 60px; position:relative}
+.kicker{font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:.28em; text-transform:uppercase; color:var(--amber); margin-bottom:22px}
+h1.title{font-family:'Fraunces',serif; font-weight:800; font-size:clamp(46px,9vw,104px); line-height:.96; letter-spacing:-.02em}
+h1.title em{font-style:italic; font-weight:500; color:var(--teal)}
+.lede{max-width:640px; font-size:clamp(17px,2.4vw,21px); color:var(--muted); margin-top:28px}
+.hero-meta{display:flex; gap:26px; flex-wrap:wrap; margin-top:38px; font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--grey)}
+.hero-meta span b{color:var(--teal); display:block; font-size:22px; font-family:'Fraunces',serif; font-weight:600}
+.scroll-hint{margin-top:54px; font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--grey); display:flex; align-items:center; gap:10px}
+.scroll-hint .dot{width:7px;height:7px;border-radius:50%;background:var(--amber); animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.3)}}
+
+/* sections */
+section{padding:74px 0; border-top:1px solid var(--line)}
+.sec-no{font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.2em; color:var(--amber); text-transform:uppercase}
+h2{font-family:'Fraunces',serif; font-weight:700; font-size:clamp(30px,5vw,46px); line-height:1.04; letter-spacing:-.015em; margin:10px 0 8px}
+h3{font-family:'Fraunces',serif; font-weight:600; font-size:25px; margin:34px 0 12px; color:var(--amber2)}
+h4{font-size:15px; font-family:'JetBrains Mono',monospace; letter-spacing:.04em; text-transform:uppercase; color:var(--teal); margin:22px 0 8px}
+p{margin:12px 0; color:#cdd7e1}
+p.big{font-size:18.5px; color:#dde6ee}
+strong{color:#fff}
+.mono{font-family:'JetBrains Mono',monospace}
+.amber{color:var(--amber)} .teal{color:var(--teal)}
+
+ul.clean{list-style:none; margin:14px 0}
+ul.clean li{position:relative; padding-left:26px; margin:9px 0; color:#cdd7e1}
+ul.clean li::before{content:"▸"; position:absolute; left:0; color:var(--amber); font-size:14px; top:2px}
+
+/* cards */
+.card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:24px; margin:20px 0}
+.card.accent{border-left:3px solid var(--amber)}
+.card.teal{border-left:3px solid var(--teal)}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+.grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+@media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+
+/* figure (presentation slide) */
+figure{margin:24px 0; background:#fff; border-radius:14px; overflow:hidden; border:1px solid var(--line); box-shadow:0 12px 40px rgba(0,0,0,.4)}
+figure img{display:block; width:100%}
+figcaption{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted); padding:10px 14px; background:var(--panel); border-top:1px solid var(--line)}
+figcaption b{color:var(--teal)}
+
+.callout{background:linear-gradient(135deg,rgba(255,148,66,.08),rgba(70,214,196,.06)); border:1px solid var(--line); border-radius:14px; padding:18px 22px; margin:20px 0; font-size:15.5px}
+.callout .lab{font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--amber); display:block; margin-bottom:6px}
+
+.formula{font-family:'JetBrains Mono',monospace; background:#0a0d11; border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin:16px 0; font-size:16px; color:var(--teal); overflow-x:auto}
+.formula .var{color:var(--amber)}
+
+/* interactive shell */
+.lab-box{background:var(--panel2); border:1px solid var(--line); border-radius:16px; padding:22px; margin:22px 0}
+.lab-box .lab-title{font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--teal); margin-bottom:16px; display:flex; align-items:center; gap:9px}
+.lab-box .lab-title::before{content:"●"; color:var(--amber); animation:pulse 2s infinite}
+.btn{font-family:'JetBrains Mono',monospace; font-size:13px; background:var(--panel); color:var(--txt); border:1px solid var(--line); border-radius:9px; padding:9px 16px; cursor:pointer; transition:.16s; letter-spacing:.03em}
+.btn:hover{border-color:var(--amber); color:var(--amber)}
+.btn.primary{background:var(--amber); color:var(--ink); border-color:var(--amber); font-weight:700}
+.btn.primary:hover{background:var(--amber2); color:var(--ink)}
+.btn:disabled{opacity:.35; cursor:not-allowed}
+.btn-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:14px 0}
+.toggle-row{display:inline-flex; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:4px; gap:4px}
+.toggle-row button{font-family:'JetBrains Mono',monospace; font-size:13px; border:none; background:transparent; color:var(--muted); padding:8px 16px; border-radius:7px; cursor:pointer; transition:.15s}
+.toggle-row button.on{background:var(--amber); color:var(--ink); font-weight:700}
+
+input.code-in{font-family:'JetBrains Mono',monospace; font-size:15px; background:#0a0d11; border:1px solid var(--line); color:var(--teal); border-radius:9px; padding:10px 14px; width:100%; letter-spacing:.12em}
+input.code-in:focus{outline:none; border-color:var(--amber)}
+
+.narr{font-family:'JetBrains Mono',monospace; font-size:13.5px; color:var(--amber2); background:#0a0d11; border:1px dashed var(--line); border-radius:9px; padding:12px 15px; margin-top:14px; min-height:46px}
+.result{font-family:'JetBrains Mono',monospace; font-size:14px; margin-top:14px; color:var(--muted)}
+.result b{color:var(--teal); font-size:18px}
+
+svg.grid-svg{display:block; max-width:100%; height:auto; margin:0 auto}
+.cell-bg{fill:transparent; stroke:var(--line); stroke-width:1}
+.cell-obj{fill:#56606c}
+.legend{display:flex; gap:18px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted); margin-top:14px}
+.legend i{display:inline-block; width:13px; height:13px; border-radius:3px; margin-right:6px; vertical-align:-1px; border:1px solid var(--line)}
+
+/* quiz */
+.quiz-q{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; margin:16px 0}
+.quiz-q .qnum{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--amber); letter-spacing:.14em}
+.quiz-q .qtext{font-size:16.5px; font-weight:600; margin:7px 0 14px; color:#fff}
+.opt{display:block; width:100%; text-align:left; background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:11px 15px; margin:8px 0; cursor:pointer; color:#cdd7e1; font-size:14.5px; transition:.14s; font-family:inherit}
+.opt:hover{border-color:var(--muted)}
+.opt.correct{border-color:var(--teal); background:rgba(70,214,196,.12); color:#fff}
+.opt.wrong{border-color:var(--red); background:rgba(239,93,93,.1)}
+.opt .mk{font-family:'JetBrains Mono',monospace; color:var(--muted); margin-right:9px}
+.qfb{font-size:13.5px; margin-top:10px; padding:10px 14px; border-radius:9px; display:none}
+.qfb.show{display:block}
+.qfb.ok{background:rgba(70,214,196,.1); color:var(--teal)}
+.qfb.no{background:rgba(239,93,93,.1); color:#ffb3b3}
+
+/* exam accordion */
+.exam{border:1px solid var(--line); border-radius:12px; margin:12px 0; overflow:hidden; background:var(--panel)}
+.exam summary{cursor:pointer; padding:16px 20px; font-size:15.5px; list-style:none; display:flex; gap:14px; align-items:flex-start; transition:.15s}
+.exam summary::-webkit-details-marker{display:none}
+.exam summary:hover{background:var(--panel2)}
+.exam .yr{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink); background:var(--amber); padding:3px 8px; border-radius:6px; white-space:nowrap; font-weight:700; margin-top:2px}
+.exam .ans{padding:0 20px 18px 20px; color:#cdd7e1; font-size:14.5px; border-top:1px solid var(--line); margin-top:0}
+.exam .ans h5{color:var(--teal); font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.1em; text-transform:uppercase; margin:16px 0 6px}
+
+/* reveal anim */
+.reveal{opacity:0; transform:translateY(30px); transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1; transform:none}
+
+footer{border-top:1px solid var(--line); padding:46px 0 70px; color:var(--muted); font-size:13.5px}
+footer .mono{color:var(--grey)}
+
+.tag{display:inline-block; font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--teal); border:1px solid var(--line); padding:3px 10px; border-radius:20px; margin:3px 6px 3px 0}
+
+@media(max-width:760px){
+  nav .links{display:none; position:absolute; top:100%; left:0; right:0; background:var(--ink); flex-direction:column; padding:10px; border-bottom:1px solid var(--line)}
+  nav .links.open{display:flex}
+  nav .links a{padding:10px}
+  .menu-toggle{display:block; background:none; border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:6px 11px; cursor:pointer; font-family:'JetBrains Mono',monospace}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<nav>
+  <div class="inner">
+    <div class="brand"><b>COMP27112</b> · IMAGE PROCESSING · L7</div>
+    <button class="menu-toggle" onclick="document.getElementById('navlinks').classList.toggle('open')">≡</button>
+    <div class="links" id="navlinks">
+      <a href="#blobs">Blobs</a>
+      <a href="#connectivity">Connectivity</a>
+      <a href="#cca">Labelling</a>
+      <a href="#boundary">Boundary</a>
+      <a href="#moments">Moments</a>
+      <a href="#chain">Chain Codes</a>
+      <a href="#measure">Measure</a>
+      <a href="#tracking">Tracking</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#exam">Exams</a>
+      <a href="#deck">Deck</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="kicker">Lecture 7 · Detecting, Describing &amp; Measuring Shapes</div>
+  <h1 class="title">Blobs<br>&amp; <em>Boundaries</em></h1>
+  <p class="lede">Once an image is thresholded, the real work begins: finding the connected regions, walking their edges, and squeezing out numbers — area, perimeter, orientation — that let a machine <em class="teal">recognise</em> and <em class="teal">track</em> them.</p>
+  <div class="hero-meta">
+    <span><b>8</b>core topics</span>
+    <span><b>6</b>interactive labs</span>
+    <span><b>12</b>quiz questions</span>
+    <span><b>6</b>past-paper Qs</span>
+  </div>
+  <div class="scroll-hint"><span class="dot"></span> Scroll to begin · everything below is clickable</div>
+</header>
+
+<!-- ===================== 1. BLOBS ===================== -->
+<section id="blobs">
+  <div class="reveal">
+  <div class="sec-no">01 / Foundations</div>
+  <h2>What is a blob?</h2>
+  <p class="big">A <strong>blob</strong> is a set of pixels that (1) <strong class="amber">share some property</strong> and (2) are <strong class="amber">connected</strong> to one another.</p>
+  <p>That two-part definition is the whole game. The "property" is whatever lets us say two neighbouring pixels belong to the same object; "connected" is what stitches lone pixels into a single region. The lecture opens — tongue firmly in cheek — with the 1958 sci-fi poster, because a blob really is just an amorphous mass of similar stuff.</p>
+
+  <figure>
+    <img src="assets/img/slide-02.png" alt="The Blob 1958 movie poster used in lecture">
+    <figcaption><b>Slide 2</b> — "Indescribable, indestructible, nothing can stop it!" The lecturer's icebreaker for what a blob is.</figcaption>
+  </figure>
+
+  <h3>Deciding the "property"</h3>
+  <p>Two questions drive blob formation, and a classifier answers them pixel by pixel:</p>
+  <ul class="clean">
+    <li>Are two <strong>adjacent pixels</strong> similar enough to be from the same object?</li>
+    <li>Is a pixel similar enough to the <strong>blob it touches</strong> to be absorbed into it?</li>
+  </ul>
+
+  <div class="grid2">
+    <div class="card accent">
+      <h4>Thresholding</h4>
+      <p>The simplest property. Pixel values collapse to <span class="mono">{0,1}</span>; grouping is trivial — same value = same object. This is exactly where Lecture 7 picks up from.</p>
+    </div>
+    <div class="card teal">
+      <h4>Statistical tests</h4>
+      <p>Richer properties build a <strong>probability density function</strong> of grey values or colours, then a classifier decides membership — useful when a single threshold won't separate things cleanly.</p>
+    </div>
+  </div>
+  </div>
+</section>
+
+<!-- ===================== 2. CONNECTIVITY ===================== -->
+<section id="connectivity">
+  <div class="reveal">
+  <div class="sec-no">02 / Connectivity</div>
+  <h2>4-connected vs 8-connected</h2>
+  <p>"Connected" needs a definition. A pixel's neighbours are either the <strong>4</strong> sharing an edge, or the <strong>8</strong> sharing an edge <em>or a corner</em>. The choice changes which pixels merge into one blob — and it has real trade-offs.</p>
+
+  <div class="lab-box">
+    <div class="lab-title">Lab · Neighbourhood explorer</div>
+    <div class="toggle-row" id="connToggle">
+      <button class="on" data-c="4">4-connected</button>
+      <button data-c="8">8-connected</button>
+    </div>
+    <div style="display:flex; justify-content:center; margin-top:18px">
+      <svg class="grid-svg" id="connSvg" viewBox="0 0 300 300" width="300"></svg>
+    </div>
+    <div class="narr" id="connNarr"></div>
+  </div>
+
+  <figure>
+    <img src="assets/img/slide-08.png" alt="Connectivity issues: corner disconnection and thin object piercing">
+    <figcaption><b>Slide 8</b> — The catch: <b>4-connected</b> can split objects that only touch at corners; <b>8-connected</b> fixes that but can "pierce" through thin background gaps, accidentally joining things.</figcaption>
+  </figure>
+  </div>
+</section>
+
+<!-- ===================== 3. CCA / LABELLING ===================== -->
+<section id="cca">
+  <div class="reveal">
+  <div class="sec-no">03 / Blob finding</div>
+  <h2>Connected Component Analysis</h2>
+  <p class="big">Also called <strong class="amber">Region Labelling</strong>. Goal: find groups of contiguous pixels and give every separate blob its own integer label. Counting the labels then counts the objects.</p>
+
+  <figure>
+    <img src="assets/img/slide-10.png" alt="Tadpoles original and red channel">
+    <figcaption><b>Slide 10</b> — Counting tadpoles. The green background is killed off cleanly by taking just the <b>red channel</b> as greyscale.</figcaption>
+  </figure>
+  <figure>
+    <img src="assets/img/slide-11.png" alt="Tadpoles thresholded and region labelled">
+    <figcaption><b>Slide 11</b> — Threshold at 128 → binary blobs. Region-labelling paints each blob a distinct label; the <b>number of labels = the tadpole count</b>.</figcaption>
+  </figure>
+
+  <div class="callout">
+    <span class="lab">Watch out</span>
+    Thresholding is imperfect: a tail can split into pieces, two touching tadpoles can fuse into one blob, and bright eyes can punch holes. Fix these <em>before</em> labelling with morphology — <strong>Dilation, Erosion, Opening &amp; Closing</strong>.
+  </div>
+
+  <h3>The two-pass algorithm</h3>
+  <div class="grid2">
+    <div class="card accent">
+      <h4>Pass 1 · scan + provisional labels</h4>
+      <ul class="clean">
+        <li><strong>Zero</strong> labelled neighbours → take the next free label</li>
+        <li><strong>One</strong> labelled neighbour → copy that label</li>
+        <li><strong>Two+ different</strong> labels → take one, and <em class="amber">record the equivalence</em></li>
+      </ul>
+    </div>
+    <div class="card teal">
+      <h4>Pass 2 · resolve</h4>
+      <p>Scan again and re-label every pixel using the equivalence table, so each true region ends up with a single consistent label.</p>
+    </div>
+  </div>
+
+  <div class="lab-box">
+    <div class="lab-title">Lab · Step through the worked example</div>
+    <p style="font-size:14px;color:var(--muted);margin-top:0">The exact grid from slides 15–16. Step through Pass 1 cell by cell, watch the equivalences appear, then resolve.</p>
+    <div style="display:flex; justify-content:center">
+      <svg class="grid-svg" id="ccaSvg" viewBox="0 0 460 190" width="460"></svg>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" id="ccaStep">Next step ▸</button>
+      <button class="btn" id="ccaReset">Reset</button>
+    </div>
+    <div class="narr" id="ccaNarr">Press “Next step” to label the first foreground pixel.</div>
+    <div class="result" id="ccaEquiv">Equivalences recorded: <b>—</b></div>
+  </div>
+  </div>
+</section>
+
+<!-- ===================== 4. BOUNDARY DETECTION ===================== -->
+<section id="boundary">
+  <div class="reveal">
+  <div class="sec-no">04 / Boundary detection</div>
+  <h2>Walking the edge</h2>
+  <p>To <em>describe</em> a blob we first trace its outline. Scan top-to-bottom, left-to-right; the first object pixel is the start <span class="mono amber">O₀</span>, and the background cell to its left is <span class="mono">B₀</span>. Then sweep <strong>clockwise</strong> around the current pixel's neighbours, starting from the backtrack cell: the first object pixel you hit is the next boundary pixel, the background cell just before it becomes the new <span class="mono">B</span>.</p>
+  <p>Stop only when you return to <span class="mono amber">O₀</span> <strong>and</strong> the next pixel found is <span class="mono">O₁</span> again — the extra condition handles boundaries that loop back through the start in a different direction.</p>
+
+  <div class="lab-box">
+    <div class="lab-title">Lab · Animated boundary trace</div>
+    <p style="font-size:14px;color:var(--muted);margin-top:0">The blob from slides 17–21. Play the clockwise walk and watch <span class="mono amber">Oₙ</span> step around the 14-pixel border.</p>
+    <div style="display:flex; justify-content:center">
+      <svg class="grid-svg" id="bndSvg" viewBox="0 0 340 340" width="340"></svg>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" id="bndPlay">▶ Play trace</button>
+      <button class="btn" id="bndStep">Step ▸</button>
+      <button class="btn" id="bndReset">Reset</button>
+    </div>
+    <div class="narr" id="bndNarr">O₀ is the first object pixel found by the raster scan. Press play.</div>
+    <div class="legend">
+      <span><i style="background:#56606c"></i>object</span>
+      <span><i style="background:var(--amber)"></i>current Oₙ</span>
+      <span><i style="background:var(--teal)"></i>traced border</span>
+      <span><i style="background:var(--blue)"></i>backtrack Bₙ</span>
+    </div>
+  </div>
+  </div>
+</section>
+
+<!-- ===================== 5. MOMENTS ===================== -->
+<section id="moments">
+  <div class="reveal">
+  <div class="sec-no">05 / Description · moments of area</div>
+  <h2>From see-saws to centroids</h2>
+  <p>Why does an image-processing lecture talk about weights on a plank? Because the <strong>centre of gravity</strong> of a balanced see-saw and the <strong>centroid</strong> of a blob are the same calculation: a weighted average of positions.</p>
+
+  <div class="grid2">
+    <figure style="margin:0">
+      <img src="assets/img/slide-27.png" alt="Generalised moments see-saw">
+      <figcaption><b>Slide 27</b> — A moment <span class="mono">M = weight × distance</span>. Balance the plank by placing the pivot at the weighted-average distance.</figcaption>
+    </figure>
+    <figure style="margin:0">
+      <img src="assets/img/slide-29.png" alt="Centre of gravity of a blob worked example">
+      <figcaption><b>Slide 29</b> — Same maths on a blob: average the x and y of its 22 pixels → centre ≈ <b>(3.5, 3.8)</b>.</figcaption>
+    </figure>
+  </div>
+
+  <h3>Formal definition</h3>
+  <div class="formula">M<span class="var">αβ</span> = Σ<sub>image</sub>  x<sup>α</sup> · y<sup>β</sup> · I(x,y)</div>
+  <p>For a binary image where <span class="mono">I(x,y) ∈ {0,1}</span>:</p>
+  <ul class="clean">
+    <li><span class="mono">M₀₀</span> = sum of pixels = the blob's <strong>area</strong></li>
+    <li><span class="mono">M₁₀</span> = sum of x-values (similarly <span class="mono">M₀₁</span> for y)</li>
+    <li>Centre of gravity = <span class="mono amber">(M₁₀/M₀₀ , M₀₁/M₀₀)</span></li>
+  </ul>
+
+  <h3>Central moments &amp; orientation</h3>
+  <div class="formula">M<span class="var">αβ</span> = Σ<sub>image</sub> (x−x̄)<sup>α</sup>(y−ȳ)<sup>β</sup> I(x,y)</div>
+  <p>Measuring relative to the centroid <span class="mono">(x̄,ȳ)</span> makes the moments <strong>position-invariant</strong> — slide the blob anywhere and they don't change. Combine low-order moments and you can also recover <strong>orientation</strong>:</p>
+  <div class="formula">θ = ½ · tan⁻¹( <span class="var">2M₁₁</span> / (M₂₀ − M₀₂) )</div>
+  <div class="callout">
+    <span class="lab">Why it matters</span>
+    Carefully chosen moments can be made invariant to <strong>position, orientation and size</strong> at once — giving compact numbers that discriminate blobs by shape, and that work on non-binary and labelled images too.
+  </div>
+  </div>
+</section>
+
+<!-- ===================== 6. CHAIN CODES ===================== -->
+<section id="chain">
+  <div class="reveal">
+  <div class="sec-no">06 / Description · chain codes</div>
+  <h2>Chain codes</h2>
+  <p>A chain code records a boundary as the <strong>sequence of directions</strong> you step in as you walk around it — an 8-direction compass, <span class="mono">0</span> = up, increasing clockwise to <span class="mono">7</span>.</p>
+
+  <div class="lab-box">
+    <div class="lab-title">Lab · Direction compass</div>
+    <p style="font-size:14px;color:var(--muted);margin-top:0">Click a direction (or any code 0–7) to see where it points.</p>
+    <div style="display:flex; justify-content:center">
+      <svg class="grid-svg" id="compassSvg" viewBox="0 0 240 240" width="240"></svg>
+    </div>
+    <div class="narr" id="compassNarr">Direction 0 points straight up. Odd directions (1,3,5,7) are diagonals of length √2.</div>
+  </div>
+
+  <figure>
+    <img src="assets/img/slide-34.png" alt="Chain code worked example">
+    <figcaption><b>Slide 34</b> — Walking this shape clockwise from the red dot gives the <b>ordinary chain code</b> <span class="mono" style="color:#222">c = 2 3 2 3 4 4 6 7 5 6 7 1 7 1</span>.</figcaption>
+  </figure>
+
+  <div class="grid3">
+    <div class="card"><h4>Cyclic</h4><p>Start anywhere; when you reach the end, continue from the start.</p></div>
+    <div class="card"><h4>Not rotation-invariant</h4><p>Rotate the shape 90° and the ordinary code changes completely.</p></div>
+    <div class="card"><h4>Compact</h4><p>14 directions × 3 bits ≈ <strong>5.25 bytes</strong> vs 28 bytes for 14 (x,y) pairs.</p></div>
+  </div>
+
+  <h3>Differential chain codes</h3>
+  <p>Take the <strong>difference</strong> between successive codes (mod 8) and you describe <em>turns</em> rather than absolute directions:</p>
+  <div class="formula">d<sub>n</sub> = ( c<sub>n</sub> − c<sub>n−1</sub> ) mod 8   <span style="color:var(--muted)">, with c₋₁ = 0</span></div>
+
+  <div class="lab-box">
+    <div class="lab-title">Lab · Ordinary → differential converter</div>
+    <p style="font-size:14px;color:var(--muted);margin-top:0">Edit the ordinary code; the differential code is computed live.</p>
+    <input class="code-in" id="diffIn" value="2 3 2 3 4 4 6 7 5 6 7 1 7 1">
+    <div class="result" id="diffOut"></div>
+  </div>
+
+  <div class="callout">
+    <span class="lab">The pay-off</span>
+    The differential chain code <strong>is rotationally invariant</strong> — rotate the shape and the turn-sequence is unchanged. Combined with the cyclic property, you can compare two shapes by cyclically rotating one code against the other.
+  </div>
+  </div>
+</section>
+
+<!-- ===================== 7. MEASUREMENTS ===================== -->
+<section id="measure">
+  <div class="reveal">
+  <div class="sec-no">07 / Measurements</div>
+  <h2>Perimeter &amp; area from the code</h2>
+
+  <h3>Perimeter</h3>
+  <p>Even codes (0,2,4,6) are horizontal/vertical steps of length <strong>1</strong>; odd codes (1,3,5,7) are diagonals of length <strong>√2</strong> (hypotenuse of a unit right triangle). So with <span class="mono">E</span> even codes and <span class="mono">D</span> odd codes:</p>
+  <div class="formula">Perimeter = <span class="var">E</span> + √2 · <span class="var">D</span></div>
+
+  <div class="lab-box">
+    <div class="lab-title">Lab · Perimeter calculator</div>
+    <input class="code-in" id="perimIn" value="2 3 2 3 4 4 6 7 5 6 7 1 7 1">
+    <div class="result" id="perimOut"></div>
+  </div>
+
+  <h3>Area — the Shoelace algorithm</h3>
+  <p>Treat the boundary pixels as polygon vertices. Walk the chain code to recover their (x,y) coordinates, then apply the shoelace sum and halve its absolute value.</p>
+  <div class="formula">Area = ½ · | Σ ( x<sub>i</sub>·y<sub>i+1</sub> − x<sub>i+1</sub>·y<sub>i</sub> ) |</div>
+
+  <div class="lab-box">
+    <div class="lab-title">Lab · Chain code → area</div>
+    <p style="font-size:14px;color:var(--muted);margin-top:0">The code is converted to coordinates, then the shoelace sum is taken. Matches the slide's answer of 14.</p>
+    <input class="code-in" id="areaIn" value="2 3 2 3 4 4 6 7 5 6 7 1 7 1">
+    <div class="result" id="areaOut"></div>
+  </div>
+
+  <div class="grid2">
+    <figure style="margin:0">
+      <img src="assets/img/slide-47.png" alt="Area from chain code coordinate table">
+      <figcaption><b>Slide 43</b> — Walking the code from (0,0) builds the coordinate table; shoelace sum = −28 → area = <b>14</b>.</figcaption>
+    </figure>
+    <figure style="margin:0">
+      <img src="assets/img/slide-48.png" alt="Area estimate vs pixel count">
+      <figcaption><b>Slide 44</b> — Polygon area (14) is the area <em>inside</em> the vertices; add the ~7 grey pixels outside it ≈ the true 22-pixel count. The gap shrinks for larger shapes.</figcaption>
+    </figure>
+  </div>
+
+  <h3>Colour distribution</h3>
+  <p>A blob's colour histogram is a powerful descriptor that's independent of area and orientation — typically the <strong>H, S</strong> components with brightness normalised out. It's exactly what lets a tracker say "that blue jacket is still the same person".</p>
+  </div>
+</section>
+
+<!-- ===================== 8. TRACKING ===================== -->
+<section id="tracking">
+  <div class="reveal">
+  <div class="sec-no">08 / Blob tracking (aside)</div>
+  <h2>Following blobs through time</h2>
+  <figure>
+    <img src="assets/img/slide-50.png" alt="Video frames of bees in a hive">
+    <figcaption><b>Slide 46</b> — Four frames of bees in a hive. Between frames each bee moves — but <em>which</em> blob is which?</figcaption>
+  </figure>
+
+  <p>Matching a blob at time <span class="mono">t₂</span> to one at <span class="mono">t₁</span> needs <strong>invariant properties</strong> (what stays the same?). It's hard: there can be many blobs, and the population changes as blobs enter and leave. With <span class="mono">N</span> blobs in one frame and <span class="mono">M</span> in the next, comparing every subset is a <strong>combinatorial explosion</strong>.</p>
+
+  <h3>Predictive tracking</h3>
+  <div class="grid3">
+    <div class="card accent">
+      <h4>Maintain</h4>
+      <p>For each blob: current <strong>location</strong>, <strong>velocity</strong> (distance + direction since last frame) and its <strong>invariants</strong>.</p>
+    </div>
+    <div class="card teal">
+      <h4>Predict</h4>
+      <p>Use location + velocity to estimate where the blob will be next frame. Kalman and particle filters do this estimation.</p>
+    </div>
+    <div class="card accent">
+      <h4>Verify</h4>
+      <p>Is there a blob <em>near</em> the prediction with the <em>same invariants</em>? If yes, it's a match.</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <span class="lab">Verification reality</span>
+    Velocity estimates drift and change, so keep an <strong>error estimate</strong> that defines a search window around the prediction. Invariants like colour also shift with lighting or rotation — so you look for <strong>probable</strong>, not exact, matches.
+  </div>
+
+  <h3>Edge cases — "what if?"</h3>
+  <ul class="clean">
+    <li><strong>Multiple blobs at the predicted spot</strong> (one bee climbs another) → record it in case they split later.</li>
+    <li><strong>No blob where predicted</strong> → keep tracking the "missing" blob for a few frames to re-acquire it.</li>
+    <li><strong>A blob with no prediction</strong> → a new blob has appeared in the scene.</li>
+  </ul>
+  </div>
+</section>
+
+<!-- ===================== QUIZ ===================== -->
+<section id="quiz">
+  <div class="reveal">
+  <div class="sec-no">Check yourself</div>
+  <h2>Quiz</h2>
+  <p>Straight from the course's visual quiz bank (blob description + morphology). Click an answer — it's marked instantly.</p>
+  <div id="quizHost"></div>
+  </div>
+</section>
+
+<!-- ===================== EXAM ===================== -->
+<section id="exam">
+  <div class="reveal">
+  <div class="sec-no">Past papers</div>
+  <h2>Exam questions on this material</h2>
+  <p>Real COMP27112 questions touching blobs, labelling, chain codes, moments and boundaries. Click to reveal a model approach.</p>
+  <div id="examHost"></div>
+  </div>
+</section>
+
+<!-- ===================== FULL DECK GALLERY ===================== -->
+<section id="deck">
+  <div class="reveal">
+  <div class="sec-no">Appendix</div>
+  <h2>The full slide deck</h2>
+  <p>Every slide from the lecture (7.1 → 7.3), in order. Click any slide to open it full size.</p>
+  <details class="exam" style="margin-top:18px">
+    <summary><span class="yr">56 slides</span><span>Show / hide the complete deck</span></summary>
+    <div class="ans" style="border-top:1px solid var(--line)">
+      <div id="deckGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:16px"></div>
+    </div>
+  </details>
+  </div>
+</section>
+
+<footer>
+  <div class="reveal">
+  <p><span class="tag">Blob finding</span><span class="tag">CCA / labelling</span><span class="tag">Boundary detection</span><span class="tag">Chain codes</span><span class="tag">Moments</span><span class="tag">Perimeter &amp; area</span><span class="tag">Tracking</span></p>
+  <p class="mono" style="margin-top:18px">Visual notes compiled from COMP27112 — Introduction to Visual Computing, Image Processing Lecture 7 (T. Morley, University of Manchester). Slide images © University of Manchester, used for study. Interactive labs, quiz and exam excerpts assembled for revision.</p>
+  </div>
+</footer>
+
+</div>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
