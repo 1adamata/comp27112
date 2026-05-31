@@ -42,7 +42,7 @@
     <p class="sub">A histogram counts how many pixels sit at each intensity 0–255. Drag the threshold across it and watch the image split into black &amp; white — then let the <em>iterative</em> method pick the split for you.</p>
     <div class="meta">
       <span class="chip a">Image Processing</span>
-      <span class="chip">Week 1 · point processing</span>
+      <span class="chip">Ch 1–2 · point processing</span>
     </div>
   </div>
 </header>
@@ -51,7 +51,7 @@
 
   <section style="border-bottom:none;padding-bottom:18px">
     <div class="card">
-      <h3>Two equations, both already in your Week 1 notes</h3>
+      <h3>Two equations, both already in your Chapters 1–2 notes</h3>
       <div class="eq">binary threshold:&nbsp; I′(x,y) = 255 if I(x,y) ≥ <span class="hl">T</span>, else 0</div>
       <div class="eq">auto-pick T:&nbsp; <span class="hl">θ = (μ<span class="v">L</span> + μ<span class="v">H</span>) / 2</span> &nbsp;&nbsp;<span style="color:#8a7f6a">// iterated until it stops moving</span></div>
       <p class="small">Thresholding turns a greyscale image into a <b>binary</b> one. The only decision is <b>where</b> to cut — and a well-separated histogram (two humps) makes that decision obvious. The valley between the humps is the natural threshold.</p>

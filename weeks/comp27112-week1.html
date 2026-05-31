@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COMP27112 · Week 1 — Visual Computing Study Lab</title>
+<title>COMP27112 · Chapters 1–2 — Visual Computing Study Lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -13,7 +13,7 @@
 
 <nav class="toc">
   <div class="inner">
-    <span class="brand">COMP27112 · WK1</span>
+    <span class="brand">COMP27112 · CH1-2</span>
     <a href="#unit">Unit</a>
     <a href="#what">What is IP</a>
     <a href="#history">History</a>
@@ -32,8 +32,8 @@
 
 <header class="hero">
   <div class="wrap">
-    <div class="deco">01</div>
-    <div class="kicker">Introduction to Visual Computing · Week 1</div>
+    <div class="deco">01–02</div>
+    <div class="kicker">Introduction to Visual Computing · Chapters 1–2</div>
     <h1>The Image,<br><em>Decoded.</em></h1>
     <p class="sub">Everything from the unit intro, Image-Processing Lecture 1 (parts 1.1–1.3), and Tim Morris's handout Chapter 1 — taught so you <em>understand</em> it, then drilled so you can answer it.</p>
     <div class="meta">
@@ -65,7 +65,8 @@
           <p class="small"><b>Dr David Petrescu.</b> Synthesise images from 3D models. Suggested text: Marschner &amp; Shirley, <em>Fundamentals of Computer Graphics</em>.</p>
         </div>
       </div>
-      <p class="small">The exam is split <b>roughly evenly</b> between the two. This guide is the IP side of Week 1, but the unit-level facts below are fair game for either examiner.</p>
+      <p class="small">The exam is split <b>roughly evenly</b> between the two. This guide is the IP side of Chapters 1–2, but the unit-level facts below are fair game for either examiner.</p>
+      <p class="small">"12-megapixels" just means width×height ≈ 12 million. <b>Zooming in far enough reveals the individual pixels</b> — the image is discrete, not continuous. That discreteness is the seed of sampling/aliasing (Chapters 3–4+).</p>
     </div>
 
     <div class="card">
@@ -279,7 +280,7 @@
       <h3>Resolution</h3>
       <p>The pixel dimensions <b>width × height</b>. The slide's worked example:</p>
       <div class="eq">12 megapixels → <span class="hl">4272 × 2848</span> = 12,166,656 px</div>
-      <p class="small">"12-megapixel" just means width×height ≈ 12 million. <b>Zooming in far enough reveals the individual pixels</b> — the image is discrete, not continuous. That discreteness is the seed of sampling/aliasing (Week 2+).</p>
+      <p class="small">"12-megapixel" just means width×height ≈ 12 million. <b>Zooming in far enough reveals the individual pixels</b> — the image is discrete, not continuous. That discreteness is the seed of sampling/aliasing (Chapters 3–4+).</p>
     </div>
     <div class="card">
       <h3>Colour depth (bit depth)</h3>
@@ -466,7 +467,7 @@
 
   <div class="hook">
     <span class="lbl">🧠 Hook — "Point = only the point"</span>
-    <p style="margin:6px 0 0">If the new pixel needs to know a <em>neighbour's</em> value, it's not point processing — it's <b>region</b> processing (convolution, blur, edges; Week 2+). Point ops can be drawn as one input→output curve; region ops cannot.</p>
+    <p style="margin:6px 0 0">If the new pixel needs to know a <em>neighbour's</em> value, it's not point processing — it's <b>region</b> processing (convolution, blur, edges; Chapters 3–4+). Point ops can be drawn as one input→output curve; region ops cannot.</p>
   </div>
 
   <div class="card">
@@ -544,7 +545,7 @@
 <!-- ============ 12. COLOUR (Lecture 2) ============ -->
 <section id="colour">
   <div class="sec-head"><span class="sec-num">11</span><h2>Colour — perception &amp; colour models</h2></div>
-  <p class="lead">From your own Week 1 notes (Lecture 2). How humans see colour, why we need standardised colour spaces, the main models (RGB, YCrCb, HSV/IHS, Lab), and colour-based segmentation. Lower drill-priority than the core IP above, but classic short-answer fodder.</p>
+  <p class="lead">From your own Chapters 1–2 notes (Lecture 2). How humans see colour, why we need standardised colour spaces, the main models (RGB, YCrCb, HSV/IHS, Lab), and colour-based segmentation. Lower drill-priority than the core IP above, but classic short-answer fodder.</p>
 
   <div class="grid2">
     <div class="card">
@@ -778,9 +779,9 @@ H = θ if B≤G, else 360−θ</div>
 
 <div class="footer">
   <div class="wrap">
-    <div class="big">That's Week 1, end-to-end.</div>
+    <div class="big">That's Chapters 1–2, end-to-end.</div>
     <p>Sources fused: unit intro talk · IP Lecture 1.1–1.3 (slides + transcript) · Tim Morris handout Ch.1 (pp.1–8) · your own Week-1 notes (L1 + L2 Colour).</p>
-    <p class="small" style="margin-top:14px">Highest-yield for the IP half: <b>bits/bytes &amp; memory calc · RGB vs greyscale · (x,y) vs (r,c) · point processing + clipping · thresholding</b>. Drill those till they're automatic — then say "test me on Week 1" and I'll quiz you live.</p>
+    <p class="small" style="margin-top:14px">Highest-yield for the IP half: <b>bits/bytes &amp; memory calc · RGB vs greyscale · (x,y) vs (r,c) · point processing + clipping · thresholding</b>. Drill those till they're automatic — then say "test me on Chapters 1–2" and I'll quiz you live.</p>
   </div>
 </div>
 

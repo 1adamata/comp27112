@@ -1,12 +1,12 @@
-# Week 2 — drop-in changes
+# Chapters 3–4 — drop-in changes
 
 Two files change. Everything else in your repo stays exactly as-is.
 
 ```
 visual-textbook/
-├─ index.html                    ← REPLACE (Week 2 "coming soon" slot → real card)
+├─ index.html                    ← REPLACE (Chapters 3–4 "coming soon" slot → real card)
 └─ weeks/
-   └─ comp27112-week2.html        ← NEW
+   └─ comp27112-week2.html        ← NEW (Chapters 3–4)
 ```
 
 ## Do NOT touch these — yours are already correct
@@ -20,15 +20,15 @@ matrices (which house.css doesn't define), exactly like the convolution widget
 adds its own local styles.
 
 ## index.html
-I only swapped the first `.week-card empty` ("Week 2 — coming soon") for a real
-`.week-card` matching your Week 1 card. If your live index has drifted since,
+I only swapped the first `.week-card empty` ("Chapters 3–4 — coming soon") for a real
+`.week-card` matching your Chapters 1–2 card. If your live index has drifted since,
 just copy the `<!-- WEEK 2 (live) -->` block out of this file and paste it after
-your Week 1 card instead of replacing the whole file.
+your Chapters 1–2 card instead of replacing the whole file.
 
 ## Serve it (the OpenCV lab needs a server)
 ```
 python3 -m http.server 8000
-# open http://localhost:8000/  (or the Week 2 page directly)
+# open http://localhost:8000/  (or the Chapters 3–4 page directly)
 ```
 WebAssembly won't load via file://. On Vercel / GitHub Pages it just works.
 

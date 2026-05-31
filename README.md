@@ -18,7 +18,7 @@ visual-textbook/
 │                                     and components (cards, hooks, exam-boxes,
 │                                     drill cards, equations, pipelines…)
 ├── weeks/
-│   └── comp27112-week1.html        ← Week 1 — "The Image, Decoded"
+│   └── comp27112-week1.html        ← Chapters 1–2 — "The Image, Decoded"
 ├── widgets/
 │   └── convolution-playground.html ← standalone interactive blocks (reusable)
 ├── templates/
@@ -62,14 +62,14 @@ Prefer GitHub Pages? Settings → Pages → deploy from `main` / root. Same resu
 
 ---
 
-## ➕ Add a new week
+## ➕ Add a new chapter page
 
 1. Copy the template:
    ```bash
    cp templates/week-template.html weeks/comp27112-week2.html
    ```
 2. Fill in the content (the template shows every available component).
-3. Add a card to `index.html` — duplicate the Week 1 `<a class="week-card">` block,
+3. Add a card to `index.html` — duplicate the Chapters 1–2 `<a class="week-card">` block,
    bump the number, point `href` at your new file, and swap one of the
    `week-card empty` slots for it.
 
@@ -82,13 +82,13 @@ That's it. The shared `house.css` styles it automatically.
 This repo is structured to be edited by [Claude Code](https://claude.com/claude-code)
 without you opening files. Some prompts that work well:
 
-- *"Add Week 2 of COMP27112 to this repo. Copy `templates/week-template.html` into
+- *"Add Chapters 3–4 of COMP27112 to this repo. Copy `templates/week-template.html` into
   `weeks/`, fill it from these notes \[paste/attach], match the style of
-  `weeks/comp27112-week1.html`, and add a card to `index.html`."*
+  `weeks/comp27112-week1.html` (Chapters 1–2), and add a card to `index.html`."*
 - *"In `assets/house.css`, nudge the paper background a touch warmer and bump base
   font size to 19px — keep everything else."*
-- *"Build an interactive canvas for \[concept] in Week 2, in the same style as the
-  point-processing playground in Week 1."*
+- *"Build an interactive canvas for \[concept] in Chapters 3–4, in the same style as the
+  point-processing playground in Chapters 1–2."*
 
 Because design lives in `house.css` and each week is its own file, edits stay
 isolated and easy to review as diffs.

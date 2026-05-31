@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COMP27112 · Week 2 — Sampling, Histograms &amp; Geometry</title>
+<title>COMP27112 · Chapters 3–4 — Sampling, Histograms &amp; Geometry</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -45,7 +45,7 @@
 
 <nav class="toc">
   <div class="inner">
-    <span class="brand">COMP27112 · WK2</span>
+    <span class="brand">COMP27112 · CH3-4</span>
     <a href="../index.html">← Shelf</a>
     <a href="#sources">Sources</a>
     <a href="#sampling">Sampling</a>
@@ -65,8 +65,8 @@
 
 <header class="hero">
   <div class="wrap">
-    <div class="deco">02</div>
-    <div class="kicker">Image Processing · Week 2 · Lectures 3 &amp; 4</div>
+    <div class="deco">03–04</div>
+    <div class="kicker">Image Processing · Chapters 3–4 · Lectures 3 &amp; 4</div>
     <h1>From light<br><em>to pixels, and back.</em></h1>
     <p class="sub">How images are sampled and measured, then the point-processing and geometry tools that act on them — histograms, thresholding, affine matrices, lens distortion and interpolation. Each paired with the live OpenCV call you're marked on.</p>
     <div class="meta">
@@ -153,7 +153,7 @@
     <h3>Image as a function</h3>
     <div class="eq">f(<span class="v">x</span>, <span class="v">y</span>) → intensity            <span style="color:#8a7f6a">// continuous</span>
 f[<span class="v">x</span>, <span class="v">y</span>] ∈ {0, 1, …, <span class="hl">L−1</span>}      <span style="color:#8a7f6a">// digitised · L = levels, e.g. 256</span></div>
-    <p class="small">A colour image is just several greyscale images stacked (usually R, G, B), each with its own sampling + quantisation. Colour models came in Week 1 — this is intuition only.</p>
+    <p class="small">A colour image is just several greyscale images stacked (usually R, G, B), each with its own sampling + quantisation. Colour models came in Chapters 1–2 — this is intuition only.</p>
   </div>
 </section>
 
@@ -706,7 +706,7 @@ y_corr = y + p₁(r² + 2y²) + 2p₂xy</div>
 
 <div class="footer">
   <div class="wrap">
-    <div class="big">That's Week 2, end-to-end.</div>
+    <div class="big">That's Chapters 3–4, end-to-end.</div>
     <p>Sources fused: IP Lectures 3.1–3.3 &amp; 4.1–4.4 (slides + transcripts) · your Week-2 notes · past-paper phrasing for the drills.</p>
     <p class="small" style="margin-top:14px">Diagrams redrawn from the slides; copyrighted photos intentionally omitted — run the OpenCV lab on your own image instead. Highest-yield: <b>sampling vs quantisation · resolution calcs · histograms &amp; clipping · thresholding (P-tile/Otsu) · affine matrices · reverse mapping</b>. <a href="../index.html">← back to the shelf</a></p>
   </div>
