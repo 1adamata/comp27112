@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMP27112 · Chapter 3 — Transformations · Visual Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1c1c1b; --bg2:#232322; --panel:#272725; --line:#3a3a37;
+    --chalk:#f3efe6; --muted:#aca596; --dim:#7d776c;
+    --x:#4aa3df; --y:#6fb95a; --z:#e0772e; --vec:#cf6bcf; --theta:#e8973f;
+    --peach:#e8c79c; --hl:#86d486; --accent:#e8973f; --accent2:#cf6bcf;
+    --serif:'Fraunces',Georgia,'Iowan Old Style',serif;
+    --body:'Newsreader',Georgia,serif;
+    --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--chalk);
+    font-family:var(--body);font-size:19px;line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(circle at 18% 12%, rgba(232,151,63,.06), transparent 42%),
+      radial-gradient(circle at 86% 78%, rgba(207,107,207,.06), transparent 46%);
+  }
+  /* subtle chalk-dust grain */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* progress + nav */
+  #progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:50;
+    background:linear-gradient(90deg,var(--theta),var(--vec));box-shadow:0 0 12px rgba(232,151,63,.6)}
+  nav{position:fixed;top:0;right:0;left:0;z-index:40;display:flex;align-items:center;
+    justify-content:space-between;padding:14px 26px;
+    background:linear-gradient(180deg,rgba(28,28,27,.92),rgba(28,28,27,0));
+    backdrop-filter:blur(4px)}
+  nav .brand{font-family:var(--serif);font-weight:900;letter-spacing:.02em;font-size:18px}
+  nav .brand b{color:var(--theta)}
+  nav .links{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:12.5px;text-transform:uppercase;letter-spacing:.08em}
+  nav .links a{color:var(--dim);text-decoration:none;transition:color .2s}
+  nav .links a:hover,nav .links a.active{color:var(--chalk)}
+  @media(max-width:880px){nav .links{display:none}}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:0 26px;position:relative;z-index:2}
+
+  /* hero */
+  header.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
+    padding:90px 0 60px;position:relative;overflow:hidden}
+  .hero .kicker{font-family:var(--mono);text-transform:uppercase;letter-spacing:.32em;
+    font-size:13px;color:var(--theta);margin-bottom:18px}
+  .hero h1{font-family:var(--serif);font-weight:900;font-size:clamp(46px,9vw,118px);
+    line-height:.92;margin:0;letter-spacing:-.02em}
+  .hero h1 em{font-style:italic;font-weight:500;color:var(--vec);display:block}
+  .hero p.lead{max-width:640px;font-size:clamp(19px,2.4vw,24px);color:var(--muted);margin:26px 0 0}
+  .hero .cow{position:absolute;right:-20px;top:50%;transform:translateY(-50%);
+    width:min(46vw,520px);opacity:.96;
+    -webkit-mask-image:radial-gradient(ellipse 64% 62% at 58% 50%,#000 52%,transparent 80%);
+    mask-image:radial-gradient(ellipse 64% 62% at 58% 50%,#000 52%,transparent 80%);
+    animation:graze 7s ease-in-out infinite}
+  @keyframes graze{0%,100%{transform:translateY(-50%) rotate(-1deg)}50%{transform:translateY(-54%) rotate(1.5deg)}}
+  @media(max-width:780px){.hero .cow{position:static;width:70%;margin:30px auto 0;transform:none;animation:none}}
+  .scrollcue{margin-top:54px;font-family:var(--mono);font-size:12px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:12px}
+  .scrollcue .dot{width:7px;height:7px;border-radius:50%;background:var(--theta);
+    animation:bob 1.6s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(6px);opacity:1}}
+
+  /* sections */
+  section{padding:74px 0;border-top:1px solid var(--line)}
+  .num{font-family:var(--mono);font-size:13px;letter-spacing:.18em;color:var(--theta);text-transform:uppercase}
+  h2{font-family:var(--serif);font-weight:900;font-size:clamp(32px,5vw,56px);line-height:1.02;
+    margin:.25em 0 .5em;letter-spacing:-.015em}
+  h3{font-family:var(--serif);font-weight:600;font-size:26px;margin:1.8em 0 .4em;color:var(--chalk)}
+  p{margin:0 0 1.05em}
+  .lede{font-size:22px;color:var(--muted);max-width:680px}
+  strong{color:var(--chalk);font-weight:600}
+  .tag{color:var(--vec);font-style:italic}
+  .gx{color:var(--x)} .gy{color:var(--y)} .gz{color:var(--z)}
+  .gv{color:var(--vec)} .gt{color:var(--theta)} .gp{color:var(--peach)} .gh{color:var(--hl)}
+  a.inline{color:var(--theta);text-decoration:none;border-bottom:1px solid rgba(232,151,63,.4)}
+
+  /* reveal animation */
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  .reveal.d1{transition-delay:.08s}.reveal.d2{transition-delay:.16s}.reveal.d3{transition-delay:.24s}
+
+  /* slide figure */
+  figure{margin:1.6em 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.35)}
+  figure img{display:block;width:100%;cursor:zoom-in;transition:filter .3s}
+  figure:hover img{filter:brightness(1.06)}
+  figcaption{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--dim);
+    padding:10px 16px;border-top:1px solid var(--line);text-transform:uppercase}
+  figcaption b{color:var(--theta);font-weight:600}
+
+  /* callout */
+  .callout{border-left:3px solid var(--theta);background:rgba(232,151,63,.07);
+    padding:18px 22px;border-radius:0 12px 12px 0;margin:1.4em 0;font-size:18px}
+  .callout.v{border-color:var(--vec);background:rgba(207,107,207,.07)}
+  .callout .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--theta);display:block;margin-bottom:6px}
+  .callout.v .lbl{color:var(--vec)}
+
+  /* matrix styling */
+  .mtx{display:inline-flex;align-items:center;font-family:var(--mono);vertical-align:middle;margin:0 2px}
+  .mtx .br{font-size:2.4em;line-height:.8;color:var(--dim);font-weight:300}
+  .mtx .cells{display:inline-grid;gap:2px 14px;padding:0 8px;text-align:center}
+  .eq{font-family:var(--mono);font-size:17px;background:var(--bg2);border:1px solid var(--line);
+    border-radius:10px;padding:14px 18px;margin:1.2em 0;overflow-x:auto;color:var(--peach)}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
+  @media(max-width:820px){.two{grid-template-columns:1fr}}
+
+  /* interactive lab */
+  .lab{background:linear-gradient(180deg,#222220,#1a1a19);border:1px solid var(--line);
+    border-radius:18px;padding:24px;margin:1.6em 0;box-shadow:0 18px 50px rgba(0,0,0,.4)}
+  .lab h3{margin-top:0}
+  .labgrid{display:grid;grid-template-columns:1.15fr .85fr;gap:26px;align-items:center}
+  @media(max-width:820px){.labgrid{grid-template-columns:1fr}}
+  canvas{width:100%;height:auto;display:block;background:
+    repeating-linear-gradient(0deg,transparent 0 39px,rgba(255,255,255,.03) 39px 40px),
+    repeating-linear-gradient(90deg,transparent 0 39px,rgba(255,255,255,.03) 39px 40px),#191918;
+    border-radius:12px;border:1px solid var(--line);touch-action:none}
+  .ctrl{margin:10px 0}
+  .ctrl label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:13px;
+    color:var(--muted);margin-bottom:5px}
+  .ctrl label b{color:var(--theta)}
+  input[type=range]{-webkit-appearance:none;width:100%;height:5px;border-radius:3px;
+    background:var(--line);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+    background:var(--theta);cursor:pointer;box-shadow:0 0 0 4px rgba(232,151,63,.18)}
+  input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-radius:50%;
+    background:var(--theta);cursor:pointer}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+  .chip{font-family:var(--mono);font-size:12.5px;padding:7px 13px;border-radius:999px;cursor:pointer;
+    border:1px solid var(--line);background:var(--bg2);color:var(--muted);transition:all .18s;user-select:none}
+  .chip:hover{border-color:var(--theta);color:var(--chalk)}
+  .chip.on{background:var(--theta);color:#1a1a19;border-color:var(--theta);font-weight:600}
+  .chip.v.on{background:var(--vec);border-color:var(--vec)}
+  .btn{font-family:var(--mono);font-size:13px;padding:9px 16px;border-radius:9px;cursor:pointer;
+    border:1px solid var(--line);background:var(--bg2);color:var(--chalk);transition:all .18s}
+  .btn:hover{border-color:var(--theta);transform:translateY(-1px)}
+  .live-mtx{font-family:var(--mono);font-size:15px;color:var(--peach);text-align:center;
+    background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:14px}
+  .live-mtx .row{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 10px}
+  .live-mtx .row span{padding:2px 0}
+
+  /* quiz */
+  .quiz{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:22px 24px;margin:1.3em 0;transition:border-color .3s}
+  .quiz.correct{border-color:var(--hl)} .quiz.wrong{border-color:#d06a6a}
+  .quiz .q{font-family:var(--serif);font-size:21px;font-weight:600;margin-bottom:6px}
+  .quiz .src{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+  .opt{display:block;width:100%;text-align:left;font-family:var(--body);font-size:17px;
+    padding:12px 16px;margin:8px 0;border-radius:10px;border:1px solid var(--line);
+    background:var(--bg2);color:var(--chalk);cursor:pointer;transition:all .15s}
+  .opt:hover{border-color:var(--theta)}
+  .opt.right{background:rgba(134,212,134,.16);border-color:var(--hl)}
+  .opt.bad{background:rgba(208,106,106,.16);border-color:#d06a6a}
+  .opt .mk{font-family:var(--mono);color:var(--dim);margin-right:10px}
+  .fb{font-size:16px;color:var(--muted);margin-top:12px;padding-left:14px;border-left:2px solid var(--theta);display:none}
+  .fb.show{display:block}
+
+  /* accordion past papers */
+  .acc{border:1px solid var(--line);border-radius:12px;margin:12px 0;overflow:hidden;background:var(--panel)}
+  .acc summary{cursor:pointer;padding:18px 22px;list-style:none;display:flex;justify-content:space-between;
+    gap:16px;align-items:flex-start}
+  .acc summary::-webkit-details-marker{display:none}
+  .acc summary .yr{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--theta);
+    text-transform:uppercase;white-space:nowrap}
+  .acc summary .qt{font-family:var(--serif);font-size:19px;font-weight:600;flex:1}
+  .acc summary .plus{font-family:var(--mono);color:var(--dim);transition:transform .25s}
+  .acc[open] summary .plus{transform:rotate(45deg);color:var(--theta)}
+  .acc .ans{padding:0 22px 22px;color:var(--muted);font-size:17px;border-top:1px solid var(--line);margin-top:-2px;padding-top:18px}
+  .acc .ans b{color:var(--chalk)}
+  .marks{font-family:var(--mono);font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+
+  /* cheat table */
+  table{width:100%;border-collapse:collapse;margin:1.4em 0;font-size:16px}
+  th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--theta)}
+  td.m{font-family:var(--mono);color:var(--peach);white-space:nowrap}
+
+  footer{padding:60px 0 80px;border-top:1px solid var(--line);color:var(--dim);font-size:15px}
+  footer b{color:var(--muted)}
+
+  /* lightbox */
+  #lb{position:fixed;inset:0;z-index:90;background:rgba(10,10,9,.94);display:none;
+    align-items:center;justify-content:center;padding:30px;cursor:zoom-out}
+  #lb img{max-width:96vw;max-height:92vh;border-radius:8px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  #lb.open{display:flex}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<nav>
+  <div class="brand">COMP27112 · <b>Ch.3</b></div>
+  <div class="links">
+    <a href="#linear">Linear</a>
+    <a href="#scale">Scale</a>
+    <a href="#rotation">Rotate</a>
+    <a href="#shear">Shear</a>
+    <a href="#lab">Lab</a>
+    <a href="#compose">Compose</a>
+    <a href="#homog">Homogeneous</a>
+    <a href="#threed">3D</a>
+    <a href="#quiz">Quiz</a>
+    <a href="#exams">Exams</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker reveal in">Computer Graphics &amp; Image Processing · Chapter 3</div>
+    <h1 class="reveal in d1">Transform&shy;ations<em>warping the whole vector space</em></h1>
+    <p class="lead reveal in d2">Scale, rotate, reflect, shear, translate — and how every one of them becomes a single matrix you can multiply. Built from the lecture slides, with live demos you can drag, exam questions, and quick quizzes.</p>
+    <div class="scrollcue reveal in d3"><span class="dot"></span> scroll to begin · click any slide to enlarge</div>
+  </div>
+  <img class="cow" src="assets/02-cow.png" alt="The course's cow mascot">
+</header>
+
+<!-- WHY -->
+<section id="why">
+  <div class="wrap">
+    <div class="num reveal">Motivation</div>
+    <h2 class="reveal">Why do we need transformations?</h2>
+    <p class="lede reveal">To build virtual worlds or overlay effects on real footage, we need to move objects around: make them bigger or smaller, spin them, flip them, slant them, and shift their position. In this chapter our test subject is the course's <span class="tag">cow</span>.</p>
+    <figure class="reveal">
+      <img src="assets/03-overview.png" alt="Overview of all 2D transformations applied to the cow">
+      <figcaption><b>Slide</b> — the six moves: uniform scale, rotation, non-uniform scale, shear, reflection, translation</figcaption>
+    </figure>
+    <p class="reveal">Every transformation below is just a rule for turning one vector into another. The magic of this chapter is that almost all of them can be written as a <strong>matrix multiplication</strong> — and matrices <em>compose</em>, so a whole chain of moves collapses into one matrix that a GPU can apply millions of times a second.</p>
+  </div>
+</section>
+
+<!-- LINEAR -->
+<section id="linear">
+  <div class="wrap">
+    <div class="num reveal">01 — Foundations</div>
+    <h2 class="reveal">Linear transformations</h2>
+    <p class="lede reveal">A transformation <span class="gt">T</span> maps vectors to vectors: <span class="eq" style="display:inline-block;padding:4px 10px;margin:0">T : ℝⁿ → ℝᵐ</span>. It is <strong>linear</strong> when it respects vector addition and scalar multiplication.</p>
+    <figure class="reveal">
+      <img src="assets/05-linear-def.png" alt="Definition of a linear transformation and its properties">
+      <figcaption><b>Slide</b> — the three defining properties</figcaption>
+    </figure>
+    <div class="two">
+      <div class="reveal">
+        <h3>The three properties</h3>
+        <p><strong>1. Additivity:</strong> <span class="eq" style="display:inline-block;padding:4px 10px;margin:.3em 0">T(u + v) = T(u) + T(v)</span></p>
+        <p><strong>2. Homogeneity:</strong> <span class="eq" style="display:inline-block;padding:4px 10px;margin:.3em 0">T(c·u) = c·T(u)</span></p>
+        <p><strong>3. Origin fixed:</strong> <span class="eq" style="display:inline-block;padding:4px 10px;margin:.3em 0">T(0⃗) = 0⃗</span></p>
+        <p>Geometrically: <strong>grid lines stay straight, evenly spaced, and parallel</strong>, and the origin never moves. Keep that picture — it tells you instantly whether something is linear. (Spoiler: translation breaks rule 3.)</p>
+      </div>
+      <div class="reveal d1">
+        <h3>One matrix is enough</h3>
+        <p>A matrix–vector product computes a new vector from the old one.</p>
+        <figure style="margin-top:0">
+          <img src="assets/04-matrix-vector.png" alt="Matrix vector multiplication producing a new vector">
+          <figcaption><b>Slide</b> — A·v gives a new vector</figcaption>
+        </figure>
+      </div>
+    </div>
+    <h3 class="reveal">The key insight: just watch the basis vectors</h3>
+    <p class="reveal">Any vector is a combination of the basis vectors, <span class="eq" style="display:inline-block;padding:4px 10px;margin:.2em 0">v = Σ cᵢ b̂ᵢ</span>. Because <span class="gt">T</span> is linear, <span class="eq" style="display:inline-block;padding:4px 10px;margin:.2em 0">T(v) = Σ cᵢ T(b̂ᵢ)</span>. So to know what a transform does to <em>every</em> vector, you only need to know what it does to the basis vectors — and those transformed basis vectors are exactly the <strong>columns of the matrix</strong>.</p>
+    <figure class="reveal">
+      <img src="assets/06-basis-action.png" alt="The action of a linear transformation on the basis vectors defines the matrix for any vector">
+      <figcaption><b>Slide</b> — the matrix's columns <em>are</em> the transformed basis vectors → it works for <b>any</b> vector</figcaption>
+    </figure>
+    <div class="callout reveal"><span class="lbl">Mental model</span>A linear transformation doesn't just move one arrow — it <strong>morphs the entire grid</strong>. Sit with that idea; it's the heart of everything that follows.</div>
+  </div>
+</section>
+
+<!-- SCALE -->
+<section id="scale">
+  <div class="wrap">
+    <div class="num reveal">02 — Scale</div>
+    <h2 class="reveal">Scaling</h2>
+    <p class="lede reveal">Stretch or shrink the cow. Multiplying every coordinate by a scalar <span class="gt">s</span> works, but we prefer a matrix so it fits the same machinery as everything else.</p>
+    <div class="two">
+      <figure class="reveal"><img src="assets/07-uniform-scale.png" alt="Uniform scale matrix is a diagonal matrix"><figcaption><b>Slide</b> — uniform scale = a <b>diagonal matrix</b></figcaption></figure>
+      <figure class="reveal d1"><img src="assets/08-nonuniform-scale.png" alt="Non uniform scale with separate sx and sy"><figcaption><b>Slide</b> — non-uniform: different sx, sy</figcaption></figure>
+    </div>
+    <p class="reveal">The scale matrix is <strong>diagonal</strong>: values sit only on the main diagonal, zeros elsewhere.</p>
+    <div class="eq reveal">S = [ sx 0 ; 0 sy ]   →   v′ = [ sx·vx ; sy·vy ]</div>
+    <p class="reveal">For <strong>uniform</strong> scale, sx = sy. For <strong>non-uniform</strong> scale, set them independently — that single change is all you need, no extra machinery. Try it in the lab below.</p>
+  </div>
+</section>
+
+<!-- ROTATION -->
+<section id="rotation">
+  <div class="wrap">
+    <div class="num reveal">03 — Rotation</div>
+    <h2 class="reveal">Rotation</h2>
+    <p class="lede reveal">Spin a vector by an angle <span class="gt">θ</span>. Its length <span class="gt">R</span> never changes — only its direction does. We derive the new components from the action on the basis vectors.</p>
+    <figure class="reveal">
+      <img src="assets/09-rotation-derivation.png" alt="Geometric derivation of the rotation components using trigonometry">
+      <figcaption><b>Slide</b> — components from trig: vx·cosθ, vx·sinθ …</figcaption>
+    </figure>
+    <p class="reveal">Collecting the components into a matrix gives the rotation matrix. The minus sign decides the spin direction.</p>
+    <figure class="reveal">
+      <img src="assets/10-rotation-matrix.png" alt="The 2D rotation matrix, clockwise and counter-clockwise forms">
+      <figcaption><b>Slide</b> — clockwise vs counter-clockwise: just move the minus sign</figcaption>
+    </figure>
+
+    <div class="lab reveal">
+      <h3>Watch a vector rotate</h3>
+      <div class="labgrid">
+        <canvas id="rotCanvas" width="560" height="420"></canvas>
+        <div>
+          <div class="ctrl">
+            <label>angle <b><span id="rotVal">35°</span></b></label>
+            <input id="rotTheta" type="range" min="0" max="360" value="35">
+          </div>
+          <div class="live-mtx">
+            R(θ) =
+            <div class="row" style="margin-top:8px">
+              <span id="r00">cos θ</span><span id="r01">−sin θ</span><span></span>
+              <span id="r10">sin θ</span><span id="r11">cos θ</span><span></span>
+            </div>
+            <div style="margin-top:10px;color:var(--muted);font-size:13px">
+              cos θ = <span id="cval" style="color:var(--hl)">0.82</span> &nbsp; sin θ = <span id="sval" style="color:var(--hl)">0.57</span>
+            </div>
+          </div>
+          <p style="font-size:15px;color:var(--muted);margin-top:14px">The columns of R are the rotated basis vectors î and ĵ — exactly the "watch the basis" idea in action.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="reveal">Rotation matrices are orthogonal</h3>
+    <figure class="reveal">
+      <img src="assets/11-rotation-orthogonal.png" alt="Rotation matrices are orthogonal, transpose equals inverse">
+      <figcaption><b>Slide</b> — Rᵀ = R⁻¹, so RᵀR = I</figcaption>
+    </figure>
+    <div class="callout reveal"><span class="lbl">Why it matters</span>The two columns (sin/cos) are perpendicular unit vectors, so the matrix is <strong>orthogonal</strong>: its <strong>transpose equals its inverse</strong>. To undo a rotation you just transpose it — no expensive inverse needed. Rotating one way then the other (the transpose) returns you to the start: RᵀR = I.</div>
+  </div>
+</section>
+
+<!-- REFLECTION -->
+<section id="reflection">
+  <div class="wrap">
+    <div class="num reveal">04 — Reflection</div>
+    <h2 class="reveal">Reflection</h2>
+    <p class="lede reveal">Mirror the cow across an axis. Reflections are <strong>also orthogonal</strong> — but they are <em>not</em> rotation matrices, so keep the distinction clear.</p>
+    <figure class="reveal">
+      <img src="assets/12-reflection.png" alt="Reflection across the y axis">
+      <figcaption><b>Slide</b> — reflection across y (and across the origin)</figcaption>
+    </figure>
+    <div class="eq reveal">reflect across y: [ −1 0 ; 0 1 ]   ·   reflect across x: [ 1 0 ; 0 −1 ]   ·   across origin: [ −1 0 ; 0 −1 ]</div>
+    <p class="reveal">Flip a sign on the diagonal and the corresponding axis is mirrored. Toggle the reflect chips in the lab to see the cow-shape flip.</p>
+  </div>
+</section>
+
+<!-- SHEAR -->
+<section id="shear">
+  <div class="wrap">
+    <div class="num reveal">05 — Shear / Skew</div>
+    <h2 class="reveal">Shear</h2>
+    <p class="lede reveal">Slant the cow sideways. What <em>is</em> a shear, really? It's three transforms in disguise: <strong>rotate, scale non-uniformly, then rotate back</strong>.</p>
+    <figure class="reveal">
+      <img src="assets/13-shear-decomp.png" alt="Shear decomposed into rotation, non-uniform scale, rotation">
+      <figcaption><b>Slide</b> — shear = R₁ · S · R₂ (rotate · scale · rotate back)</figcaption>
+    </figure>
+    <p class="reveal">This is the first hint of how powerful matrices are: a single "new" operation is built by <strong>composing</strong> ones we already have. Which raises a critical question — does the order of those matrices matter?</p>
+  </div>
+</section>
+
+<!-- LAB -->
+<section id="lab">
+  <div class="wrap">
+    <div class="num reveal">Interactive</div>
+    <h2 class="reveal">The transformation lab</h2>
+    <p class="lede reveal">Drag the sliders. The ghost outline is the original shape; the solid magenta shape is transformed. The live 3×3 <strong>homogeneous</strong> matrix on the right is the single composite that produces it.</p>
+    <div class="lab reveal">
+      <div class="labgrid">
+        <canvas id="labCanvas" width="560" height="460"></canvas>
+        <div>
+          <div class="ctrl"><label>scale&nbsp;X &nbsp;<b><span id="sxV">1.0</span></b></label><input id="sx" type="range" min="-2" max="3" step="0.05" value="1.4"></div>
+          <div class="ctrl"><label>scale&nbsp;Y &nbsp;<b><span id="syV">1.0</span></b></label><input id="sy" type="range" min="-2" max="3" step="0.05" value="1.4"></div>
+          <div class="ctrl"><label>rotate&nbsp;θ &nbsp;<b><span id="thV">0°</span></b></label><input id="th" type="range" min="0" max="360" step="1" value="25"></div>
+          <div class="ctrl"><label>shear&nbsp;X &nbsp;<b><span id="shV">0.0</span></b></label><input id="sh" type="range" min="-1.5" max="1.5" step="0.02" value="0"></div>
+          <div class="ctrl"><label>translate&nbsp;X &nbsp;<b><span id="txV">0</span></b></label><input id="tx" type="range" min="-160" max="160" step="2" value="0"></div>
+          <div class="ctrl"><label>translate&nbsp;Y &nbsp;<b><span id="tyV">0</span></b></label><input id="ty" type="range" min="-160" max="160" step="2" value="0"></div>
+          <div class="chips">
+            <span class="chip" id="reflX">reflect&nbsp;X</span>
+            <span class="chip" id="reflY">reflect&nbsp;Y</span>
+            <button class="btn" id="reset">reset</button>
+          </div>
+          <div class="live-mtx">
+            M (homogeneous) =
+            <div class="row" style="margin-top:8px">
+              <span id="m00">1</span><span id="m01">0</span><span id="m02">0</span>
+              <span id="m10">0</span><span id="m11">1</span><span id="m12">0</span>
+              <span id="m20">0</span><span id="m21">0</span><span id="m22">1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="reveal" style="font-size:16px;color:var(--muted)">Notice translate X / translate Y live in the <em>third column</em> — that only works because of homogeneous coordinates, which we reach below.</p>
+  </div>
+</section>
+
+<!-- COMPOSE -->
+<section id="compose">
+  <div class="wrap">
+    <div class="num reveal">06 — Composition</div>
+    <h2 class="reveal">Order matters</h2>
+    <p class="lede reveal">Combining transforms is "just" multiplying their matrices — but matrix multiplication is <strong>not commutative</strong>. Rotate-then-translate is a completely different result from translate-then-rotate.</p>
+
+    <div class="lab reveal">
+      <h3>Rotate &amp; translate — in both orders</h3>
+      <div class="labgrid">
+        <canvas id="ordCanvas" width="560" height="420"></canvas>
+        <div>
+          <p style="margin-top:0">The same cow-shape, the same 40° rotation, and the same rightward translation — applied in two orders.</p>
+          <div class="chips">
+            <span class="chip on" id="ordA">Rotate → Translate</span>
+            <span class="chip v" id="ordB">Translate → Rotate</span>
+          </div>
+          <p style="font-size:15px;color:var(--muted)" id="ordNote">
+            <b style="color:var(--theta)">Rotate → Translate:</b> the shape spins in place, then slides right — it lands upright-rotated beside the origin.
+          </p>
+          <p style="font-size:15px;color:var(--muted)">Try toggling. <b style="color:var(--vec)">Translate → Rotate</b> swings the whole arm around the origin, throwing the shape onto a wide arc.</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="reveal"><img src="assets/15-noncommutative.png" alt="A times v is not equal to v times A"><figcaption><b>Slide</b> — Av ≠ vA: multiplication doesn't commute</figcaption></figure>
+
+    <h3 class="reveal">Read transforms right-to-left</h3>
+    <p class="reveal">The transform <strong>closest to the vector</strong> is applied <strong>first</strong>. So if we want to rotate (R1), then translate (T1), then scale (S1), then translate again (T2), the composite is read right→left:</p>
+    <figure class="reveal"><img src="assets/16-composition-recipe.png" alt="M = T2 S1 T1 R1 p, applied right to left"><figcaption><b>Slide</b> — M = T2·S1·T1·R1 · p &nbsp;(rightmost acts first)</figcaption></figure>
+    <div class="callout v reveal"><span class="lbl">Common bug</span>Getting matrix order wrong is one of the <strong>most common errors in graphics engineering</strong>. Our shear from earlier had to flip its order too — <em>R₂·S·R₁</em>, not <em>R₁·S·R₂</em> — or the cow shears the wrong way.</div>
+    <figure class="reveal"><img src="assets/17-shear-order.png" alt="Shear with corrected order R2 S R1"><figcaption><b>Slide</b> — corrected shear order: R₂·S·R₁·p</figcaption></figure>
+  </div>
+</section>
+
+<!-- TRANSLATION -->
+<section id="translation">
+  <div class="wrap">
+    <div class="num reveal">07 — Translation</div>
+    <h2 class="reveal">Translation breaks the rules</h2>
+    <p class="lede reveal">Translation just adds an offset: v′ = v + d. Useful — e.g. to rotate the cow about a point P, move P to the origin, rotate, move back. But there's a problem.</p>
+    <div class="two">
+      <figure class="reveal"><img src="assets/18-translation.png" alt="Translation adds an offset to a vector"><figcaption><b>Slide</b> — translation = v + offset</figcaption></figure>
+      <figure class="reveal d1"><img src="assets/19-translation-not-linear.png" alt="Translation does not map the origin to the origin"><figcaption><b>Slide</b> — but T(0⃗) ≠ 0⃗ …</figcaption></figure>
+    </div>
+    <p class="reveal">Translation moves the origin, so it <strong>violates rule 3</strong> (T(0⃗)=0⃗). It can't be written as a 2×2 matrix multiply, and it won't compose with rotation/scale the normal way. Stacking separate "multiply then add" steps a million times a second is exactly what we want to avoid.</p>
+    <h3 class="reveal">Affine = linear + translation</h3>
+    <figure class="reveal"><img src="assets/20-affine.png" alt="Affine transformation equals linear part plus translation part"><figcaption><b>Slide</b> — Mx + b = y: a <b>linear part</b> plus a <b>translation part</b></figcaption></figure>
+    <p class="reveal">A linear transformation <em>plus</em> a translation is an <strong>affine transformation</strong> (linear transforms are a special case where b = 0). Affine transforms keep grid lines straight, evenly spaced and parallel — but they're allowed to move the origin.</p>
+    <div class="callout reveal"><span class="lbl">Exam note</span>The course's MCQ answer for "an affine transform" is <strong>"will maintain the area of objects"</strong> (the other options are clearly wrong). Be precise in long answers though: affine maps preserve <em>parallelism and ratios</em>, and scale area by |det A| — area is only exactly preserved when |det A| = 1.</div>
+  </div>
+</section>
+
+<!-- HOMOGENEOUS -->
+<section id="homog">
+  <div class="wrap">
+    <div class="num reveal">08 — The fix</div>
+    <h2 class="reveal">Homogeneous coordinates</h2>
+    <p class="lede reveal">The trick that makes translation a matrix — discovered by <strong>August Ferdinand Möbius</strong> (yes, the strip). Add one extra coordinate and everything unifies.</p>
+    <figure class="reveal"><img src="assets/21-mobius.png" alt="August Ferdinand Mobius, inventor of homogeneous coordinates"><figcaption><b>Slide</b> — August Ferdinand Möbius</figcaption></figure>
+    <p class="reveal">Append a <strong>1</strong> to the vector and use a 3×3 matrix. The extra row lets the translation sit in the last column and still be a pure multiplication:</p>
+    <figure class="reveal"><img src="assets/22-hc-translation.png" alt="Translation written as a 3x3 homogeneous matrix multiplication"><figcaption><b>Slide</b> — translation is now a matrix multiply</figcaption></figure>
+    <h3 class="reveal">Position vs direction vectors</h3>
+    <figure class="reveal"><img src="assets/23-hc-position-direction.png" alt="Homogeneous coordinates distinguish position vectors from direction vectors"><figcaption><b>Slide</b> — last entry <b>1</b> → a position; <b>0</b> → a direction (translation has no effect)</figcaption></figure>
+    <p class="reveal">If the bottom entry is <strong>1</strong> you have a <strong>position</strong>; make it <strong>0</strong> and you have a pure <strong>direction</strong> — translation then has no effect on it, which is exactly what you want for things like surface normals.</p>
+    <div class="two">
+      <figure class="reveal"><img src="assets/24-hc-rotation-scale.png" alt="Rotation and scale written in homogeneous coordinates"><figcaption><b>Slide</b> — rotation &amp; scale in HC too</figcaption></figure>
+      <figure class="reveal d1"><img src="assets/25-hc-inverse.png" alt="The translation inverse now works, giving the identity"><figcaption><b>Slide</b> — the inverse now works: TT⁻¹ = I₃</figcaption></figure>
+    </div>
+    <figure class="reveal"><img src="assets/26-hc-2d.png" alt="General homogeneous transformation matrix in 2D"><figcaption><b>Slide</b> — one general 2D affine matrix for everything</figcaption></figure>
+    <div class="callout reveal"><span class="lbl">The payoff</span>Now <strong>every</strong> affine transform — scale, rotate, reflect, shear, translate — is a single 3×3 matrix. A whole chain composes into <strong>one composite matrix</strong>, and your GPU's tensor cores will <em>love</em> it.</div>
+  </div>
+</section>
+
+<!-- 3D -->
+<section id="threed">
+  <div class="wrap">
+    <div class="num reveal">09 — Into 3D</div>
+    <h2 class="reveal">3D transformations</h2>
+    <p class="lede reveal">Good news: 3D is barely different. Add a z dimension and use <strong>4×4</strong> matrices. Scale and translate work the same way, just with an extra axis.</p>
+    <figure class="reveal"><img src="assets/27-hc-3d.png" alt="Homogeneous coordinates extended to 3D with a 4x4 matrix"><figcaption><b>Slide</b> — homogeneous coordinates in 3D → 4×4 matrices</figcaption></figure>
+    <div class="two">
+      <figure class="reveal"><img src="assets/28-scale-3d.png" alt="Scale in 3D"><figcaption><b>Slide</b> — scale in 3D (now on z too)</figcaption></figure>
+      <figure class="reveal d1"><img src="assets/29-translate-3d.png" alt="Translate in 3D"><figcaption><b>Slide</b> — translate in 3D</figcaption></figure>
+    </div>
+    <h3 class="reveal">Rotation is the one that's different</h3>
+    <p class="reveal">In 2D we rotate <em>about a point</em>. In 3D we rotate <em>about an axis</em>, so there's a separate matrix for the x, y and z axes. Rotating about z looks identical to the 2D case — the z coordinates simply sit still.</p>
+    <figure class="reveal"><img src="assets/30-rotation-3d-axes.png" alt="3D rotation matrices about the x, y and z axes"><figcaption><b>Slide</b> — Rₓ(θ), R_y(θ), R_z(θ): one per axis</figcaption></figure>
+    <figure class="reveal"><img src="assets/31-rotation-3d-composed.png" alt="Composing rotations about multiple axes"><figcaption><b>Slide</b> — combine them, but mind the order: R = Rₓ(θ)·R_y(θ)</figcaption></figure>
+    <div class="callout v reveal"><span class="lbl">Order, again</span>Doing one axis at a time gives jagged motion; the smooth result comes from a <strong>composite matrix</strong> of all the rotations at once. And just like 2D, <strong>order still matters</strong>.</div>
+    <figure class="reveal"><img src="assets/32-summary.png" alt="Summary slide tying it all back to the cow and Mobius"><figcaption><b>Slide</b> — it all comes back to the basis vectors: T(v) = Σ cᵢ T(b̂ᵢ)</figcaption></figure>
+  </div>
+</section>
+
+<!-- CHEAT SHEET -->
+<section id="cheat">
+  <div class="wrap">
+    <div class="num reveal">Reference</div>
+    <h2 class="reveal">Matrix cheat-sheet</h2>
+    <table class="reveal">
+      <tr><th>Transform</th><th>2D matrix (homogeneous, acts on [x y 1]ᵀ)</th><th>Notes</th></tr>
+      <tr><td>Uniform scale</td><td class="m">[ s 0 0 ; 0 s 0 ; 0 0 1 ]</td><td>Diagonal. s&gt;1 grows, 0&lt;s&lt;1 shrinks.</td></tr>
+      <tr><td>Non-uniform scale</td><td class="m">[ sx 0 0 ; 0 sy 0 ; 0 0 1 ]</td><td>Independent sx, sy.</td></tr>
+      <tr><td>Rotation (CCW)</td><td class="m">[ cosθ −sinθ 0 ; sinθ cosθ 0 ; 0 0 1 ]</td><td>Orthogonal; Rᵀ = R⁻¹.</td></tr>
+      <tr><td>Reflect across y</td><td class="m">[ −1 0 0 ; 0 1 0 ; 0 0 1 ]</td><td>Orthogonal but not a rotation.</td></tr>
+      <tr><td>Reflect across x</td><td class="m">[ 1 0 0 ; 0 −1 0 ; 0 0 1 ]</td><td>Flip the other diagonal sign.</td></tr>
+      <tr><td>Shear (x by k)</td><td class="m">[ 1 k 0 ; 0 1 0 ; 0 0 1 ]</td><td>= R₂·S·R₁ underneath.</td></tr>
+      <tr><td>Translation</td><td class="m">[ 1 0 tx ; 0 1 ty ; 0 0 1 ]</td><td>Needs HC; not linear (moves origin).</td></tr>
+    </table>
+    <p class="reveal" style="color:var(--muted);font-size:16px">Compose right→left: the matrix nearest the point acts first. In 3D, pad to 4×4 and add R_x, R_y, R_z.</p>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="wrap">
+    <div class="num reveal">Check yourself</div>
+    <h2 class="reveal">Quick quiz</h2>
+    <p class="lede reveal">Tap an answer. Drawn from the course's visual quizzes — transformation and linear-algebra items.</p>
+    <div id="quizHost"></div>
+  </div>
+</section>
+
+<!-- EXAMS -->
+<section id="exams">
+  <div class="wrap">
+    <div class="num reveal">Past papers</div>
+    <h2 class="reveal">Exam questions on this chapter</h2>
+    <p class="lede reveal">Real COMP27112 questions touching transformations. Click to expand a worked answer.</p>
+    <div id="examHost"></div>
+    <p class="reveal" style="color:var(--dim);font-size:15px;margin-top:20px">Other related questions seen across papers: viewing-transformation construction (2019), 3×3 perspective-projection matrix interpretation (2017), and "give an example of the vector cross product in CG" (2018) — useful warm-ups, but more about the viewing/projection chapters.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><b>COMP27112 — Computer Graphics &amp; Image Processing · Chapter 3: Transformations.</b></p>
+    <p>Built from the lecture deck <i>COMP27112_2Dtransformations</i> (David Petrescu, University of Manchester), the module video transcript, the visual quizzes, and past papers 2016–2025. All 32 slide images live in the <span class="m" style="font-family:var(--mono);color:var(--peach)">/assets</span> folder. Click any slide to enlarge.</p>
+    <p style="color:var(--dim)">Study notes for revision. Equations and figures are reproduced from your own course material.</p>
+  </div>
+</footer>
+
+<div id="lb"><img id="lbImg" src="" alt=""></div>
+
+<script>
+/* ---------- progress + reveal + nav ---------- */
+const prog=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement;
+  prog.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';},{passive:true});
+
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in');});},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+const secs=[...document.querySelectorAll('section[id]')];
+const navLinks=[...document.querySelectorAll('nav .links a')];
+const navIO=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){
+  navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+e.target.id));}});},{rootMargin:'-45% 0px -50% 0px'});
+secs.forEach(s=>navIO.observe(s));
+
+/* ---------- lightbox ---------- */
+const lb=document.getElementById('lb'),lbImg=document.getElementById('lbImg');
+document.querySelectorAll('figure img').forEach(img=>img.addEventListener('click',()=>{
+  lbImg.src=img.src;lb.classList.add('open');}));
+lb.addEventListener('click',()=>lb.classList.remove('open'));
+addEventListener('keydown',e=>{if(e.key==='Escape')lb.classList.remove('open');});
+
+/* ---------- shared cow-ish "F" shape (asymmetric so flips/rotations are obvious) ---------- */
+const SHAPE=[[0,0],[0,3],[2,3],[2,2.4],[0.7,2.4],[0.7,1.95],[1.7,1.95],[1.7,1.35],[0.7,1.35],[0.7,0]];
+const CX=0.85,CY=1.5; // centroid-ish for centering
+function centered(){return SHAPE.map(p=>[p[0]-CX,p[1]-CY]);}
+
+function drawAxes(ctx,w,h,ox,oy){
+  ctx.lineWidth=1.5;
+  ctx.strokeStyle='rgba(74,163,223,.55)'; // x blue
+  ctx.beginPath();ctx.moveTo(0,oy);ctx.lineTo(w,oy);ctx.stroke();
+  ctx.strokeStyle='rgba(111,185,90,.55)'; // y green
+  ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox,h);ctx.stroke();
+  ctx.fillStyle='rgba(243,239,230,.5)';ctx.beginPath();ctx.arc(ox,oy,3,0,7);ctx.fill();
+}
+function poly(ctx,pts,ox,oy,sc,fill,stroke,lw){
+  ctx.beginPath();
+  pts.forEach((p,i)=>{const x=ox+p[0]*sc,y=oy-p[1]*sc;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+  ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill();}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||2;ctx.stroke();}
+}
+
+/* ---------- rotation demo ---------- */
+(function(){
+  const c=document.getElementById('rotCanvas'),ctx=c.getContext('2d');
+  const W=c.width,H=c.height,ox=W*0.32,oy=H*0.62;
+  const slider=document.getElementById('rotTheta');
+  function fmt(n){return (n>=0?' ':'')+n.toFixed(2);}
+  function draw(){
+    const deg=+slider.value, t=deg*Math.PI/180, cs=Math.cos(t), sn=Math.sin(t);
+    ctx.clearRect(0,0,W,H);drawAxes(ctx,W,H,ox,oy);
+    const L=150;
+    // original vector v (fixed at 0deg-ish reference)
+    const vx=L*0.92, vy=L*0.36;
+    ctx.strokeStyle='rgba(207,107,207,.35)';ctx.lineWidth=4;
+    ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+vx,oy-vy);ctx.stroke();
+    // rotated v'
+    const rx=vx*cs-vy*sn, ry=vx*sn+vy*cs;
+    ctx.strokeStyle='#cf6bcf';ctx.lineWidth=4;
+    ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+rx,oy-ry);ctx.stroke();
+    // arrowhead
+    const ah=Math.atan2(-ry,rx);
+    ctx.fillStyle='#cf6bcf';ctx.beginPath();
+    ctx.moveTo(ox+rx,oy-ry);
+    ctx.lineTo(ox+rx-12*Math.cos(ah-.4),oy-ry+12*Math.sin(ah-.4));
+    ctx.lineTo(ox+rx-12*Math.cos(ah+.4),oy-ry+12*Math.sin(ah+.4));
+    ctx.fill();
+    // angle arc
+    ctx.strokeStyle='#e8973f';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.arc(ox,oy,46,-Math.atan2(vy,vx),-Math.atan2(ry,rx),ry<vy);ctx.stroke();
+    ctx.fillStyle='#e8973f';ctx.font='italic 20px Fraunces, serif';ctx.fillText('θ',ox+58,oy-30);
+    ctx.fillStyle='rgba(243,239,230,.85)';ctx.font='16px JetBrains Mono, monospace';
+    ctx.fillText("v",ox+vx+8,oy-vy);ctx.fillStyle='#cf6bcf';ctx.fillText("v′",ox+rx+8,oy-ry);
+    // labels
+    document.getElementById('rotVal').textContent=deg+'°';
+    document.getElementById('cval').textContent=fmt(cs);
+    document.getElementById('sval').textContent=fmt(sn);
+    document.getElementById('r00').textContent=fmt(cs);
+    document.getElementById('r01').textContent=fmt(-sn);
+    document.getElementById('r10').textContent=fmt(sn);
+    document.getElementById('r11').textContent=fmt(cs);
+  }
+  slider.addEventListener('input',draw);draw();
+})();
+
+/* ---------- transformation lab ---------- */
+(function(){
+  const c=document.getElementById('labCanvas'),ctx=c.getContext('2d');
+  const W=c.width,H=c.height,ox=W*0.42,oy=H*0.58,sc=46;
+  const ids=['sx','sy','th','sh','tx','ty'];
+  const el={};ids.forEach(i=>el[i]=document.getElementById(i));
+  const refX=document.getElementById('reflX'),refY=document.getElementById('reflY');
+  let rx=false,ry=false;
+  function setTxt(){
+    sxV.textContent=(+el.sx.value).toFixed(2);syV.textContent=(+el.sy.value).toFixed(2);
+    thV.textContent=el.th.value+'°';shV.textContent=(+el.sh.value).toFixed(2);
+    txV.textContent=el.tx.value;tyV.textContent=el.ty.value;
+  }
+  function compose(){
+    const t=(+el.th.value)*Math.PI/180,cs=Math.cos(t),sn=Math.sin(t);
+    let SX=+el.sx.value,SY=+el.sy.value,K=+el.sh.value;
+    let TX=(+el.tx.value)/sc,TY=-(+el.ty.value)/sc; // canvas y is down
+    const fx=rx?-1:1, fy=ry?-1:1;
+    // build 3x3 in math coords: M = T * Reflect * Rot * Shear * Scale  (applied to [x y 1])
+    function mul(A,B){const R=[[0,0,0],[0,0,0],[0,0,0]];
+      for(let i=0;i<3;i++)for(let j=0;j<3;j++)for(let k=0;k<3;k++)R[i][j]+=A[i][k]*B[k][j];return R;}
+    const S=[[SX,0,0],[0,SY,0],[0,0,1]];
+    const Sh=[[1,K,0],[0,1,0],[0,0,1]];
+    const R=[[cs,-sn,0],[sn,cs,0],[0,0,1]];
+    const Rf=[[fx,0,0],[0,fy,0],[0,0,1]];
+    const T=[[1,0,TX],[0,1,TY],[0,0,1]];
+    let M=mul(Rf,mul(R,mul(Sh,S)));M=mul(T,M);
+    return M;
+  }
+  function apply(M,p){return [M[0][0]*p[0]+M[0][1]*p[1]+M[0][2],
+                              M[1][0]*p[0]+M[1][1]*p[1]+M[1][2]];}
+  function draw(){
+    setTxt();
+    ctx.clearRect(0,0,W,H);drawAxes(ctx,W,H,ox,oy);
+    const base=centered();
+    // ghost original
+    poly(ctx,base,ox,oy,sc,'rgba(243,239,230,.05)','rgba(243,239,230,.35)',1.5);
+    // transformed
+    const M=compose();
+    const tp=base.map(p=>apply(M,p));
+    poly(ctx,tp,ox,oy,sc,'rgba(207,107,207,.22)','#cf6bcf',2.5);
+    // update live matrix display
+    const id=(r,col)=>document.getElementById('m'+r+col);
+    for(let r=0;r<3;r++)for(let col=0;col<3;col++){
+      id(''+r,''+col).textContent=(M[r][col]).toFixed(2);
+    }
+  }
+  ids.forEach(i=>el[i].addEventListener('input',draw));
+  refX.addEventListener('click',()=>{rx=!rx;refX.classList.toggle('on',rx);draw();});
+  refY.addEventListener('click',()=>{ry=!ry;refY.classList.toggle('on',ry);draw();});
+  document.getElementById('reset').addEventListener('click',()=>{
+    el.sx.value=1.4;el.sy.value=1.4;el.th.value=25;el.sh.value=0;el.tx.value=0;el.ty.value=0;
+    rx=ry=false;refX.classList.remove('on');refY.classList.remove('on');draw();});
+  draw();
+})();
+
+/* ---------- order-matters demo ---------- */
+(function(){
+  const c=document.getElementById('ordCanvas'),ctx=c.getContext('2d');
+  const W=c.width,H=c.height,ox=W*0.30,oy=H*0.60,sc=40;
+  const a=document.getElementById('ordA'),b=document.getElementById('ordB');
+  const note=document.getElementById('ordNote');
+  let mode='A';
+  const t=40*Math.PI/180,cs=Math.cos(t),sn=Math.sin(t),TX=210/sc;
+  function mul(A,B){const R=[[0,0,0],[0,0,0],[0,0,0]];
+    for(let i=0;i<3;i++)for(let j=0;j<3;j++)for(let k=0;k<3;k++)R[i][j]+=A[i][k]*B[k][j];return R;}
+  const R=[[cs,-sn,0],[sn,cs,0],[0,0,1]], T=[[1,0,TX],[0,1,0],[0,0,1]];
+  function apply(M,p){return[M[0][0]*p[0]+M[0][1]*p[1]+M[0][2],M[1][0]*p[0]+M[1][1]*p[1]+M[1][2]];}
+  function draw(){
+    ctx.clearRect(0,0,W,H);drawAxes(ctx,W,H,ox,oy);
+    const base=centered();
+    poly(ctx,base,ox,oy,sc,'rgba(243,239,230,.05)','rgba(243,239,230,.3)',1.5);
+    const M = mode==='A' ? mul(T,R) : mul(R,T);
+    const col = mode==='A' ? '#e8973f' : '#cf6bcf';
+    const fill= mode==='A' ? 'rgba(232,151,63,.22)' : 'rgba(207,107,207,.22)';
+    const tp=base.map(p=>apply(M,p));
+    poly(ctx,tp,ox,oy,sc,fill,col,2.5);
+    a.classList.toggle('on',mode==='A');b.classList.toggle('on',mode==='B');
+  }
+  a.addEventListener('click',()=>{mode='A';note.innerHTML='<b style="color:var(--theta)">Rotate → Translate:</b> the shape spins about the origin first, then slides right — it stays compact and lands beside the origin.';draw();});
+  b.addEventListener('click',()=>{mode='B';note.innerHTML='<b style="color:var(--vec)">Translate → Rotate:</b> the shape is pushed right first, so the later rotation swings that whole offset around the origin — it lands far up on an arc. Same matrices, different order, different cow.';draw();});
+  draw();
+})();
+
+/* ---------- quizzes ---------- */
+const QUIZZES=[
+  {q:"A geometric transform will…",src:"Visual quiz · geometric transforms",
+   opts:["Make straight edges curve","Increase the contrast of an image","Correct for incorrect focus","Rearrange the locations of pixels"],ans:3,
+   fb:"A geometric transform moves where pixels are — it rearranges their locations, it doesn't change their values."},
+  {q:"An affine transform…",src:"Visual quiz · geometric transforms",
+   opts:["Will make curved objects appear straight","Will maintain the area of objects","Will bring all areas into sharp focus","Will render the image more comprehensible"],ans:1,
+   fb:"Marked answer: it maintains the area of objects. (More precisely affine maps preserve parallelism and ratios; area is scaled by |det A|, so it's exactly preserved when |det A| = 1.)"},
+  {q:"Why do we use 4×4 transformation matrices in 3D graphics?",src:"Visual quiz · 3D transformations",
+   opts:["They can encode scales and rotations","They can encode translations as well as scales and rotations","They can encode the identity as well as rotations","They can encode 2D as well as 3D transformations"],ans:1,
+   fb:"The extra row/column (homogeneous coordinates) lets translation become a matrix multiply, unifying it with scale and rotation."},
+  {q:"In 2D a rotation is defined with respect to a point. In 3D a rotation is defined with respect to…",src:"Visual quiz · 3D transformations",
+   opts:["a plane","a point","the x, y or z axis","a 3D vector"],ans:3,
+   fb:"Think of a wheel spinning: it turns about an axis, and that axis (a 3D vector) can point in any direction."},
+  {q:"Take a point P and transform it by M1, then M2, then M3 (column-vector convention). What is P′?",src:"Visual quiz · 3D transformations",
+   opts:["P′ = P×M1 + P×M2 + P×M3","P′ = M3 × M2 × M1 × P","P′ = P×M3 + P×M2 + P×M1","P′ = M1 × M2 × M3 × P"],ans:1,
+   fb:"The first transform sits closest to the point, so you read right→left: M3·M2·M1·P."},
+  {q:"Given a matrix A and its inverse B, what is the result of applying (A×B) to a point P?",src:"Visual quiz · 3D transformations",
+   opts:["P′ = A×P×B","P′ = P","P′ = 2×P","P′ = A×P + B×P"],ans:1,
+   fb:"By definition A×B = I (the identity), so applying it leaves P unchanged."},
+  {q:"What is the result of multiplying a vector by a scalar?",src:"Visual quiz · linear algebra",
+   opts:["A new vector with each component scaled by that scalar","A scalar equal to the dot product with itself","A matrix with the scalar on its diagonal","A unit vector in the same direction"],ans:0,
+   fb:"Scalar multiplication scales every component — the basis for uniform scaling."},
+  {q:"What is an identity matrix?",src:"Visual quiz · linear algebra",
+   opts:["A square matrix with ones on the diagonal and zeros elsewhere","A matrix whose entries are all ones","A matrix with ones only in the first row","A matrix whose determinant is zero"],ans:0,
+   fb:"It acts like the number 1 for matrices: IM = M. RᵀR = I is why rotations are easy to invert."}
+];
+(function(){
+  const host=document.getElementById('quizHost');
+  QUIZZES.forEach((Q,qi)=>{
+    const card=document.createElement('div');card.className='quiz reveal';
+    card.innerHTML='<div class="q">'+Q.q+'</div><div class="src">'+Q.src+'</div>';
+    const fb=document.createElement('div');fb.className='fb';fb.textContent=Q.fb;
+    Q.opts.forEach((o,oi)=>{
+      const btn=document.createElement('button');btn.className='opt';
+      btn.innerHTML='<span class="mk">'+String.fromCharCode(65+oi)+'</span>'+o;
+      btn.addEventListener('click',()=>{
+        if(card.dataset.done)return;card.dataset.done='1';
+        [...card.querySelectorAll('.opt')].forEach((b,bi)=>{
+          if(bi===Q.ans)b.classList.add('right');
+          if(bi===oi&&oi!==Q.ans)b.classList.add('bad');
+          b.style.cursor='default';
+        });
+        card.classList.add(oi===Q.ans?'correct':'wrong');
+        fb.classList.add('show');
+      });
+      card.appendChild(btn);
+    });
+    card.appendChild(fb);host.appendChild(card);io.observe(card);
+  });
+})();
+
+/* ---------- past papers ---------- */
+const EXAMS=[
+  {yr:"2022 · Q24",mk:"4 marks",
+   q:"You are given three 4×4 matrices: diag(1,2,1,1); an identity with a (1,1,0) translation column; and a 30° rotation in the xy-plane. What is the purpose of the three matrices?",
+   a:"Each matrix is one elementary 3D transform in homogeneous form. <b>diag(1,2,1,1)</b> is a <b>non-uniform scale</b> that doubles the y-coordinate (x and z unchanged). The second is a <b>translation</b> by (1,1,0). The third, with cos30/−sin30/sin30/cos30 in the top-left block, is a <b>rotation of 30° about the z-axis</b>. Multiplied together they form a single composite transform; remember the rightmost matrix acts on the point first."},
+  {yr:"2022 · Q25",mk:"1 mark",
+   q:"What is the overall effect of (such a chain of) transformations?",
+   a:"It is a single <b>composite affine transformation</b>: the point is scaled, then translated, then rotated (reading right→left). Because the matrices are multiplied into one matrix, the whole sequence is applied as one matrix–vector multiply per point — efficient and order-dependent."},
+  {yr:"2022 · Q23",mk:"4 marks",
+   q:"Describe the operations needed to rotate an object by an angle about an arbitrary axis.",
+   a:"Rotation matrices are defined about the x, y or z axis through the origin, so reduce the general case to that: <b>(1)</b> translate so a point on the axis sits at the origin; <b>(2)</b> rotate the arbitrary axis onto a coordinate axis (e.g. z) using one or two axis rotations; <b>(3)</b> perform the desired rotation about that axis; <b>(4)</b> undo step 2 (inverse/transpose rotations); <b>(5)</b> undo step 1 (inverse translation). Compose all five into one matrix, applied right→left."},
+  {yr:"2018 · Q3",mk:"3 marks",
+   q:"Find the centre P of the cow (vertices stored in file F), then derive a single composite transformation C that scales the cow by a 3D scale S with respect to P.",
+   a:"Find P as the <b>centroid</b> — average the stored vertex coordinates. Scaling about an arbitrary point P is scaling-about-the-origin sandwiched between translations: <b>C = T(P) · S · T(−P)</b>. Translate P to the origin, apply the scale S, then translate back. Reading right→left, T(−P) acts first. (You weren't required to write the coefficients.)"},
+  {yr:"2017 · Q2",mk:"1 mark",
+   q:"For 3D transformations, why do we use 4×4 matrices instead of 3×3?",
+   a:"Homogeneous coordinates. A 3×3 matrix can encode 3D scale and rotation but <b>not translation</b> (translation isn't linear — it moves the origin). Adding a fourth row/column lets translation live in the last column as a pure multiplication, so scale, rotation and translation all compose uniformly into one matrix."}
+];
+(function(){
+  const host=document.getElementById('examHost');
+  EXAMS.forEach(E=>{
+    const d=document.createElement('details');d.className='acc reveal';
+    d.innerHTML='<summary><span class="yr">'+E.yr+'</span><span class="qt">'+E.q+'</span>'
+      +'<span style="display:flex;gap:10px;align-items:center"><span class="marks">'+E.mk+'</span><span class="plus">+</span></span></summary>'
+      +'<div class="ans"><b>Worked answer.</b> '+E.a+'</div>';
+    host.appendChild(d);io.observe(d);
+  });
+})();
+</script>
+</body>
+</html>

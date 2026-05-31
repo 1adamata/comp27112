@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Graphics Pipeline · COMP27112 Visual Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0b0e;
+  --bg2:#0f1116;
+  --panel:#14171e;
+  --panel2:#1a1e27;
+  --line:#262b36;
+  --ink:#e9ecf2;
+  --ink-dim:#9aa3b2;
+  --ink-faint:#5b6473;
+  /* pipeline stage colours, taken from the lecture slides */
+  --vtx:#e8743b;     /* orange  - vertex / fixed stages */
+  --api:#6cc24a;     /* green   - graphics API */
+  --gpu:#b3539f;     /* magenta - GPU memory / fragment */
+  --ras:#4a9fd4;     /* blue    - rasterisation */
+  --lime:#c6f24e;    /* primary accent */
+  --warn:#f5c451;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'Hanken Grotesk',sans-serif;
+  font-size:17px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+/* subtle grid + grain backdrop */
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;
+  background:
+   radial-gradient(900px 600px at 80% -10%, rgba(108,194,74,.07), transparent 60%),
+   radial-gradient(800px 700px at 0% 30%, rgba(74,159,212,.06), transparent 60%),
+   radial-gradient(900px 700px at 90% 90%, rgba(179,83,159,.06), transparent 60%);
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;opacity:.4;pointer-events:none;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(circle at 50% 30%, #000 0%, transparent 80%);
+  -webkit-mask-image:radial-gradient(circle at 50% 30%, #000 0%, transparent 80%);
+}
+.mono{font-family:'JetBrains Mono',monospace}
+h1,h2,h3,.disp{font-family:'Syne',sans-serif;letter-spacing:-.01em;line-height:1.05}
+a{color:var(--lime);text-decoration:none}
+
+/* ---------- progress + nav ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--vtx),var(--ras),var(--api),var(--gpu));}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;
+  padding:14px 22px;backdrop-filter:blur(11px);background:rgba(10,11,14,.62);border-bottom:1px solid var(--line);}
+nav .brand{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink-dim);letter-spacing:.04em}
+nav .brand b{color:var(--lime)}
+nav .links{display:flex;gap:4px;flex-wrap:wrap}
+nav .links a{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink-dim);padding:5px 9px;border-radius:7px;transition:.2s}
+nav .links a:hover{color:var(--ink);background:var(--panel2)}
+@media(max-width:820px){nav .links{display:none}}
+
+/* ---------- layout ---------- */
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+section{padding:74px 0;position:relative}
+.kicker{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--lime);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.kicker::before{content:"";width:26px;height:1px;background:var(--lime)}
+h2.title{font-size:clamp(28px,5vw,46px);font-weight:800;margin-bottom:18px}
+.lead{font-size:19px;color:var(--ink-dim);max-width:64ch}
+
+/* reveal on scroll */
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* ---------- hero ---------- */
+#hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-top:80px}
+.hero-tag{font-family:'JetBrains Mono',monospace;color:var(--ink-faint);font-size:13px;letter-spacing:.18em;text-transform:uppercase}
+#hero h1{font-size:clamp(44px,9vw,108px);font-weight:800;margin:14px 0 6px;line-height:.95}
+#hero h1 .g{background:linear-gradient(90deg,var(--ras),var(--api));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-sub{font-size:clamp(18px,2.4vw,23px);color:var(--ink-dim);max-width:60ch;margin-top:18px}
+.hero-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:30px}
+.chip{font-family:'JetBrains Mono',monospace;font-size:12px;padding:7px 13px;border:1px solid var(--line);border-radius:30px;color:var(--ink-dim);background:var(--panel)}
+.chip b{color:var(--lime)}
+/* animated triangle motif */
+.tri-stage{position:absolute;right:-40px;top:50%;transform:translateY(-50%);width:min(46vw,520px);height:min(46vw,520px);pointer-events:none;opacity:.9}
+@media(max-width:900px){.tri-stage{opacity:.22;right:-10%}}
+.scroll-hint{margin-top:46px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-faint);display:flex;align-items:center;gap:9px}
+.scroll-hint .dot{width:7px;height:7px;border-radius:50%;background:var(--lime);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
+
+/* ---------- generic cards ---------- */
+.grid{display:grid;gap:18px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:760px){.g2,.g3{grid-template-columns:1fr}}
+.card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:var(--r);padding:22px;transition:.25s}
+.card:hover{border-color:#39404e;transform:translateY(-3px)}
+.card h3{font-size:20px;margin-bottom:8px}
+.card p{color:var(--ink-dim);font-size:15.5px}
+.tagrow{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}
+.tag{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 9px;border-radius:6px;background:var(--panel2);color:var(--ink-dim);border:1px solid var(--line)}
+
+/* slide image figure */
+figure{margin:26px 0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:#000}
+figure img{width:100%;display:block}
+figcaption{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-faint);padding:10px 14px;border-top:1px solid var(--line);background:var(--bg2)}
+.imgrow{display:grid;gap:14px;grid-template-columns:repeat(2,1fr)}
+@media(max-width:760px){.imgrow{grid-template-columns:1fr}}
+.imgrow figure{margin:0}
+
+/* callouts */
+.note{border-left:3px solid var(--lime);background:var(--panel);padding:14px 18px;border-radius:0 10px 10px 0;margin:20px 0;font-size:15.5px;color:var(--ink-dim)}
+.note b{color:var(--ink)}
+.note.warn{border-color:var(--warn)}
+.note.warn b{color:var(--warn)}
+.note.exam{border-color:var(--gpu)}
+.note.exam b{color:#e487cf}
+
+/* code block */
+pre{background:#0c0e13;border:1px solid var(--line);border-radius:12px;padding:18px;overflow:auto;font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.6;color:#cdd6e3;margin:14px 0}
+pre .c{color:#5b6473;font-style:italic}
+pre .k{color:#c792ea}
+pre .f{color:#82aaff}
+pre .n{color:#f78c6c}
+pre .s{color:#c3e88d}
+code.inl{font-family:'JetBrains Mono',monospace;background:var(--panel2);padding:2px 7px;border-radius:6px;font-size:.9em;color:var(--lime);border:1px solid var(--line)}
+
+/* ---------- API explorer ---------- */
+.api-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:760px){.api-grid{grid-template-columns:1fr 1fr}}
+.api{border:1px solid var(--line);border-radius:12px;padding:18px;cursor:pointer;background:var(--panel);transition:.25s;position:relative;overflow:hidden}
+.api .name{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px}
+.api .sub{font-size:13px;color:var(--ink-faint);margin-top:3px}
+.api .detail{font-size:13.5px;color:var(--ink-dim);max-height:0;opacity:0;transition:.3s;margin-top:0}
+.api.open .detail{max-height:200px;opacity:1;margin-top:12px}
+.api::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,var(--lime));opacity:.0;transition:.25s}
+.api:hover::before,.api.open::before{opacity:1}
+.api:hover{transform:translateY(-3px);border-color:#39404e}
+
+/* ---------- interactive pipeline ---------- */
+.pipe-toggle{display:inline-flex;border:1px solid var(--line);border-radius:30px;overflow:hidden;margin-bottom:26px;background:var(--panel)}
+.pipe-toggle button{font-family:'JetBrains Mono',monospace;font-size:13px;padding:9px 20px;background:none;border:none;color:var(--ink-dim);cursor:pointer;transition:.2s}
+.pipe-toggle button.on{background:var(--lime);color:#0a0b0e;font-weight:700}
+.pipeline{display:grid;grid-template-columns:1.1fr 1.4fr;gap:26px;align-items:start}
+@media(max-width:820px){.pipeline{grid-template-columns:1fr}}
+.stages{display:flex;flex-direction:column;gap:0;position:relative}
+.stage{border:1px solid var(--line);border-radius:11px;padding:14px 16px;background:var(--panel);cursor:pointer;transition:.25s;position:relative;display:flex;align-items:center;gap:12px}
+.stage:hover{border-color:var(--sc,var(--lime))}
+.stage.active{border-color:var(--sc,var(--lime));background:linear-gradient(90deg,color-mix(in srgb,var(--sc,var(--lime)) 14%,var(--panel)),var(--panel));box-shadow:0 0 0 1px var(--sc,var(--lime)) inset}
+.stage .idx{font-family:'JetBrains Mono',monospace;font-size:12px;width:24px;height:24px;flex:0 0 24px;border-radius:6px;display:grid;place-items:center;background:var(--panel2);color:var(--sc,var(--lime));border:1px solid var(--line)}
+.stage .nm{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:500}
+.stage .pill{margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--ink-faint)}
+.stage.prog .pill{color:var(--lime);border-color:var(--lime)}
+.flowdot{width:14px;height:18px;margin:2px auto;color:var(--ink-faint);text-align:center;font-size:14px}
+.stage-detail{border:1px solid var(--line);border-radius:13px;padding:24px;background:linear-gradient(180deg,var(--panel),var(--bg2));position:sticky;top:90px;min-height:300px}
+.stage-detail h3{font-size:23px;margin-bottom:6px;color:var(--sc,var(--lime))}
+.stage-detail .role{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-faint);margin-bottom:14px;text-transform:uppercase;letter-spacing:.12em}
+.stage-detail p{color:var(--ink-dim);font-size:15.5px}
+.stage-detail .io{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.io-box{flex:1;min-width:120px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--bg2)}
+.io-box .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.1em}
+.io-box .val{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink);margin-top:3px}
+
+/* vertex attribute explorer */
+.vtx-demo{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:center}
+@media(max-width:680px){.vtx-demo{grid-template-columns:1fr}}
+.vstage{aspect-ratio:1/1;border:1px solid var(--line);border-radius:13px;background:radial-gradient(circle at 50% 50%,#11141b,#0a0b0e);position:relative;display:grid;place-items:center}
+.vnode{position:absolute;width:26px;height:26px;border-radius:50%;border:2px solid #0a0b0e;cursor:pointer;transition:.2s;box-shadow:0 0 0 0 transparent}
+.vnode:hover,.vnode.sel{transform:scale(1.25);box-shadow:0 0 18px 2px var(--vc)}
+.attr-card{border:1px solid var(--line);border-radius:12px;padding:18px;background:var(--panel)}
+.attr-card h4{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink-faint);margin-bottom:12px;text-transform:uppercase;letter-spacing:.1em}
+.attr-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:14px}
+.attr-row:last-child{border:none}
+.attr-row span:first-child{color:var(--ink-dim)}
+.attr-row span:last-child{color:var(--lime)}
+
+/* tabs (code) */
+.tabs{display:flex;gap:6px;margin-bottom:0}
+.tabs button{font-family:'JetBrains Mono',monospace;font-size:13px;padding:8px 16px;border:1px solid var(--line);border-bottom:none;border-radius:9px 9px 0 0;background:var(--bg2);color:var(--ink-dim);cursor:pointer}
+.tabs button.on{background:#0c0e13;color:var(--lime);border-color:var(--line)}
+.tabpane{display:none}
+.tabpane.on{display:block}
+.tabpane pre{margin-top:0;border-radius:0 12px 12px 12px}
+
+/* shader live demo */
+.shader-wrap{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+@media(max-width:760px){.shader-wrap{grid-template-columns:1fr}}
+#glcanvas{width:100%;aspect-ratio:1/1;border:1px solid var(--line);border-radius:13px;display:block;background:#000}
+.ctrl{margin:14px 0}
+.ctrl label{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-dim);display:flex;justify-content:space-between}
+input[type=range]{width:100%;accent-color:var(--lime);margin-top:7px}
+.btn{font-family:'JetBrains Mono',monospace;font-size:13px;padding:9px 16px;border:1px solid var(--lime);background:transparent;color:var(--lime);border-radius:9px;cursor:pointer;transition:.2s}
+.btn:hover{background:var(--lime);color:#0a0b0e}
+
+/* GLSL channel diagram */
+.glsl-diag{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+@media(max-width:680px){.glsl-diag{grid-template-columns:1fr}}
+.shbox{border:1px solid var(--line);border-radius:13px;padding:20px;background:var(--panel)}
+.shbox.vx{border-top:3px solid var(--vtx)}
+.shbox.fr{border-top:3px solid var(--gpu)}
+.shbox h4{font-family:'JetBrains Mono',monospace;font-size:15px;margin-bottom:6px}
+.shbox .out{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-faint);margin-top:8px}
+.qualifier{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+.qbtn{flex:1;min-width:150px;border:1px solid var(--line);border-radius:11px;padding:14px;cursor:pointer;transition:.2s;background:var(--panel)}
+.qbtn:hover{transform:translateY(-3px)}
+.qbtn.qa{border-left:3px solid var(--vtx)}
+.qbtn.qu{border-left:3px solid var(--api)}
+.qbtn.qv{border-left:3px solid var(--gpu)}
+.qbtn .qt{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px}
+.qbtn .qd{font-size:13px;color:var(--ink-dim);margin-top:5px}
+
+/* quiz */
+.quiz{border:1px solid var(--line);border-radius:14px;padding:24px;background:var(--panel);margin-bottom:16px}
+.quiz .qhead{display:flex;gap:10px;align-items:baseline;margin-bottom:14px}
+.quiz .qnum{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--lime);border:1px solid var(--lime);border-radius:6px;padding:2px 8px;flex:0 0 auto}
+.quiz .qq{font-size:17px;font-weight:600}
+.opt{border:1px solid var(--line);border-radius:10px;padding:12px 15px;margin:8px 0;cursor:pointer;transition:.18s;font-size:15px;display:flex;gap:10px;align-items:center}
+.opt:hover{border-color:#39404e;background:var(--panel2)}
+.opt .mk{width:20px;height:20px;border-radius:5px;border:1px solid var(--ink-faint);flex:0 0 auto;display:grid;place-items:center;font-size:12px}
+.opt.correct{border-color:var(--api);background:color-mix(in srgb,var(--api) 12%,var(--panel))}
+.opt.correct .mk{background:var(--api);border-color:var(--api);color:#06210a}
+.opt.wrong{border-color:#e0584b;background:color-mix(in srgb,#e0584b 11%,var(--panel))}
+.opt.wrong .mk{background:#e0584b;border-color:#e0584b;color:#2a0805}
+.opt.lock{pointer-events:none;opacity:.92}
+.quiz .fb{font-size:14px;color:var(--ink-dim);margin-top:10px;display:none;border-left:2px solid var(--lime);padding-left:12px}
+.quiz .fb.show{display:block}
+#score{position:sticky;bottom:18px;z-index:30;margin:24px auto 0;width:max-content;font-family:'JetBrains Mono',monospace;font-size:14px;background:var(--panel2);border:1px solid var(--lime);border-radius:30px;padding:10px 22px;color:var(--lime);box-shadow:0 8px 30px rgba(0,0,0,.5)}
+
+/* past papers */
+.pp{border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:12px;overflow:hidden}
+.pp summary{cursor:pointer;padding:16px 18px;list-style:none;display:flex;gap:12px;align-items:baseline}
+.pp summary::-webkit-details-marker{display:none}
+.pp .yr{font-family:'JetBrains Mono',monospace;font-size:11px;color:#0a0b0e;background:var(--ras);padding:3px 9px;border-radius:6px;font-weight:700;flex:0 0 auto}
+.pp .qtext{font-size:15.5px}
+.pp .ans{padding:0 18px 18px 18px;color:var(--ink-dim);font-size:15px;border-top:1px solid var(--line);margin-top:0;padding-top:14px}
+.pp[open] summary{color:var(--lime)}
+
+/* footer */
+footer{border-top:1px solid var(--line);padding:44px 0;color:var(--ink-faint);font-family:'JetBrains Mono',monospace;font-size:12.5px}
+footer a{color:var(--ink-dim)}
+
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);margin:0}
+.tcols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media(max-width:760px){.tcols{grid-template-columns:1fr}}
+.statline{display:flex;gap:26px;flex-wrap:wrap;margin-top:24px;font-family:'JetBrains Mono',monospace}
+.statline div b{display:block;font-family:'Syne';font-size:30px;color:var(--lime);line-height:1}
+.statline div span{font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.1em}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<nav>
+  <div class="brand">COMP27112 · <b>ch.05</b> graphics_pipeline</div>
+  <div class="links">
+    <a href="#hero">intro</a>
+    <a href="#apis">APIs</a>
+    <a href="#hardware">CPU/GPU</a>
+    <a href="#scene">scene&nbsp;data</a>
+    <a href="#pipeline">pipeline</a>
+    <a href="#triangle">draw&nbsp;triangle</a>
+    <a href="#shaders">shaders</a>
+    <a href="#playground">playground</a>
+    <a href="#quiz">quiz</a>
+    <a href="#exam">past&nbsp;papers</a>
+  </div>
+</nav>
+
+<!-- ================= HERO ================= -->
+<header id="hero" class="wrap">
+  <svg class="tri-stage" viewBox="0 0 200 200" aria-hidden="true">
+    <polygon id="triBlue" points="120,30 175,55 120,75" fill="#4a9fd4"/>
+    <polygon id="triGreen" points="95,60 140,55 110,135" fill="#6cc24a"/>
+  </svg>
+  <div class="hero-tag">University of Manchester · School of Computer Science</div>
+  <h1>The <span class="g">Graphics</span><br>Pipeline.</h1>
+  <p class="hero-sub">How a GPU turns a fistful of vertices — <span class="mono" style="color:var(--lime)">[0,0,0, 1,0,0, 0,1,0]</span> — into the coloured pixels you see on screen. APIs, shaders, the fixed vs programmable pipeline, and GLSL, all in one place.</p>
+  <div class="hero-meta">
+    <span class="chip">📺 Lecture: <b>The Graphics Pipeline</b></span>
+    <span class="chip">🧩 <b>Examinable:</b> the simplified pipeline diagram</span>
+    <span class="chip">👤 David Petrescu</span>
+  </div>
+  <div class="statline">
+    <div><b>5</b><span>core stages</span></div>
+    <div><b>2</b><span>shaders you write</span></div>
+    <div><b>3</b><span>GLSL qualifiers</span></div>
+    <div><b>6</b><span>graphics APIs</span></div>
+  </div>
+  <div class="scroll-hint"><span class="dot"></span> scroll to descend the pipeline</div>
+</header>
+
+<!-- ================= BIG PICTURE ================= -->
+<section id="bigpic" class="wrap">
+  <div class="reveal">
+    <div class="kicker">01 · orientation</div>
+    <h2 class="title">From your hands to the display</h2>
+    <p class="lead">Before the camera "sees" anything, the GPU quietly does a huge amount of work. The full system is a loop: <b>input devices</b> feed the <b>graphics API</b>, which talks to the <b>application program</b> and its <b>model</b>; the model is rendered and the API decides how to draw it back to the <b>display</b>.</p>
+  </div>
+  <figure class="reveal">
+    <img src="assets/api-loop.png" alt="Input devices to Graphics API to Application Program to Application Model to Display, in a loop">
+    <figcaption>The high-level interaction loop. Input → Graphics API → Application Program → Application Model → Display, then back round.</figcaption>
+  </figure>
+  <div class="note reveal"><b>The honest disclaimer.</b> The lecturer's giant "unified" research pipeline (below) is <b>not examinable</b> — it's there to show how much real graphics systems abstract away. What you <em>do</em> need is the small simplified pipeline we build up in section 05.</div>
+  <figure class="reveal">
+    <img src="assets/big-pipeline.png" alt="A large complex research pipeline diagram, shown for entertainment only">
+    <figcaption>"You do NOT need to revise this diagram" — the full research pipeline, shown only to convey real-world complexity.</figcaption>
+  </figure>
+</section>
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ================= GRAPHICS APIs ================= -->
+<section id="apis" class="wrap">
+  <div class="reveal">
+    <div class="kicker">02 · graphics APIs</div>
+    <h2 class="title">The software that talks to your GPU</h2>
+    <p class="lead">To reach pipeline steps and command the GPU/driver we need a <b>graphics API</b> — an intermediate layer. Tap a card to expand.</p>
+  </div>
+  <div class="api-grid reveal" id="apiGrid">
+    <!-- filled by JS -->
+  </div>
+  <div class="imgrow reveal" style="margin-top:22px">
+    <figure><img src="assets/opengl.png" alt="OpenGL slide"><figcaption>OpenGL — clear syntax, less low-level control.</figcaption></figure>
+    <figure><img src="assets/webgl-threejs-js.png" alt="WebGL to three.js and JavaScript"><figcaption>WebGL runs in JS; three.js wraps it for sanity.</figcaption></figure>
+  </div>
+  <div class="imgrow reveal">
+    <figure><img src="assets/khronos-ecosystem.png" alt="Khronos Group API ecosystem table"><figcaption>The Khronos ecosystem: cross-platform, open-standard APIs for 3D, XR, compute, vision &amp; safety-critical use.</figcaption></figure>
+    <figure><img src="assets/directx-metal.png" alt="DirectX and Metal alongside Khronos APIs"><figcaption>Non-Khronos: Microsoft's DirectX and Apple's Metal.</figcaption></figure>
+  </div>
+  <div class="imgrow reveal">
+    <figure><img src="assets/khronos.png" alt="Khronos Group with OpenGL, WebGL and Vulkan"><figcaption>Khronos maintains OpenGL, WebGL &amp; Vulkan.</figcaption></figure>
+    <figure><img src="assets/webgl.png" alt="WebGL slide: designed for the browser, inspired by OpenGL, compiled at runtime"><figcaption>WebGL — browser-native, inspired by OpenGL, compiled at runtime.</figcaption></figure>
+  </div>
+  <div class="note reveal"><b>Key facts to keep.</b> OpenGL = released <b>1992</b>, portable, the <em>ES</em> suffix means <em>Embedded Systems</em>. WebGL evolved from OpenGL, runs in the browser via JavaScript, compiled at runtime. <b>three.js</b> is a wrapper on top of WebGL. <b>OpenGL, WebGL &amp; Vulkan</b> are maintained by the <b>Khronos Group</b> (cross-platform). <b>Vulkan</b> = strongest control but ~800 lines just to draw a cube. <b>DirectX</b> = Microsoft, <b>Metal</b> = Apple.</div>
+</section>
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ================= HARDWARE ================= -->
+<section id="hardware" class="wrap">
+  <div class="reveal">
+    <div class="kicker">03 · the hardware</div>
+    <h2 class="title">CPU vs GPU — why graphics is parallel</h2>
+    <p class="lead">A <b>GPU</b> is a many-core processor optimised for <b>parallel</b> work. That fits graphics perfectly: the same transformation runs on thousands of vertices, and the same shading runs on millions of pixels — all at once.</p>
+  </div>
+  <div class="grid g2 reveal" style="align-items:stretch">
+    <div class="card" style="--c:var(--ras)">
+      <h3 style="color:var(--ras)">CPU</h3>
+      <p>A few powerful cores. Runs the <b>application</b> and the <b>graphics API</b> (e.g. JavaScript + WebGL). Reads scene data from <b>memory (RAM)</b>, decides what to draw, and sends the relevant data to GPU memory.</p>
+      <div class="tagrow"><span class="tag">serial-strong</span><span class="tag">orchestrates</span></div>
+    </div>
+    <div class="card" style="--c:var(--gpu)">
+      <h3 style="color:var(--gpu)">GPU</h3>
+      <p>Massively parallel cores + its own <b>GPU memory</b>. Takes the scene data and runs the pipeline operations on it, spitting out a finished image.</p>
+      <div class="tagrow"><span class="tag">massively-parallel</span><span class="tag">transforms + shades</span></div>
+    </div>
+  </div>
+  <figure class="reveal"><img src="assets/cpu-gpu.png" alt="A CPU chip beside a GPU graphics card"><figcaption>The two processors: a CPU (left) and a GPU (right). Graphics leans on the GPU's parallelism.</figcaption></figure>
+  <figure class="reveal"><img src="assets/scene-to-image.png" alt="Scene data goes into a GPU and a rendered image comes out"><figcaption>"Some scene data" → GPU → a pretty rendered image. The pipeline is the "magic" inside.</figcaption></figure>
+</section>
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ================= SCENE DATA ================= -->
+<section id="scene" class="wrap">
+  <div class="reveal">
+    <div class="kicker">04 · scene data</div>
+    <h2 class="title">What we actually feed in: vertices</h2>
+    <p class="lead">The data is mostly <b>scene parameters describing vertices</b> — the building blocks of rendering. Connect vertices into <b>polygons</b> (almost always <b>triangles</b>). Think of a vertex as a container of attributes. <b>Click a vertex</b> to inspect it.</p>
+  </div>
+  <div class="vtx-demo reveal">
+    <div class="vstage" id="vstage">
+      <svg id="vedges" viewBox="0 0 100 100" style="position:absolute;inset:0;width:100%;height:100%" aria-hidden="true">
+        <line x1="22" y1="22" x2="22" y2="78" stroke="#3a4150" stroke-width="0.8"/>
+        <line x1="22" y1="78" x2="78" y2="78" stroke="#3a4150" stroke-width="0.8"/>
+        <line x1="22" y1="22" x2="78" y2="78" stroke="#3a4150" stroke-width="0.8"/>
+      </svg>
+      <!-- nodes positioned via JS -->
+    </div>
+    <div>
+      <div class="attr-card" id="attrCard">
+        <h4 id="attrTitle">Vertex 0 · attributes</h4>
+        <div class="attr-row"><span>position (X,Y,Z)</span><span id="aPos">0.0, 0.0, 0.0</span></div>
+        <div class="attr-row"><span>colour (R,G,B,A)</span><span id="aCol">0.91, 0.45, 0.23, 1.0</span></div>
+        <div class="attr-row"><span>UV (textures)</span><span id="aUV">0.0, 0.0</span></div>
+        <div class="attr-row"><span>time</span><span id="aTime">t</span></div>
+      </div>
+      <div class="note" style="margin-top:16px">A vertex can carry <b>positions</b>, <b>colours</b>, <b>UV coordinates</b> (for textures) and even <b>time</b> — you decide based on your application. Positions tell the API <em>"draw a triangle here"</em>.</div>
+    </div>
+  </div>
+  <div class="imgrow reveal" style="margin-top:8px">
+    <figure><img src="assets/scene-vertices-table.png" alt="A triangle of three vertices and an X Y Z table"><figcaption>Three vertices → one triangle. Each row is an (X, Y, Z) position.</figcaption></figure>
+    <figure><img src="assets/vertex-attributes.png" alt="Vertex attributes: positions and RGBA colours"><figcaption>Per-vertex attributes — positions (XYZ) and colours (RGBA) side by side.</figcaption></figure>
+  </div>
+</section>
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ================= THE PIPELINE ================= -->
+<section id="pipeline" class="wrap">
+  <div class="reveal">
+    <div class="kicker">05 · the pipeline · ⭐ examinable</div>
+    <h2 class="title">Fixed vs Programmable</h2>
+    <p class="lead">Older APIs used a <b>fixed</b> pipeline (rigid built-in steps). Modern graphics uses the <b>programmable</b> pipeline, where two stages are replaced by <b>shader programs you write</b>. Toggle below, then click any stage.</p>
+  </div>
+  <div class="pipe-toggle reveal" role="tablist">
+    <button id="btnFixed" class="" onclick="setPipe('fixed')">Fixed</button>
+    <button id="btnProg" class="on" onclick="setPipe('prog')">Programmable</button>
+  </div>
+  <div class="pipeline reveal">
+    <div class="stages" id="stages"></div>
+    <div class="stage-detail" id="stageDetail"></div>
+  </div>
+
+  <div class="note exam reveal" style="margin-top:26px"><b>⭐ Exam-critical.</b> Memorise the <b>programmable</b> order: <span class="mono">3D Vertices → <b style="color:var(--vtx)">Vertex Shader</b> → Geometry / Tessellation → Rasterisation → <b style="color:var(--gpu)">Fragment (Pixel) Shader</b> → Per-Sample Ops → pixel colours</span>. The <b>vertex shader</b> &amp; <b>fragment shader</b> are the two you must supply/write. The other stages typically run fixed on hardware.</div>
+
+  <div class="tcols reveal" style="margin-top:24px">
+    <figure style="margin:0"><img src="assets/examinable-pipeline.png" alt="The examinable simplified programmable pipeline"><figcaption>⭐ "You DO need to revise this" — the examinable simplified pipeline.</figcaption></figure>
+    <figure style="margin:0"><img src="assets/fixed-vs-programmable.png" alt="Fixed pipeline beside programmable pipeline"><figcaption>Side by side: Fixed (left) vs Programmable (right).</figcaption></figure>
+  </div>
+
+  <div class="grid g2 reveal" style="margin-top:14px">
+    <div class="card"><h3 style="font-size:18px;color:var(--vtx)">Why choose Fixed?</h3><p>Easier for beginners. But it's generally <b>deprecated</b>, slower, and not as well maintained on modern APIs.</p></div>
+    <div class="card"><h3 style="font-size:18px;color:var(--gpu)">Why choose Programmable?</h3><p>Steeper learning curve, but <b>full control</b> and the ability to optimise for your exact app — e.g. an 8-bit indie game doesn't want costly ray tracing burning the GPU.</p></div>
+  </div>
+
+  <figure class="reveal"><img src="assets/system-architecture.png" alt="Basic graphics system architecture: CPU application, GPU graphics software, framebuffer, display"><figcaption>Basic graphics system architecture: app on CPU → graphics API → GPU graphics software → <b>framebuffer memory</b> (all pixel data) → signal hardware (HDMI/DAC) → display.</figcaption></figure>
+
+  <div class="reveal">
+    <div class="kicker" style="margin-top:30px">slide-by-slide build-up</div>
+    <p style="color:var(--ink-dim);margin-bottom:6px">How the lecture grows the diagram, from fixed to fully programmable:</p>
+  </div>
+  <div class="imgrow reveal">
+    <figure><img src="assets/fixed-pipeline.png" alt="Fixed graphics pipeline diagram"><figcaption>① Fixed pipeline — API feeds parameters into rigid stages.</figcaption></figure>
+    <figure><img src="assets/programmable-full.png" alt="Programmable pipeline with all stages"><figcaption>② Programmable — vertex &amp; fragment stages become shader programs.</figcaption></figure>
+  </div>
+  <div class="imgrow reveal">
+    <figure><img src="assets/programmable-supplied.png" alt="Shaders need to be supplied and written for the graphics API"><figcaption>③ The shaded stages are the ones you must supply/write.</figcaption></figure>
+    <figure><img src="assets/programmable-gpu.png" alt="Pipeline running on the GPU with memory and CPU application"><figcaption>④ It all runs on the GPU; the CPU app feeds data from memory.</figcaption></figure>
+  </div>
+  <figure class="reveal"><img src="assets/programmable-output.png" alt="Programmable pipeline producing a rendered game image via WebGL"><figcaption>⑤ Output: with WebGL + JS the pipeline yields the final rendered image.</figcaption></figure>
+</section>
+
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ================= DRAW A TRIANGLE ================= -->
+<section id="triangle" class="wrap">
+  <div class="reveal">
+    <div class="kicker">06 · drawing a triangle</div>
+    <h2 class="title">Raw WebGL vs three.js</h2>
+    <p class="lead">Same triangle, two levels of abstraction. <span class="mono">three.js</span> is a wrapper — the short version compiles down to roughly the long one. (Example code; <b>not examined</b>, but it shows the moving parts.)</p>
+  </div>
+  <div class="reveal">
+    <div class="tabs">
+      <button class="on" onclick="codeTab(0)">Raw WebGL</button>
+      <button onclick="codeTab(1)">three.js</button>
+    </div>
+    <div class="tabpane on">
+<pre><span class="c">// First link and compile Shaders</span>
+<span class="k">const</span> program = gl.<span class="f">createProgram</span>();
+gl.<span class="f">attachShader</span>(program, vertexShader)
+gl.<span class="f">attachShader</span>(program, fragmentShader)
+
+<span class="k">const</span> posLoc = gl.<span class="f">getAttribLocation</span>(program, <span class="s">'pos'</span>);
+<span class="k">const</span> vertices = <span class="k">new</span> <span class="n">Float32Array</span>(
+[ -1, -1, 0, <span class="c">// vertex 1</span>
+   1, -1, 0, <span class="c">// vertex 2</span>
+   0,  1, 0  <span class="c">// vertex 3</span>
+]);
+vertex_buffer = gl.<span class="f">createBuffer</span>();
+gl.<span class="f">bindBuffer</span>(gl.ARRAY_BUFFER, vertexBuffer);
+gl.<span class="f">bufferData</span>(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+gl.<span class="f">vertexAttribPointer</span>(posLoc, 3, gl.FLOAT, false, 0, 0);
+gl.<span class="f">enableVertexAttribArray</span>(posLoc);
+gl.<span class="f">drawArrays</span>(gl.TRIANGLES, 0, 3);</pre>
+    </div>
+    <div class="tabpane">
+<pre><span class="k">const</span> geometry = <span class="k">new</span> <span class="n">THREE.BufferGeometry</span>();
+
+<span class="k">const</span> vertices = <span class="k">new</span> <span class="n">Float32Array</span>(
+[ -1, -1, 0, <span class="c">// vertex 1</span>
+   1, -1, 0, <span class="c">// vertex 2</span>
+   0,  1, 0  <span class="c">// vertex 3</span>
+]);
+geometry.<span class="f">setAttribute</span>(<span class="s">'position'</span>,
+   <span class="k">new</span> <span class="n">THREE.BufferAttribute</span>(vertices, 3));
+
+<span class="k">const</span> mesh = <span class="k">new</span> <span class="n">THREE.Mesh</span>(geometry, shaders);
+<span class="c">// "material" in tutorials == your shaders</span></pre>
+    </div>
+  </div>
+  <div class="imgrow reveal">
+    <figure><img src="assets/webgl-triangle-code.png" alt="Raw WebGL code to draw a triangle"><figcaption>The raw WebGL slide — verbose buffer setup.</figcaption></figure>
+    <figure><img src="assets/threejs-triangle-code.png" alt="three.js code to draw a triangle"><figcaption>The three.js slide — the same triangle, far fewer lines.</figcaption></figure>
+  </div>
+  <div class="note reveal"><b>What's happening.</b> Create a <b>buffer</b> in GPU memory, <b>bind</b> it (tell the GPU "use this one"), fill it with vertices (a flat <b>1-D array</b>), then describe how to read it — <span class="mono">3</span> components per vertex (X,Y,Z), as floats. Finally <span class="mono">drawArrays(TRIANGLES, 0, 3)</span> draws from vertex 0 to 3. In WebGL you must state the primitive (TRIANGLES); a three.js <span class="mono">Mesh</span> defaults to triangles.</div>
+</section>
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ================= SHADERS ================= -->
+<section id="shaders" class="wrap">
+  <div class="reveal">
+    <div class="kicker">07 · shaders in GLSL</div>
+    <h2 class="title">The two programs you write</h2>
+    <p class="lead">WebGL/OpenGL use <b>GLSL</b> (OpenGL Shading Language); DirectX uses <b>HLSL</b> — nearly identical, so learn one. The <b>vertex shader</b> processes each vertex independently and outputs <span class="mono">gl_Position</span>. The <b>fragment (pixel) shader</b> processes each pixel independently and outputs <span class="mono">gl_FragColor</span>.</p>
+  </div>
+
+  <div class="glsl-diag reveal">
+    <div class="shbox vx">
+      <h4 style="color:var(--vtx)">Vertex Shader</h4>
+      <p style="color:var(--ink-dim);font-size:14.5px">Runs per <b>vertex</b>. Positions geometry in the scene.</p>
+      <div class="out">→ sends out <span class="mono">gl_Position</span></div>
+    </div>
+    <div class="shbox fr">
+      <h4 style="color:var(--gpu)">Fragment Shader</h4>
+      <p style="color:var(--ink-dim);font-size:14.5px">Runs per <b>pixel/fragment</b>. Computes lighting &amp; texture colour.</p>
+      <div class="out">→ sends out <span class="mono">gl_FragColor</span></div>
+    </div>
+  </div>
+
+  <div class="reveal" style="margin-top:8px">
+    <p style="color:var(--ink-dim);margin-bottom:6px">The three GLSL data qualifiers — <b>tap each</b>:</p>
+    <div class="qualifier">
+      <div class="qbtn qa" onclick="qual(this,'a')"><div class="qt" style="color:var(--vtx)">attribute</div><div class="qd" id="qda">Per-vertex input. <b>Read-only</b>, only on the vertex shader (e.g. position).</div></div>
+      <div class="qbtn qu" onclick="qual(this,'u')"><div class="qt" style="color:var(--api)">uniform</div><div class="qd" id="qdu">Shared value accessible by <b>both</b> shaders (e.g. matrices, time).</div></div>
+      <div class="qbtn qv" onclick="qual(this,'v')"><div class="qt" style="color:var(--gpu)">varying</div><div class="qd" id="qdv">Passes data <b>vertex → fragment</b>; <b>interpolated</b> over screen space during rasterisation.</div></div>
+    </div>
+  </div>
+
+  <figure class="reveal"><img src="assets/shaders-varying.png" alt="Shaders in GLSL: uniform, attributes and varying flowing between vertex and fragment shaders"><figcaption>How values flow: <b>attributes</b> in → vertex shader → <b>varying</b> (interpolated) → fragment shader; <b>uniforms</b> reach both.</figcaption></figure>
+
+  <div class="reveal">
+    <div class="kicker" style="margin-top:30px">vertex shader · GLSL</div>
+    <p style="color:var(--ink-dim);margin-bottom:6px">The classic vertex shader. Note <span class="mono">vec4</span> — GLSL promotes to <b>homogeneous coordinates</b> for the transforms. Order is <b>right→left</b>, so model-view applies before projection.</p>
+<pre><span class="k">attribute</span> <span class="n">vec4</span> gl_Vertex;       <span class="c">// incoming vertex from the buffer (read-only)</span>
+<span class="k">uniform</span> gl_ProjectionMatrix;   <span class="c">// supplied via the API</span>
+<span class="k">uniform</span> gl_ModelViewMatrix;    <span class="c">// we know how to build this</span>
+
+<span class="k">void</span> <span class="f">main</span>(){
+  gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;
+  <span class="c">// gl_Position is passed down the pipeline</span>
+}</pre>
+  </div>
+
+  <div class="reveal">
+    <div class="kicker" style="margin-top:24px">fragment shader · GLSL</div>
+    <p style="color:var(--ink-dim);margin-bottom:6px">Must output a colour. <span class="mono">vec4</span> = (R, G, B, <b>A</b>) where A is the alpha/opacity. A <b>varying</b> is interpolated across the surface during rasterisation — combine it with a <span class="mono">uniform</span> time for animated effects.</p>
+<pre><span class="c">// simplest: every pixel white &amp; opaque</span>
+<span class="k">void</span> <span class="f">main</span>(){ gl_FragColor = <span class="n">vec4</span>(1.0, 1.0, 1.0, 1.0); }
+
+<span class="c">// animated: varying UV * uniform time on the red channel</span>
+<span class="k">varying</span> <span class="n">vec2</span> uv_coord;
+<span class="k">uniform</span> <span class="n">float</span> uTime;
+<span class="k">void</span> <span class="f">main</span>(){
+  <span class="n">vec3</span> color = <span class="n">vec3</span>(uv_coord.x * uTime, 0.3, 0.1);
+  gl_FragColor = <span class="n">vec4</span>(color, 1.0);
+}</pre>
+  </div>
+
+  <div class="imgrow reveal">
+    <figure><img src="assets/vertex-shader-attr.png" alt="Vertex shader gl_Vertex attribute explained"><figcaption><span class="mono">gl_Vertex</span> — the incoming vertex the shader can manipulate.</figcaption></figure>
+    <figure><img src="assets/vertex-shader-full.png" alt="Full vertex shader with projection and model-view matrices annotated"><figcaption>The full line annotated: position out, model-view &amp; projection in.</figcaption></figure>
+  </div>
+  <figure class="reveal"><img src="assets/vertex-shader-uniform.png" alt="Vertex shader declaring projection and model-view matrices as uniforms"><figcaption>Declaring the matrices as <span class="mono">uniform</span> so the API can supply them.</figcaption></figure>
+
+  <div class="imgrow reveal" style="margin-top:14px">
+    <figure><img src="assets/shaders-uniform.png" alt="Uniform values reaching both vertex and fragment shaders"><figcaption><span class="mono">uniform</span> reaches both shaders.</figcaption></figure>
+    <figure><img src="assets/shaders-attributes.png" alt="Attributes feeding into the vertex shader"><figcaption><span class="mono">attribute</span> feeds only the vertex shader.</figcaption></figure>
+  </div>
+</section>
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ================= PLAYGROUND ================= -->
+<section id="playground" class="wrap">
+  <div class="reveal">
+    <div class="kicker">08 · live shader playground</div>
+    <h2 class="title">Run the fragment shader yourself</h2>
+    <p class="lead">This is a real WebGL canvas running the fragment shader from the slides. The <span class="mono">varying</span> UV is interpolated across the surface; drag <span class="mono">uTime</span> to see the "spooky red effects" the lecturer mentions. Move your mouse over the canvas too.</p>
+  </div>
+  <div class="shader-wrap reveal">
+    <canvas id="glcanvas" width="480" height="480"></canvas>
+    <div>
+      <div class="ctrl">
+        <label><span>uniform float uTime</span><span id="tval" class="mono" style="color:var(--lime)">0.50</span></label>
+        <input id="time" type="range" min="0" max="6.28" step="0.01" value="0.5">
+      </div>
+      <button class="btn" id="animBtn" onclick="toggleAnim()">▶ animate uTime</button>
+      <div class="note" style="margin-top:18px">
+        <b>What you're seeing:</b> the red channel = <span class="mono">fract(uv.x · uTime)</span>, green is the interpolated <span class="mono">uv.y</span>, blue is fixed. Because <span class="mono">uv_coord</span> is a <b>varying</b>, the rasteriser interpolates it smoothly between the triangle's corners — exactly the behaviour described in the lecture.
+      </div>
+<pre style="font-size:12px"><span class="k">precision</span> <span class="n">mediump</span> <span class="n">float</span>;
+<span class="k">varying</span> <span class="n">vec2</span> uv_coord;
+<span class="k">uniform</span> <span class="n">float</span> uTime;
+<span class="k">void</span> <span class="f">main</span>(){
+  <span class="n">vec3</span> c = <span class="n">vec3</span>(<span class="f">fract</span>(uv_coord.x*uTime),
+               uv_coord.y*0.6+0.1, 0.25);
+  gl_FragColor = <span class="n">vec4</span>(c, 1.0);
+}</pre>
+    </div>
+  </div>
+  <div class="imgrow reveal" style="margin-top:18px">
+    <figure><img src="assets/fragment-simple.png" alt="Simplest fragment shader setting every pixel white"><figcaption>The simplest fragment shader — every pixel white &amp; opaque.</figcaption></figure>
+    <figure><img src="assets/fragment-uvtime.png" alt="Fragment shader using varying UV coordinate and uniform time"><figcaption>The slide's animated version — <span class="mono">varying</span> UV × <span class="mono">uniform uTime</span>.</figcaption></figure>
+  </div>
+</section>
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ================= QUIZ ================= -->
+<section id="quiz" class="wrap">
+  <div class="reveal">
+    <div class="kicker">09 · check yourself</div>
+    <h2 class="title">Quiz (from the course question bank)</h2>
+    <p class="lead">Pipeline-relevant questions pulled from the visual quizzes. Click an answer — it locks and tells you if you're right.</p>
+  </div>
+  <div id="quizHost" class="reveal"></div>
+  <div id="score">score: 0 / 0</div>
+</section>
+<div class="wrap"><div class="divider"></div></div>
+
+<!-- ================= PAST PAPERS ================= -->
+<section id="exam" class="wrap">
+  <div class="reveal">
+    <div class="kicker">10 · past papers</div>
+    <h2 class="title">Exam questions related to this chapter</h2>
+    <p class="lead">From COMP27112 past papers. The GPU-pipeline/shader material is newer, so directly-on-topic questions are sparse — but these touch the pipeline, primitives, tessellation and rendering. Click to reveal a model answer.</p>
+  </div>
+  <div id="ppHost" class="reveal"></div>
+  <div class="note reveal"><b>Revision steer.</b> The single most likely short-answer hit is <b>2018 §B Q1 — "fundamental difference between fixed and programmable pipelines."</b> Be able to draw the simplified pipeline, name the two shaders you write, and define <span class="mono">attribute / uniform / varying</span>.</div>
+</section>
+
+<!-- ================= SUMMARY ================= -->
+<section id="summary" class="wrap">
+  <div class="reveal">
+    <div class="kicker">11 · one-screen recap</div>
+    <h2 class="title">Everything, distilled</h2>
+  </div>
+  <div class="grid g3 reveal">
+    <div class="card"><h3 style="font-size:17px">APIs</h3><p>OpenGL (1992, ES=embedded), WebGL (browser/JS, from OpenGL), three.js (wraps WebGL), Vulkan (max control). Khronos maintains all three; DirectX=MS, Metal=Apple.</p></div>
+    <div class="card"><h3 style="font-size:17px">Hardware</h3><p>CPU runs app+API, GPU is massively parallel. Output lands in the <b>framebuffer</b> before going to the display.</p></div>
+    <div class="card"><h3 style="font-size:17px">Scene data</h3><p>Vertices = containers of attributes: position, colour, UV, time. Connected into triangles.</p></div>
+    <div class="card"><h3 style="font-size:17px">⭐ Pipeline</h3><p>Vertices → <b>Vertex Shader</b> → Geometry/Tessellation → Rasterisation → <b>Fragment Shader</b> → Per-Sample Ops → pixels.</p></div>
+    <div class="card"><h3 style="font-size:17px">Fixed vs Programmable</h3><p>Fixed = easy but deprecated/slower. Programmable = steeper but full control; you write the vertex &amp; fragment shaders.</p></div>
+    <div class="card"><h3 style="font-size:17px">GLSL qualifiers</h3><p><b>attribute</b> (per-vertex, read-only), <b>uniform</b> (both shaders), <b>varying</b> (vertex→fragment, interpolated).</p></div>
+  </div>
+</section>
+
+<footer class="wrap">
+  <div>COMP27112 · Introduction to Visual Computing — Chapter 5 visual notes.</div>
+  <div style="margin-top:6px">Built from the lecture "The Graphics Pipeline" (D. Petrescu), the course visual quizzes, and past papers (2016–2025). Slide images © University of Manchester, used here for study.</div>
+  <div style="margin-top:10px;color:var(--ink-faint)">Interactive study aid · not an official document.</div>
+</footer>
+
+<script>
+/* ---------- scroll progress + reveal ---------- */
+const prog=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement;prog.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';});
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* ---------- hero triangle drift ---------- */
+let ht=0;function heroTri(){ht+=0.012;const b=document.getElementById('triBlue'),g=document.getElementById('triGreen');
+ if(b){b.setAttribute('transform',`rotate(${Math.sin(ht)*6} 140 50)`);g.setAttribute('transform',`rotate(${Math.cos(ht*.8)*8} 120 90)`);}
+ requestAnimationFrame(heroTri);}heroTri();
+
+/* ---------- API explorer ---------- */
+const apis=[
+ {n:'OpenGL',s:'Khronos · 1992',c:'var(--ras)',d:'Portable, clear syntax, still maintained. Less low-level control than newer APIs. The ES suffix = Embedded Systems.'},
+ {n:'WebGL',s:'Khronos · browser',c:'#c0392b',d:'Evolved from OpenGL, runs in the browser via JavaScript, compiled at runtime. Can even do real-time ray tracing if the hardware allows.'},
+ {n:'three.js',s:'wrapper · JS',c:'var(--ink)',d:'A wrapper on top of WebGL that hides low-level setup. Used in this course; great for getting things on screen fast.'},
+ {n:'Vulkan',s:'Khronos · low-level',c:'#c0392b',d:'Possibly the strongest current API. Minute control — but ~800 lines of code just to draw a cube.'},
+ {n:'DirectX',s:'Microsoft',c:'#7fba00',d:'Microsoft\'s API. Historically behind Khronos, recently caught up; has features the others lack. (That "install DirectX" prompt on Windows games.)'},
+ {n:'Metal',s:'Apple',c:'#4aa3ff',d:'Apple\'s own graphics API for their platforms.'},
+];
+document.getElementById('apiGrid').innerHTML=apis.map((a,i)=>`
+ <div class="api" style="--c:${a.c}" onclick="this.classList.toggle('open')">
+   <div class="name" style="color:${a.c}">${a.n}</div>
+   <div class="sub">${a.s}</div>
+   <div class="detail">${a.d}</div>
+ </div>`).join('');
+
+/* ---------- vertex attribute explorer ---------- */
+const verts=[
+ {x:'22',y:'22',col:'#e8743b',pos:'0.0, 1.0, 0.0',rgba:'0.91, 0.45, 0.23, 1.0',uv:'0.5, 1.0'},
+ {x:'22',y:'78',col:'#6cc24a',pos:'0.0, 0.0, 0.0',rgba:'0.42, 0.76, 0.29, 1.0',uv:'0.0, 0.0'},
+ {x:'78',y:'78',col:'#4a9fd4',pos:'1.0, 0.0, 0.0',rgba:'0.29, 0.62, 0.83, 1.0',uv:'1.0, 0.0'},
+];
+const vs=document.getElementById('vstage');
+verts.forEach((v,i)=>{const n=document.createElement('div');n.className='vnode';n.style.cssText=`left:${v.x}%;top:${v.y}%;transform:translate(-50%,-50%);background:${v.col};--vc:${v.col}`;
+ n.onclick=()=>selVert(i,n);vs.appendChild(n);});
+function selVert(i,n){document.querySelectorAll('.vnode').forEach(e=>e.classList.remove('sel'));n.classList.add('sel');
+ const v=verts[i];document.getElementById('attrTitle').textContent='Vertex '+i+' · attributes';
+ document.getElementById('aPos').textContent=v.pos;document.getElementById('aCol').textContent=v.rgba;document.getElementById('aUV').textContent=v.uv;
+ document.getElementById('aTime').textContent='t';document.getElementById('attrCard').style.borderColor=v.col;}
+selVert(0,vs.querySelector('.vnode'));
+
+/* ---------- pipeline ---------- */
+const stagesData={
+ fixed:[
+  {nm:'3D Vertices',role:'input',d:'Scene data enters: a flat array of vertex attributes (positions, colours, UVs).',in:'attribute arrays',out:'vertices'},
+  {nm:'Transformation & Viewing',role:'fixed stage',d:'Transform the model and set the viewing transformation — place geometry into the camera\'s view.',in:'vertices + matrices',out:'transformed vertices'},
+  {nm:'Lighting',role:'fixed stage',d:'Figure out how light bounces in the scene to shade the geometry.',in:'normals + lights',out:'lit vertices'},
+  {nm:'Primitive Assembly / Clipping',role:'fixed stage',d:'Assemble vertices into primitives (triangles) and clip to the region of interest we want to render.',in:'transformed vertices',out:'clipped primitives'},
+  {nm:'Rasterisation',role:'fixed stage',d:'Work out how best to use pixels to fit each shape — convert vector geometry into a pixel (raster) grid.',in:'primitives',out:'fragments'},
+  {nm:'Fragment Operations',role:'fixed stage',d:'Fragments are the elements we colour based on lighting and texture, to output a final pixel colour.',in:'fragments',out:'pixel colours'},
+ ],
+ prog:[
+  {nm:'3D Vertices',role:'input',d:'Same scene data in: a flat 1-D array of vertex attributes.',in:'attribute arrays',out:'vertices'},
+  {nm:'Vertex Shader Program',role:'★ you write this',d:'Replaces transformation & viewing. Runs once per vertex, independently, and outputs gl_Position. You write this and supply it to the API.',in:'attributes + uniforms',out:'gl_Position'},
+  {nm:'Geometry / Tessellation Shader',role:'mostly fixed',d:'Figures out how scene data becomes geometry. Sometimes editable to control how geometry is generated; tessellation splits polygons into convex pieces (usually triangles).',in:'primitives',out:'more primitives'},
+  {nm:'Rasterisation',role:'fixed (hardware)',d:'Maps the scene onto pixels. Converts vector geometry into a raster image. Varyings get interpolated across screen space here.',in:'primitives',out:'fragments'},
+  {nm:'Fragment Shader Program',role:'★ you write this',d:'Also called the pixel shader. Runs once per pixel, independently, computing lighting/texture and outputting gl_FragColor. You write this and supply it.',in:'varyings + uniforms',out:'gl_FragColor'},
+  {nm:'Per-Sample Operations',role:'fixed (hardware)',d:'Final per-sample work on hardware, producing the pixel colours written to the framebuffer.',in:'fragments',out:'pixel colours'},
+ ]
+};
+const stageColors=['var(--api)','var(--vtx)','var(--ras)','var(--ras)','var(--gpu)','var(--gpu)'];
+let pipeMode='prog',activeStage=1;
+function setPipe(m){pipeMode=m;document.getElementById('btnFixed').classList.toggle('on',m==='fixed');document.getElementById('btnProg').classList.toggle('on',m==='prog');activeStage=(m==='prog')?1:1;renderStages();}
+function renderStages(){
+ const arr=stagesData[pipeMode];const host=document.getElementById('stages');host.innerHTML='';
+ arr.forEach((s,i)=>{
+   const prog=s.role.indexOf('★')>-1;
+   const el=document.createElement('div');el.className='stage'+(i===activeStage?' active':'')+(prog?' prog':'');
+   el.style.setProperty('--sc',stageColors[i]);
+   el.innerHTML=`<div class="idx">${i}</div><div class="nm">${s.nm}</div><div class="pill">${prog?'shader':s.role.split(' ')[0]}</div>`;
+   el.onclick=()=>{activeStage=i;renderStages();};
+   host.appendChild(el);
+   if(i<arr.length-1){const f=document.createElement('div');f.className='flowdot';f.textContent='▼';host.appendChild(f);}
+ });
+ const s=arr[activeStage];const d=document.getElementById('stageDetail');d.style.setProperty('--sc',stageColors[activeStage]);
+ d.innerHTML=`<div class="role">${s.role}</div><h3>${s.nm}</h3><p>${s.d}</p>
+  <div class="io"><div class="io-box"><div class="lbl">in</div><div class="val">${s.in}</div></div>
+  <div class="io-box"><div class="lbl">out</div><div class="val">${s.out}</div></div></div>`;
+}
+renderStages();
+
+/* ---------- code tabs ---------- */
+function codeTab(i){document.querySelectorAll('#triangle .tabs button').forEach((b,bi)=>b.classList.toggle('on',bi===i));
+ document.querySelectorAll('#triangle .tabpane').forEach((p,pi)=>p.classList.toggle('on',pi===i));}
+
+/* ---------- qualifier highlight ---------- */
+function qual(el){document.querySelectorAll('.qbtn').forEach(b=>b.style.transform='');el.style.transform='translateY(-3px) scale(1.02)';}
+
+/* ---------- WebGL shader playground ---------- */
+(function(){
+ const cv=document.getElementById('glcanvas');const gl=cv.getContext('webgl')||cv.getContext('experimental-webgl');
+ if(!gl){cv.replaceWith(Object.assign(document.createElement('div'),{textContent:'WebGL not available in this browser.',className:'note'}));return;}
+ const vsrc=`attribute vec2 aPos;varying vec2 uv_coord;void main(){uv_coord=aPos*0.5+0.5;gl_Position=vec4(aPos,0.0,1.0);}`;
+ const fsrc=`precision mediump float;varying vec2 uv_coord;uniform float uTime;uniform vec2 uMouse;
+ void main(){vec2 uv=uv_coord;float m=length(uv-uMouse);
+  vec3 c=vec3(fract(uv.x*uTime+m*0.6),uv.y*0.6+0.1,0.25);gl_FragColor=vec4(c,1.0);}`;
+ function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);return o;}
+ const p=gl.createProgram();gl.attachShader(p,sh(gl.VERTEX_SHADER,vsrc));gl.attachShader(p,sh(gl.FRAGMENT_SHADER,fsrc));gl.linkProgram(p);gl.useProgram(p);
+ const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+ gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]),gl.STATIC_DRAW);
+ const loc=gl.getAttribLocation(p,'aPos');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+ const uT=gl.getUniformLocation(p,'uTime'),uM=gl.getUniformLocation(p,'uMouse');
+ let mouse=[0.5,0.5],tVal=0.5,animate=false,raf;
+ cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect();mouse=[(e.clientX-r.left)/r.width,1-(e.clientY-r.top)/r.height];if(!animate)draw();});
+ const slider=document.getElementById('time'),tlabel=document.getElementById('tval');
+ slider.addEventListener('input',()=>{tVal=parseFloat(slider.value);tlabel.textContent=tVal.toFixed(2);if(!animate)draw();});
+ function draw(){gl.viewport(0,0,cv.width,cv.height);gl.uniform1f(uT,tVal);gl.uniform2f(uM,mouse[0],mouse[1]);gl.drawArrays(gl.TRIANGLES,0,6);}
+ window.toggleAnim=function(){animate=!animate;const b=document.getElementById('animBtn');b.textContent=animate?'⏸ pause':'▶ animate uTime';
+   if(animate)loop();else cancelAnimationFrame(raf);};
+ function loop(){tVal=(tVal+0.03);if(tVal>6.28)tVal=0;slider.value=tVal;tlabel.textContent=tVal.toFixed(2);draw();raf=requestAnimationFrame(loop);}
+ draw();
+})();
+
+/* ---------- QUIZ data (pipeline-relevant, from course bank) ---------- */
+const quizData=[
+ {q:'What is rasterisation?',o:['Tracing rays from a light source through a scene','The process of converting vector geometry into a raster (pixel) image','Compressing an image using lossy algorithms','Converting a raster image to vector paths'],a:1,fb:'Rasterisation converts vector/geometric data into a pixel (raster) representation.'},
+ {q:'In the programmable pipeline, which two stages do you normally have to write and supply yourself?',o:['Rasterisation and clipping','The vertex shader and the fragment shader','Primitive assembly and lighting','The geometry shader and per-sample operations'],a:1,fb:'You must supply the vertex shader and fragment (pixel) shader; the rest typically run fixed on hardware.'},
+ {q:'What is tessellation?',o:['Combining an odd number of triangles into one','Combining simple polygons into a complex polygon','Splitting a polygon into a set of separate convex polygons','Splitting a polygon into separate concave polygons'],a:2,fb:'Tessellation simplifies a polygon into convex pieces (usually triangles).'},
+ {q:'A GLSL "varying" variable is used to…',o:['Hold a per-vertex read-only input','Share one value with both shaders','Pass data from the vertex shader to the fragment shader, interpolated during rasterisation','Store the framebuffer contents'],a:2,fb:'Varyings carry data vertex→fragment and are interpolated over screen space during rasterisation.'},
+ {q:'Why is the triangle the preferred primitive in real-time 3D graphics?',o:['It uses the least memory of any polygon','It is the only shape that represents curves','GPUs can only process three vertices at a time','It is always planar and convex with a well-defined normal, making rasterisation unambiguous'],a:3,fb:'Three points always define a unique plane: guaranteed planar, convex, with a clear normal.'},
+ {q:'What does the fragment (pixel) shader output?',o:['A transformed vertex position','A colour for a pixel (gl_FragColor)','A depth value only','A vertex buffer'],a:1,fb:'It outputs a pixel colour — gl_FragColor in GLSL.'},
+ {q:'Which group maintains OpenGL, WebGL and Vulkan?',o:['Microsoft','Apple','The Khronos Group','NVIDIA only'],a:2,fb:'Khronos maintains these cross-platform open-standard APIs.'},
+ {q:'What is a pixel?',o:['A type of vector shape','The smallest addressable element in a raster image','A colour model used in printing','A compression format'],a:1,fb:'A pixel is the smallest addressable element in a raster image.'},
+ {q:'Why is the vec4 (homogeneous) form used for positions in the vertex shader?',o:['To store RGBA colour','So 4×4 matrices can encode translation as well as rotation/scale','Because GPUs cannot read vec3','To save memory'],a:1,fb:'Homogeneous coordinates let a single 4×4 matrix encode translation along with rotation and scale.'},
+];
+const host=document.getElementById('quizHost');let answered=0,correct=0;
+quizData.forEach((Q,qi)=>{
+ const card=document.createElement('div');card.className='quiz';
+ card.innerHTML=`<div class="qhead"><span class="qnum">Q${qi+1}</span><span class="qq">${Q.q}</span></div>`;
+ Q.o.forEach((opt,oi)=>{
+   const o=document.createElement('div');o.className='opt';o.innerHTML=`<span class="mk"></span><span>${opt}</span>`;
+   o.onclick=()=>{
+     if(card.dataset.done)return;card.dataset.done=1;answered++;
+     card.querySelectorAll('.opt').forEach((x,xi)=>{x.classList.add('lock');if(xi===Q.a)x.classList.add('correct');});
+     if(oi===Q.a){o.querySelector('.mk').textContent='✓';correct++;}
+     else{o.classList.add('wrong');o.querySelector('.mk').textContent='✕';}
+     card.querySelector('.fb').classList.add('show');
+     document.getElementById('score').textContent=`score: ${correct} / ${answered}`;
+   };
+   card.appendChild(o);
+ });
+ const fb=document.createElement('div');fb.className='fb';fb.textContent='ⓘ '+Q.fb;card.appendChild(fb);
+ host.appendChild(card);
+});
+
+/* ---------- past papers ---------- */
+const papers=[
+ {yr:'2018 · §B Q1',q:'Describe the fundamental difference between fixed and programmable graphics pipelines. (1 mark)',a:'A fixed pipeline has rigid, built-in stages you cannot reprogram — the GPU performs predetermined transformation, lighting, rasterisation and fragment operations. A programmable pipeline replaces key stages (notably the vertex and fragment/pixel stages) with shader programs you write and supply to the API, giving full control over how geometry is transformed and how pixels are coloured. Fixed is easier but deprecated/slower; programmable is more work but fully controllable and optimisable.'},
+ {yr:'2018 · §B Q5',q:'Describe what is meant by tessellation, and when it is necessary. (2 marks)',a:'Tessellation is splitting a polygon into a set of separate convex polygons (typically triangles). It is necessary because rasterisation/lighting assume convex, planar primitives with well-defined normals — concave or complex polygons (or those with holes) must be broken into triangles before the GPU can render them correctly. It is also used to subdivide geometry to add detail.'},
+ {yr:'2019 · Q21',q:'The polygon ABCD contains a hole EFG. What process would you apply to enable ABCD to be correctly rendered by OpenGL, and what is its effect? (3 marks)',a:'Apply tessellation / triangulation: decompose the polygon-with-hole into a set of simple convex triangles whose union covers ABCD but excludes the hole EFG. OpenGL can only rasterise convex (ideally triangular) primitives, so the effect is to replace the single complex polygon with several triangles (e.g. fanning between the outer boundary A,B,C,D and the inner boundary E,F,G) that render the filled region correctly while leaving the hole empty.'},
+ {yr:'2017 · §B Q8',q:'Given a triangle ABC, explain how to compute the triangle\'s normal vector. (2 marks)',a:'Form two edge vectors from the vertices, e.g. AB = B − A and AC = C − A. Take their cross product N = AB × AC, which is perpendicular to the triangle\'s plane. Normalise it (divide by its magnitude) to get the unit surface normal. The winding order of A,B,C determines which way the normal points.'},
+ {yr:'2017 · §B Q1',q:'Why is a double buffer necessary in a graphics rendering system? (1 mark)',a:'So the image being drawn is not shown until it is complete. The GPU renders into a back framebuffer while the front buffer is displayed; the two are swapped once the frame is finished. This prevents the viewer from seeing partially-drawn frames and avoids flicker/tearing during animation.'},
+ {yr:'2016 · §B Q2d',q:'You would like a mesh to appear to have an irregular, bumpy surface. Describe an image-based technique applied during rendering to achieve this. (4 marks)',a:'Use bump / normal mapping. A texture stores per-texel perturbations of the surface normal (or height gradients buNu, bvNv). During the fragment shader the stored normal is combined with the geometric normal, so the lighting calculation (e.g. N·L) varies across the surface and the flat triangle appears bumpy — without adding any extra geometry. This is an image-based effect evaluated per fragment.'},
+];
+const pph=document.getElementById('ppHost');
+papers.forEach(p=>{const d=document.createElement('details');d.className='pp';
+ d.innerHTML=`<summary><span class="yr">${p.yr}</span><span class="qtext">${p.q}</span></summary><div class="ans"><b style="color:var(--lime)">Model answer · </b>${p.a}</div>`;
+ pph.appendChild(d);});
+</script>
+</body>
+</html>

@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>COMP27112 · Viewing 1 — Visual Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Spline+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#131017; --bg2:#1b1626; --panel:rgba(255,255,255,.045); --panel-line:rgba(255,255,255,.09);
+  --ink:#ece8f2; --muted:#9b93ab; --faint:#6c6480;
+  --f:#ff7a3c;  /* forward / z / orange */
+  --u:#54d56b;  /* up / y / green */
+  --s:#4aa3ff;  /* side / x / blue */
+  --pur:#9a6bff; /* room glow */
+  --warn:#ffd166; --good:#54d56b; --bad:#ff5d73;
+  --maxw:1080px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Spline Sans",system-ui,sans-serif; font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(60vw 60vw at 78% -8%, rgba(154,107,255,.20), transparent 60%),
+    radial-gradient(45vw 45vw at 8% 12%, rgba(74,163,255,.10), transparent 60%),
+    linear-gradient(180deg,#15111d,#100d15 70%);
+  background-attachment:fixed;
+}
+/* faint viewport grid overlay */
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.5;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:46px 46px; mask-image:radial-gradient(120vw 120vh at 50% 30%,#000 40%,transparent 90%);
+}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 22px; position:relative; z-index:1}
+h1,h2,h3{font-family:"Bricolage Grotesque",sans-serif; line-height:1.04; letter-spacing:-.01em; font-weight:700}
+.mono{font-family:"JetBrains Mono",monospace}
+a{color:var(--s)}
+
+/* ---------- top progress + nav ---------- */
+#bar{position:fixed; top:0; left:0; height:3px; width:0%; z-index:50;
+  background:linear-gradient(90deg,var(--s),var(--u),var(--f)); box-shadow:0 0 14px rgba(255,122,60,.5)}
+nav{position:fixed; top:0; left:0; right:0; z-index:40; backdrop-filter:blur(9px);
+  background:linear-gradient(180deg,rgba(16,13,21,.92),rgba(16,13,21,.55)); border-bottom:1px solid var(--panel-line)}
+nav .wrap{display:flex; align-items:center; gap:14px; height:54px}
+.brandtag{font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--f); border:1px solid rgba(255,122,60,.4);
+  padding:3px 8px; border-radius:6px; letter-spacing:.05em; white-space:nowrap}
+.navlinks{margin-left:auto; display:flex; gap:4px; overflow-x:auto; scrollbar-width:none}
+.navlinks::-webkit-scrollbar{display:none}
+.navlinks a{font-size:12.5px; color:var(--muted); text-decoration:none; padding:6px 9px; border-radius:7px; white-space:nowrap; transition:.2s}
+.navlinks a:hover{color:var(--ink); background:var(--panel)}
+
+/* ---------- hero ---------- */
+header.hero{padding:120px 0 60px; position:relative; overflow:hidden}
+.kʼ{}
+.hero .eyebrow{font-family:"JetBrains Mono",monospace; color:var(--f); letter-spacing:.22em; font-size:13px; text-transform:uppercase}
+.hero h1{font-size:clamp(46px,9vw,104px); margin:.12em 0 .1em; font-weight:800}
+.hero h1 .v{color:transparent; -webkit-text-stroke:2px var(--pur); text-stroke:2px var(--pur)}
+.hero .sub{font-size:clamp(18px,2.4vw,23px); color:var(--muted); max-width:680px}
+.hero .meta{margin-top:26px; display:flex; flex-wrap:wrap; gap:10px; font-family:"JetBrains Mono",monospace; font-size:12.5px}
+.hero .meta span{border:1px solid var(--panel-line); background:var(--panel); padding:6px 11px; border-radius:999px; color:var(--muted)}
+.gizmo{position:absolute; right:-30px; top:70px; width:min(40vw,360px); opacity:.85; animation:spin 22s linear infinite; transform-origin:50% 50%}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:760px){.gizmo{display:none}}
+
+/* ---------- sections ---------- */
+section{padding:46px 0; border-top:1px solid rgba(255,255,255,.05)}
+.sec-no{font-family:"JetBrains Mono",monospace; color:var(--faint); font-size:13px; letter-spacing:.12em}
+h2.sec-title{font-size:clamp(28px,4.6vw,46px); margin:.18em 0 .5em}
+.lede{font-size:19px; color:#cfc8db; max-width:760px}
+p{max-width:760px}
+.accent-f{color:var(--f)} .accent-u{color:var(--u)} .accent-s{color:var(--s)} .accent-p{color:var(--pur)}
+
+/* figure / slide image */
+figure{margin:26px 0; }
+figure img{width:100%; display:block; border-radius:14px; border:1px solid var(--panel-line);
+  box-shadow:0 24px 60px rgba(0,0,0,.45)}
+figcaption{margin-top:10px; font-size:13.5px; color:var(--muted); font-family:"JetBrains Mono",monospace}
+.figrow{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+@media(max-width:680px){.figrow{grid-template-columns:1fr}}
+
+/* callout / key concept */
+.key{border:1px solid var(--panel-line); background:linear-gradient(180deg,rgba(154,107,255,.10),rgba(154,107,255,.02));
+  border-left:3px solid var(--pur); border-radius:12px; padding:16px 18px; margin:22px 0}
+.key b{color:var(--pur)}
+.formula{font-family:"JetBrains Mono",monospace; background:#0d0a13; border:1px solid var(--panel-line);
+  border-radius:10px; padding:13px 16px; margin:14px 0; font-size:15.5px; overflow-x:auto; color:#e7e0f4}
+.formula .v{color:var(--f)} .formula .g{color:var(--u)} .formula .b{color:var(--s)}
+
+ul.clean{max-width:760px; padding-left:0; list-style:none}
+ul.clean li{position:relative; padding-left:26px; margin:9px 0}
+ul.clean li::before{content:"▸"; position:absolute; left:0; color:var(--f)}
+
+/* interactive panels */
+.lab{border:1px solid var(--panel-line); background:rgba(13,10,19,.6); border-radius:16px; padding:20px; margin:26px 0;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.lab h3{font-size:20px; margin:0 0 4px}
+.lab .hint{font-size:13.5px; color:var(--muted); margin:0 0 14px}
+.svgwrap{width:100%; border-radius:12px; background:radial-gradient(80% 90% at 60% 20%,rgba(154,107,255,.18),#0c0912); border:1px solid var(--panel-line); touch-action:none}
+.readout{display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; font-family:"JetBrains Mono",monospace; font-size:13.5px}
+.readout div{background:#0d0a13; border:1px solid var(--panel-line); border-radius:8px; padding:8px 12px}
+.btn{font-family:"JetBrains Mono",monospace; cursor:pointer; border:1px solid var(--panel-line); color:var(--ink);
+  background:var(--panel); padding:9px 15px; border-radius:9px; font-size:13.5px; transition:.18s}
+.btn:hover{background:rgba(255,122,60,.14); border-color:var(--f)}
+.btn.active{background:rgba(255,122,60,.2); border-color:var(--f); color:#fff}
+.controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:14px}
+input[type=range]{accent-color:var(--f); width:200px}
+
+/* quiz */
+.quiz{border:1px solid var(--panel-line); background:rgba(13,10,19,.5); border-radius:14px; padding:18px 20px; margin:18px 0}
+.quiz .q{font-weight:600; margin-bottom:12px}
+.quiz .q .num{font-family:"JetBrains Mono",monospace; color:var(--f); margin-right:8px}
+.opt{display:block; width:100%; text-align:left; cursor:pointer; border:1px solid var(--panel-line); background:rgba(255,255,255,.025);
+  color:var(--ink); border-radius:10px; padding:11px 14px; margin:8px 0; font-size:15.5px; font-family:inherit; transition:.15s}
+.opt:hover{border-color:var(--muted); background:rgba(255,255,255,.05)}
+.opt.correct{border-color:var(--good); background:rgba(84,213,107,.13); box-shadow:0 0 0 1px var(--good) inset}
+.opt.wrong{border-color:var(--bad); background:rgba(255,93,115,.13); box-shadow:0 0 0 1px var(--bad) inset}
+.opt.dim{opacity:.5}
+.fb{font-size:14px; margin-top:6px; padding:10px 13px; border-radius:9px; display:none}
+.fb.show{display:block}
+.fb.ok{background:rgba(84,213,107,.1); color:#bff0c7; border:1px solid rgba(84,213,107,.4)}
+.fb.no{background:rgba(255,93,115,.1); color:#ffc6cf; border:1px solid rgba(255,93,115,.4)}
+
+/* exam cards */
+.exam{border:1px solid var(--panel-line); border-radius:14px; padding:18px 20px; margin:18px 0; background:rgba(255,255,255,.025)}
+.exam .tag{font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--warn); border:1px solid rgba(255,209,102,.4);
+  padding:3px 8px; border-radius:6px; display:inline-block; margin-bottom:10px}
+.exam .qtext{font-size:16.5px; color:#e6e0f0}
+.reveal{margin-top:12px}
+.answer{display:none; margin-top:12px; border-top:1px dashed var(--panel-line); padding-top:12px; font-size:15px; color:#d4ccdf}
+.answer.show{display:block; animation:fade .4s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* reveal on scroll */
+.r{opacity:0; transform:translateY(26px); transition:.7s cubic-bezier(.2,.7,.2,1)}
+.r.in{opacity:1; transform:none}
+
+footer{padding:50px 0 70px; color:var(--muted); font-size:13.5px; text-align:center}
+footer .mono{color:var(--faint)}
+.pill-axis{font-family:"JetBrains Mono",monospace; font-size:12px; padding:3px 9px; border-radius:999px; margin-right:6px}
+.pa-f{color:var(--f); border:1px solid rgba(255,122,60,.5)} .pa-u{color:var(--u); border:1px solid rgba(84,213,107,.5)} .pa-s{color:var(--s); border:1px solid rgba(74,163,255,.5)}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<nav><div class="wrap">
+  <span class="brandtag">COMP27112 · CH.4</span>
+  <div class="navlinks">
+    <a href="#frames">Frames</a>
+    <a href="#hierarchy">Hierarchy</a>
+    <a href="#vectors">Vectors</a>
+    <a href="#analogy">Camera</a>
+    <a href="#duality">Duality</a>
+    <a href="#basis">Basis</a>
+    <a href="#volume">Volume</a>
+    <a href="#origin">To Origin</a>
+    <a href="#projection">Projection</a>
+    <a href="#quiz">Quiz</a>
+    <a href="#exams">Exams</a>
+  </div>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <!-- animated axis gizmo -->
+  <svg class="gizmo" viewBox="0 0 200 200" aria-hidden="true">
+    <g stroke-width="6" stroke-linecap="round" fill="none">
+      <line x1="100" y1="100" x2="100" y2="20" stroke="#54d56b"/>
+      <line x1="100" y1="100" x2="172" y2="135" stroke="#4aa3ff"/>
+      <line x1="100" y1="100" x2="40" y2="158" stroke="#ff7a3c"/>
+    </g>
+    <circle cx="100" cy="100" r="7" fill="#ff5d73"/>
+    <circle cx="100" cy="20" r="5" fill="#54d56b"/><circle cx="172" cy="135" r="5" fill="#4aa3ff"/><circle cx="40" cy="158" r="5" fill="#ff7a3c"/>
+  </svg>
+  <div class="eyebrow">Computer Graphics · Viewing — part 1 of 2</div>
+  <h1>3D <span class="v">Viewing</span><br>&amp; the Camera</h1>
+  <p class="sub">How a 3D scene becomes a flat 2D image — coordinate frames, hierarchical modelling, the camera analogy, the duality of moving the world vs. the camera, and the orthographic projection that ends the pipeline.</p>
+  <div class="meta">
+    <span>⌖ Modelling ⇄ Viewing</span>
+    <span>f̂ = normalise(E − C)</span>
+    <span>T<sub>C</sub> = T₂T₁</span>
+    <span>… and there is no camera</span>
+  </div>
+</div></header>
+
+<!-- ============ FRAMES & RELATIVITY ============ -->
+<section id="frames"><div class="wrap">
+  <div class="sec-no r">01 — REFRESHER</div>
+  <h2 class="sec-title r">Vectors live in a frame</h2>
+  <p class="lede r">A point <span class="mono">p</span> only has coordinates <em>relative to a coordinate frame</em>. Move the frame and the same physical point gets different numbers — yet the two descriptions are linked.</p>
+  <figure class="r">
+    <img src="assets/frames_relativity.jpg" alt="A point p shown in two coordinate frames, linked by a basis-vector transformation">
+    <figcaption>// the same point, two frames — linked by transforming the basis vectors</figcaption>
+  </figure>
+  <p class="r">Remember the core idea from the transformations lecture: a transformation is fully described by what it does to the <b>basis vectors</b>. If we transform the basis vectors of one frame, the vector we read off is the very same vector expressed from the other frame.</p>
+  <div class="formula r">T(v) = Σ&nbsp; c<sub>i</sub> · T(<span class="v">b⃗<sub>i</sub></span>)&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)">// transform the basis ⇒ transform the vector</span></div>
+  <div class="key r"><b>Relativity intuition.</b> Sitting in a rocket, the rocket feels still and the planet seems to rush past. To people on the planet, <em>you</em> are the one moving. Neither view is "wrong" — it is purely a choice of frame. That same duality drives everything in this lecture.</div>
+</div></section>
+
+<!-- ============ HIERARCHICAL MODELLING ============ -->
+<section id="hierarchy"><div class="wrap">
+  <div class="sec-no r">02 — STRUCTURE</div>
+  <h2 class="sec-title r">Hierarchical modelling</h2>
+  <p class="lede r">Real models have many parts. Instead of placing every vertex in world coordinates by hand, we give each part its <b>own local frame</b>, referred to from its parent and ultimately from world coordinates.</p>
+  <div class="figrow">
+    <figure class="r"><img src="assets/hierarchical_body.jpg" alt="A figure with nested coordinate frames for body parts">
+      <figcaption>// each limb has a local frame nested inside its parent</figcaption></figure>
+    <figure class="r"><img src="assets/teapot_local_axes.jpg" alt="A teapot with its own white local coordinate axes inside the world frame">
+      <figcaption>// the teapot carries its own axes (white) inside the world frame</figcaption></figure>
+  </div>
+  <ul class="clean r">
+    <li>Move the teapot's <b>local frame</b> and every component follows together — topology is preserved automatically.</li>
+    <li>Artists build a part once, in convenient local coordinates, then it is reused and placed via a transform.</li>
+    <li>Without a convention of origins, dropping a model into a different world would break it completely.</li>
+  </ul>
+  <figure class="r"><img src="assets/blender_transform.jpg" alt="Blender transform panel showing the teapot's location, rotation and scale">
+    <figcaption>// Blender confirms it: the teapot object has its own Location / Rotation / Scale</figcaption></figure>
+</div></section>
+
+<!-- ============ POSITION vs DIRECTION ============ -->
+<section id="vectors"><div class="wrap">
+  <div class="sec-no r">03 — HOMOGENEOUS COORDS</div>
+  <h2 class="sec-title r">Position vs direction vectors</h2>
+  <p class="lede r">Homogeneous coordinates let us flag a vector as a <em>position</em> or a <em>direction</em> by the bottom component. A direction vector has a <span class="mono">0</span> there, so translation <b>cancels out</b> — it keeps its orientation no matter where the frame sits.</p>
+  <figure class="r"><img src="assets/direction_vector.jpg" alt="Matrix showing a direction vector with zero bottom component, so translation cancels">
+    <figcaption>// the 0 in the bottom row kills the translation column — only orientation survives</figcaption></figure>
+  <div class="key r"><b>Why it matters.</b> The teapot's "up" direction (lid pointing up) should stay attached to the <em>model</em>, not the frame. Encode it as a direction vector and a rotating frame won't drag it around. Later, when light bounces off a surface, we want surface <b>normals</b> governed by the surface — not by the orientation of whatever frame we happen to use.</div>
+</div></section>
+
+<!-- ============ CAMERA ANALOGY ============ -->
+<section id="analogy"><div class="wrap">
+  <div class="sec-no r">04 — THE CAMERA ANALOGY</div>
+  <h2 class="sec-title r">Setting the scene, pointing a camera</h2>
+  <p class="lede r">Computer graphics borrows from photography: arrange objects, point a camera, take the shot. Two distinct transforms get us there.</p>
+  <div class="figrow">
+    <figure class="r"><img src="assets/real_photos.jpg" alt="Real photographs of objects being arranged and photographed on a table">
+      <figcaption>// the real-world version: arrange props, frame, shoot</figcaption></figure>
+    <figure class="r"><img src="assets/camera_perspective.jpg" alt="Blender showing the camera-perspective view of the scene">
+      <figcaption>// Blender's "Camera Perspective" — rendering from the camera's point of view</figcaption></figure>
+  </div>
+  <figure class="r"><img src="assets/analogy_full.jpg" alt="Suzanne and cheese moved by modelling transform into world coords, then a viewing transform to the camera">
+    <figcaption>// <span style="color:var(--u)">Modelling Transform</span>: objects → world coords &nbsp;·&nbsp; <span style="color:var(--f)">Viewing Transform</span>: world → camera</figcaption></figure>
+  <ul class="clean r">
+    <li><span class="accent-u"><b>Modelling transform</b></span> — places each object in world coordinates. No single formula; it's whatever combination of translate / rotate / scale the artist chooses.</li>
+    <li><span class="accent-f"><b>Viewing (camera) transform</b></span> — tells the pipeline <em>from where</em> to render. This <b>is</b> common across every API and engine, and is the real subject of this lecture.</li>
+  </ul>
+  <figure class="r"><img src="assets/teapot_camera_ray.jpg" alt="A camera placed in the scene looking towards the teapot along a ray">
+    <figcaption>// drop a camera in and aim it at the teapot</figcaption></figure>
+</div></section>
+
+<!-- ============ DUALITY ============ -->
+<section id="duality"><div class="wrap">
+  <div class="sec-no r">05 — THE BIG IDEA</div>
+  <h2 class="sec-title r">The duality of modelling &amp; viewing</h2>
+  <p class="lede r">Rotate the object by 60°, or rotate the camera by −60° (the <b>inverse</b>): the resulting photo is essentially identical. You can move the world <em>or</em> move the camera and get the same image.</p>
+  <div class="figrow">
+    <figure class="r"><img src="assets/duality_rotate.jpg" alt="Two photos: rotating the Pringles can vs rotating the camera, giving similar results">
+      <figcaption>// Rotate<sub>pringles</sub>(60°) &nbsp;≈&nbsp; Rotate<sub>camera</sub>(60°) in reverse</figcaption></figure>
+    <figure class="r"><img src="assets/duality_pringles.jpg" alt="A tripod and Pringles can illustrating the capture setup">
+      <figcaption>// move the subject, or move the lens — relativity again</figcaption></figure>
+  </div>
+
+  <div class="lab r">
+    <h3>Which one is the rotated Pringles?</h3>
+    <p class="hint">Look at the two lids. Can you actually tell which can was turned and which camera was turned?</p>
+    <figure style="margin:0 0 14px"><img src="assets/which_pringles.jpg" alt="Two Pringles cans, one rotated"></figure>
+    <button class="btn" id="pringBtn">Reveal the point ▸</button>
+    <div class="fb" id="pringFb">That's exactly the lesson: aside from minor lighting cues, you <b>can't reliably tell</b>. Rotating the object and inversely rotating the camera produce the same framing. This equivalence is what lets us implement the <span class="accent-f">viewing transform</span> as a transform applied to the whole scene.</div>
+  </div>
+</div></section>
+
+<!-- ============ CAMERA BASIS ============ -->
+<section id="basis"><div class="wrap">
+  <div class="sec-no r">06 — CAMERA COORDINATE SYSTEM</div>
+  <h2 class="sec-title r">Building the camera's axes</h2>
+  <p class="lede r">The camera lives at eye point <span class="mono">E</span>, looks at target <span class="mono">C</span>, and needs three orthonormal axes:
+    <span class="pill-axis pa-f">f̂ forward</span><span class="pill-axis pa-u">û up</span><span class="pill-axis pa-s">ŝ side</span></p>
+  <figure class="r"><img src="assets/camera_basis_labels.jpg" alt="Camera at E looking at C with labelled axes f, u, s">
+    <figcaption>// E = eye, C = centre/target, with the camera's f̂ / û / ŝ axes</figcaption></figure>
+
+  <h3 class="r" style="margin-top:30px">① Forward</h3>
+  <p class="r">Subtract: <span class="mono">E − C</span> points back from the target toward the eye. Normalise it.</p>
+  <div class="formula r"><span class="v">f̂</span> = normalise(E − C)</div>
+  <figure class="r"><img src="assets/forward_vector.jpg" alt="Forward vector f equals normalise of E minus C"></figure>
+
+  <h3 class="r">② Up — but be careful</h3>
+  <p class="r">We supply a desired up vector <span class="mono">v̂</span>, but we can't assume it's perpendicular to <span class="mono">f̂</span>. The fix is a pair of cross products, so the result is guaranteed orthonormal.</p>
+  <figure class="r"><img src="assets/up_vector_options.jpg" alt="Three cameras showing different up vectors (0,1,0), (-1,1,0), (-1,0,0)">
+    <figcaption>// v̂ defines roll: (0,1,0) upright, (−1,1,0) tilted, (−1,0,0) on its side</figcaption></figure>
+
+  <h3 class="r">③ Side, then re-derive Up</h3>
+  <div class="formula r"><span class="b">ŝ</span> = normalise(<span class="v">f̂</span> × v̂)<br><span class="g">û</span> = normalise(<span class="v">f̂</span> × <span class="b">ŝ</span>)</div>
+  <figure class="r"><img src="assets/side_vector_cross.jpg" alt="Side vector s computed as the cross product of f and v">
+    <figcaption>// ŝ falls out of the cross product f̂ × v̂ — perpendicular to both</figcaption></figure>
+  <figure class="r"><img src="assets/camera_basis_formulas.jpg" alt="All three camera-basis formulas shown together">
+    <figcaption>// the full orthonormal camera basis — most APIs compute this for you</figcaption></figure>
+
+  <!-- INTERACTIVE: drag the eye -->
+  <div class="lab r">
+    <h3>⌖ Interactive — drag the eye</h3>
+    <p class="hint">Drag the orange eye <b>E</b> around the target <b>C</b> (the teapot). Watch <span class="accent-f">f̂ = normalise(E − C)</span> and the perpendicular <span class="accent-s">ŝ</span> update live. (û completes the right-handed set, pointing out of the screen.)</p>
+    <svg class="svgwrap" id="eyeSvg" viewBox="0 0 600 380" height="380"></svg>
+    <div class="readout">
+      <div>E = <span id="roE">—</span></div>
+      <div style="color:var(--f)">f̂ = <span id="roF">—</span></div>
+      <div style="color:var(--s)">ŝ = <span id="roS">—</span></div>
+      <div>f̂ · ŝ = <span id="roDot">0.00</span> <span style="color:var(--muted)">(perpendicular ⇒ 0)</span></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- ============ VIEW VOLUME ============ -->
+<section id="volume"><div class="wrap">
+  <div class="sec-no r">07 — WHAT THE CAMERA SEES</div>
+  <h2 class="sec-title r">The viewing volume</h2>
+  <p class="lede r">Think of the camera as enclosing a volume of space — a cube here. We want to take the scene and flatten it onto the cube face nearest the camera (the future 2D image, i.e. <span class="mono">f = 0</span>).</p>
+  <div class="figrow">
+    <figure class="r"><img src="assets/view_volume_cube.jpg" alt="A translucent cube representing the camera's viewing volume around the teapot">
+      <figcaption>// the camera "sees" a volume of the scene</figcaption></figure>
+    <figure class="r"><img src="assets/teapot_on_f0.jpg" alt="Teapot flattened toward the f=0 face, asking whether this is correct">
+      <figcaption>// flatten onto f = 0 … is this the right move? (we'll see)</figcaption></figure>
+  </div>
+  <div class="key r"><b>Portal aside.</b> In a game like <em>Portal</em>, the main camera renders to your display, but every portal is essentially a <b>mini-camera</b> showing a different view of the scene. It's convenient to keep the <em>main</em> camera transform at the world origin so the math at the end of the pipeline stays simple.</div>
+  <figure class="r"><img src="assets/portal_nvidia.jpg" alt="Screenshot of Portal with RTX on, showing portals as additional camera views">
+    <figcaption>// each portal = another camera view · Source: NVIDIA</figcaption></figure>
+</div></section>
+
+<!-- ============ MOVE CAMERA TO ORIGIN ============ -->
+<section id="origin"><div class="wrap">
+  <div class="sec-no r">08 — THE VIEWING TRANSFORM</div>
+  <h2 class="sec-title r">Moving the camera to the origin</h2>
+  <p class="lede r">The goal: relocate the camera to the world origin with its axes aligned to the world axes. That's two transforms — a translation, then a rotate/align step.</p>
+  <div class="figrow">
+    <figure class="r"><img src="assets/camera_before_origin.jpg" alt="Camera positioned away from the origin before the viewing transform"><figcaption>// before</figcaption></figure>
+    <figure class="r"><img src="assets/camera_at_origin.jpg" alt="Camera now sitting at the origin after the viewing transform"><figcaption>// after: camera at O, teapot now relative to it</figcaption></figure>
+  </div>
+  <figure class="r"><img src="assets/view_matrices_t1t2.jpg" alt="The two viewing matrices: T1 translates by minus E, T2 aligns the camera axes">
+    <figcaption>// T₁ translates by −E (eye → origin) · T₂'s rows are the camera basis (align axes)</figcaption></figure>
+  <p class="r">Because we're in homogeneous coordinates, we just multiply them into one composite matrix. By convention this sets the <span class="accent-f">f̂</span> axis to point toward <span class="mono">−z</span>.</p>
+  <div class="formula r">T<sub>C</sub> = T₂ · T₁&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)">// the viewing (camera) transform</span></div>
+  <figure class="r"><img src="assets/composite_tc.jpg" alt="Composite viewing transform Tc equals T2 times T1"></figure>
+
+  <h3 class="r" style="margin-top:30px">The inverse closes the loop</h3>
+  <p class="r">The inverse <span class="mono">T<sub>C</sub><sup>−1</sup></span> does two jobs. It can send the camera back to its original pose — <em>or</em>, applied to the scene, it moves the whole world (cow and all) so we get exactly the image we'd have gotten by moving the camera. That's the duality, made concrete.</p>
+  <figure class="r"><img src="assets/inverse_duality.jpg" alt="Applying the inverse composite transform moves the scene instead of the camera">
+    <figcaption>// T<sub>C</sub><sup>−1</sup> on the scene ≡ moving the camera — duality in matrix form</figcaption></figure>
+</div></section>
+
+<!-- ============ PROJECTION ============ -->
+<section id="projection"><div class="wrap">
+  <div class="sec-no r">09 — FLATTENING THE WORLD</div>
+  <h2 class="sec-title r">There is no camera</h2>
+  <p class="lede r">The camera is a <em>skeuomorphism</em> — a helpful metaphor. In reality the GPU never builds a camera; it just takes 3D scene data and projects it onto a flat 2D display.</p>
+  <div class="figrow">
+    <figure class="r"><img src="assets/minus_z_convention.jpg" alt="Camera analogy showing it looks down the -z axis"><figcaption>// camera looks down −z (right-handed convention)</figcaption></figure>
+    <figure class="r"><img src="assets/display_phone.jpg" alt="The scene rendered onto a phone display"><figcaption>// 3D scene → flattened onto the 2D display</figcaption></figure>
+  </div>
+  <figure class="r"><img src="assets/projection_lines.jpg" alt="Projection lines drawn from scene objects onto the display plane">
+    <figcaption>// draw lines from the scene to the plane — where do they land?</figcaption></figure>
+
+  <h3 class="r" style="margin-top:24px">Orthographic projection</h3>
+  <p class="r">Put the display at the origin and simply set every <span class="mono">z</span> coordinate to <span class="mono">0</span>. The matrix zeroes the third row. Done — the crudest possible projection.</p>
+  <figure class="r"><img src="assets/orthographic_projection.jpg" alt="Orthographic projection matrix with a zeroed third row collapsing z to zero">
+    <figcaption>// orthographic projection: the z row is all zeros ⇒ depth collapses</figcaption></figure>
+
+  <!-- INTERACTIVE: flatten -->
+  <div class="lab r">
+    <h3>⌖ Interactive — collapse the z axis</h3>
+    <p class="hint">Side view: horizontal = depth (z), vertical = height (y). Press project to send every point onto the plane at z = 0. Notice depth ordering is destroyed.</p>
+    <svg class="svgwrap" id="orthoSvg" viewBox="0 0 600 320" height="320"></svg>
+    <div class="controls">
+      <button class="btn" id="orthoBtn">Project (orthographic) ▸</button>
+      <button class="btn" id="orthoReset">Reset</button>
+      <span id="orthoMsg" style="color:var(--warn); font-family:'JetBrains Mono',monospace; font-size:13px"></span>
+    </div>
+  </div>
+
+  <div class="key r"><b>Why orthographic isn't enough.</b>
+    <ul class="clean" style="margin-top:8px">
+      <li>It flattens the <em>entire</em> space, including things above or below the view.</li>
+      <li>Sometimes the projection shouldn't be a plain rectangle (think Portal).</li>
+      <li>Most importantly, killing <span class="mono">z</span> destroys depth — so we lose which surface is in front. A transparent glass in front of Suzanne couldn't tint what's behind it, and we'd have no idea what occludes what.</li>
+    </ul>
+  </div>
+  <p class="r">The next Viewing lecture fixes all of this: <b>perspective projection</b> that preserves <span class="mono">z</span> for correct ordering, plus clipping to the viewing volume — and it feeds straight into the GPU pipeline.</p>
+</div></section>
+
+<!-- ============ QUIZ ============ -->
+<section id="quiz"><div class="wrap">
+  <div class="sec-no r">10 — CHECK YOURSELF</div>
+  <h2 class="sec-title r">Quiz</h2>
+  <p class="lede r">Tap an answer — instant feedback. Questions drawn from the unit's quiz bank, focused on the maths behind viewing.</p>
+  <div id="quizHost" class="r"></div>
+</div></section>
+
+<!-- ============ EXAMS ============ -->
+<section id="exams"><div class="wrap">
+  <div class="sec-no r">11 — PAST PAPERS</div>
+  <h2 class="sec-title r">Exam questions on this chapter</h2>
+  <p class="lede r">Real COMP27112 past-paper questions touching viewing, transforms, hierarchy and duality. Hit <em>Show approach</em> for a model answer outline.</p>
+  <div id="examHost" class="r"></div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="mono">COMP27112 · Computer Graphics · Viewing 1 (Chapter 4)</div>
+  <div style="margin-top:6px">Interactive visual notes built from the lecture slides, transcript, quiz bank &amp; past papers.</div>
+  <div class="mono" style="margin-top:10px">f̂ = normalise(E − C) &nbsp;·&nbsp; ŝ = f̂ × v̂ &nbsp;·&nbsp; û = f̂ × ŝ &nbsp;·&nbsp; T<sub>C</sub> = T₂T₁</div>
+</div></footer>
+
+<script>
+/* ---------- progress bar + nav reveal ---------- */
+const bar=document.getElementById('bar');
+addEventListener('scroll',()=>{const h=document.documentElement;const p=h.scrollTop/(h.scrollHeight-h.clientHeight);bar.style.width=(p*100)+'%';},{passive:true});
+
+/* ---------- scroll reveal ---------- */
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:.12});
+document.querySelectorAll('.r').forEach(el=>io.observe(el));
+
+/* ---------- pringles reveal ---------- */
+document.getElementById('pringBtn').onclick=function(){
+  document.getElementById('pringFb').classList.add('show','ok');
+  this.classList.add('active'); this.textContent='The point ▾';
+};
+
+/* ====================================================== */
+/* INTERACTIVE 1 — drag the eye, compute f̂ and ŝ          */
+/* ====================================================== */
+(function(){
+  const svg=document.getElementById('eyeSvg');
+  const W=600,H=380, C={x:300,y:230};        // target (teapot)
+  let E={x:430,y:90};                          // eye, draggable
+  const NS='http://www.w3.org/2000/svg';
+  function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+  // defs: arrowheads
+  svg.innerHTML='<defs>'+
+    '<marker id="aF" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0L7,3L0,6Z" fill="#ff7a3c"/></marker>'+
+    '<marker id="aS" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0L7,3L0,6Z" fill="#4aa3ff"/></marker>'+
+    '<marker id="aW" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0L6,3L0,6Z" fill="#cfc8db"/></marker>'+
+    '</defs>';
+  const gaze=el('line',{stroke:'#cfc8db','stroke-width':2,'stroke-dasharray':'5 5','marker-end':'url(#aW)'});
+  const fL=el('line',{stroke:'#ff7a3c','stroke-width':4,'marker-end':'url(#aF)'});
+  const sL=el('line',{stroke:'#4aa3ff','stroke-width':4,'marker-end':'url(#aS)'});
+  const teapot=el('circle',{cx:C.x,cy:C.y,r:11,fill:'#c0344d',stroke:'#fff','stroke-width':2});
+  const tLbl=el('text',{x:C.x+16,y:C.y+5,fill:'#fff','font-family':'JetBrains Mono','font-size':14}); tLbl.textContent='C';
+  const eye=el('circle',{cx:E.x,cy:E.y,r:13,fill:'#ff7a3c',stroke:'#fff','stroke-width':2,cursor:'grab'});
+  const eLbl=el('text',{fill:'#fff','font-family':'JetBrains Mono','font-size':14}); eLbl.textContent='E';
+  const fT=el('text',{fill:'#ff7a3c','font-family':'JetBrains Mono','font-size':13,'font-weight':600}); fT.textContent='f̂';
+  const sT=el('text',{fill:'#4aa3ff','font-family':'JetBrains Mono','font-size':13,'font-weight':600}); sT.textContent='ŝ';
+  [gaze,fL,sL,teapot,tLbl,eye,eLbl,fT,sT].forEach(n=>svg.appendChild(n));
+
+  const roE=document.getElementById('roE'),roF=document.getElementById('roF'),roS=document.getElementById('roS'),roDot=document.getElementById('roDot');
+  function draw(){
+    // f̂ = normalise(E - C)  (screen y is down; flip for display vector)
+    let dx=E.x-C.x, dy=E.y-C.y; const L=Math.hypot(dx,dy)||1;
+    const fx=dx/L, fy=dy/L;            // unit, screen space
+    // gaze E->C
+    gaze.setAttribute('x1',E.x);gaze.setAttribute('y1',E.y);gaze.setAttribute('x2',C.x);gaze.setAttribute('y2',C.y);
+    // forward arrow at E, length 70 along f
+    const fl=70;
+    fL.setAttribute('x1',E.x);fL.setAttribute('y1',E.y);fL.setAttribute('x2',E.x+fx*fl);fL.setAttribute('y2',E.y+fy*fl);
+    fT.setAttribute('x',E.x+fx*fl+8);fT.setAttribute('y',E.y+fy*fl+4);
+    // side ŝ perpendicular (rotate f by +90 in screen)
+    const sx=-fy, sy=fx;
+    sL.setAttribute('x1',E.x);sL.setAttribute('y1',E.y);sL.setAttribute('x2',E.x+sx*fl);sL.setAttribute('y2',E.y+sy*fl);
+    sT.setAttribute('x',E.x+sx*fl+8);sT.setAttribute('y',E.y+sy*fl+4);
+    eye.setAttribute('cx',E.x);eye.setAttribute('cy',E.y);
+    eLbl.setAttribute('x',E.x+16);eLbl.setAttribute('y',E.y+5);
+    // readouts (world convention: y up, so negate screen-y)
+    roE.textContent='('+((E.x-C.x)/60).toFixed(2)+', '+(-(E.y-C.y)/60).toFixed(2)+')';
+    roF.textContent='('+fx.toFixed(2)+', '+(-fy).toFixed(2)+')';
+    roS.textContent='('+sx.toFixed(2)+', '+(-sy).toFixed(2)+')';
+    roDot.textContent=(fx*sx+fy*sy).toFixed(2);
+  }
+  function pt(ev){const r=svg.getBoundingClientRect();const t=ev.touches?ev.touches[0]:ev;
+    return {x:(t.clientX-r.left)/r.width*W, y:(t.clientY-r.top)/r.height*H};}
+  let drag=false;
+  function start(ev){drag=true;eye.setAttribute('cursor','grabbing');ev.preventDefault();}
+  function move(ev){if(!drag)return;const p=pt(ev);E.x=Math.max(20,Math.min(W-20,p.x));E.y=Math.max(20,Math.min(H-20,p.y));draw();}
+  function end(){drag=false;eye.setAttribute('cursor','grab');}
+  eye.addEventListener('mousedown',start);eye.addEventListener('touchstart',start,{passive:false});
+  addEventListener('mousemove',move);addEventListener('touchmove',move,{passive:false});
+  addEventListener('mouseup',end);addEventListener('touchend',end);
+  // also allow grabbing anywhere on svg
+  svg.addEventListener('mousedown',(ev)=>{const p=pt(ev);if(Math.hypot(p.x-E.x,p.y-E.y)<60){start(ev);}});
+  svg.addEventListener('touchstart',(ev)=>{const p=pt(ev);if(Math.hypot(p.x-E.x,p.y-E.y)<70){start(ev);}},{passive:false});
+  draw();
+})();
+
+/* ====================================================== */
+/* INTERACTIVE 2 — orthographic flatten                   */
+/* ====================================================== */
+(function(){
+  const svg=document.getElementById('orthoSvg');
+  const NS='http://www.w3.org/2000/svg';
+  const W=600,H=320, planeX=470, baseY=H/2;
+  function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+  // axes
+  svg.innerHTML='';
+  svg.appendChild(el('line',{x1:40,y1:baseY,x2:560,y2:baseY,stroke:'#4aa3ff','stroke-width':2,'stroke-dasharray':'4 4',opacity:.6}));
+  const zlbl=el('text',{x:545,y:baseY-8,fill:'#4aa3ff','font-family':'JetBrains Mono','font-size':13});zlbl.textContent='z';svg.appendChild(zlbl);
+  svg.appendChild(el('line',{x1:planeX,y1:30,x2:planeX,y2:H-30,stroke:'#54d56b','stroke-width':3}));
+  const plbl=el('text',{x:planeX-58,y:42,fill:'#54d56b','font-family':'JetBrains Mono','font-size':12});plbl.textContent='plane z=0';svg.appendChild(plbl);
+  // sample points (x kept on plane = their y; depth varies)
+  const data=[ {y:-70,z:90,c:'#ff7a3c'},{y:-30,z:200,c:'#ffd166'},{y:20,z:120,c:'#9a6bff'},{y:55,z:300,c:'#4aa3ff'},{y:-5,z:380,c:'#54d56b'} ];
+  const dots=[], lines=[];
+  data.forEach(d=>{
+    const x0=planeX-d.z, y=baseY+d.y;
+    const ln=el('line',{x1:x0,y1:y,x2:x0,y2:y,stroke:d.c,'stroke-width':1.5,'stroke-dasharray':'3 3',opacity:.5});
+    const c=el('circle',{cx:x0,cy:y,r:8,fill:d.c,stroke:'#0c0912','stroke-width':2});
+    lines.push({ln,x0,y});dots.push({c,x0,y});
+    svg.appendChild(ln);svg.appendChild(c);
+  });
+  const btn=document.getElementById('orthoBtn'),reset=document.getElementById('orthoReset'),msg=document.getElementById('orthoMsg');
+  let projected=false, anim=null;
+  function animate(target){
+    cancelAnimationFrame(anim);
+    const start=dots.map(d=>parseFloat(d.c.getAttribute('cx')));
+    const t0=performance.now(), dur=700;
+    (function step(now){
+      let k=Math.min(1,(now-t0)/dur); const e=1-Math.pow(1-k,3);
+      dots.forEach((d,i)=>{const cx=start[i]+(target[i]-start[i])*e;d.c.setAttribute('cx',cx);lines[i].ln.setAttribute('x2',cx);});
+      if(k<1)anim=requestAnimationFrame(step);
+    })(t0);
+  }
+  btn.onclick=function(){
+    if(projected)return;
+    projected=true; btn.classList.add('active');
+    animate(dots.map(()=>planeX));
+    msg.textContent='⚠ depth (z) discarded — front/back order lost';
+  };
+  reset.onclick=function(){
+    projected=false; btn.classList.remove('active'); msg.textContent='';
+    animate(dots.map(d=>d.x0));
+  };
+})();
+
+/* ====================================================== */
+/* QUIZ DATA + RENDER                                     */
+/* ====================================================== */
+const quizzes=[
+ {q:"What does the cross product of two 3D vectors produce?",
+  a:["A vector perpendicular to both input vectors","A scalar equal to the product of their magnitudes","A vector parallel to both input vectors","A 3×3 matrix"],
+  correct:0, fb:"The cross product gives a new vector that is perpendicular to both inputs (magnitude |A||B|sin θ)."},
+ {q:"Given two normalised vectors V1 and V2, what gives a vector V3 perpendicular to both?",
+  a:["V3 = V1 · V2 (dot product)","V3 = (V1 + V2)²","V3 = (V1 + V2) × (V1 − V2)","V3 = V1 × V2 (cross product)"],
+  correct:3, fb:"The cross product is perpendicular to both inputs — its direction follows the right-hand rule. This is exactly how we build ŝ and û."},
+ {q:"The dot product of two unit (normalised) vectors equals…",
+  a:["A vector perpendicular to both","The cosine of the angle between them","The sum of their components","Always zero"],
+  correct:1, fb:"dot = |A||B|cos θ; for unit vectors |A|=|B|=1, so it reduces to cos θ. Zero means perpendicular."},
+ {q:"Applying composite transform (A × B) to point P, where B = A⁻¹, gives:",
+  a:["P' = A × P × B","P' = P","P' = 2 × P","P' = A×P + B×P"],
+  correct:1, fb:"A·A⁻¹ = I, the identity. The inverse undoes the transform, so the point is unchanged — exactly how T_C⁻¹ restores the camera."},
+ {q:"To apply transforms M1 then M2 then M3 to a point P, the composite is:",
+  a:["P' = M1 × M2 × M3 × P","P' = M3 × M2 × M1 × P","P' = P×M3 + P×M2 + P×M1","P' = (M1+M2+M3) × P"],
+  correct:1, fb:"Matrices apply right-to-left: the first-applied transform sits closest to P, the last-applied is left-most."},
+ {q:"Key visual difference between orthographic and perspective projection?",
+  a:["Orthographic produces a fisheye distortion; perspective does not","In perspective, objects shrink with distance and parallel lines converge; orthographic preserves size and parallelism","Perspective preserves z; orthographic preserves nothing","Orthographic can only be used for 2D scenes"],
+  correct:1, fb:"Depth-based scaling is the defining difference. Orthographic keeps size constant; perspective divides x,y by depth."},
+ {q:"How do you compute a triangle's surface normal?",
+  a:["Cross product of two edge vectors, then normalise","Dot product of two edges","Average of the three vertices","Sum of the edge vectors"],
+  correct:0, fb:"Two edges of the triangle span its plane; their cross product is perpendicular to that plane. Normalise to get the unit normal."}
+];
+const qh=document.getElementById('quizHost');
+quizzes.forEach((qz,i)=>{
+  const box=document.createElement('div'); box.className='quiz';
+  box.innerHTML='<div class="q"><span class="num">Q'+(i+1)+'</span>'+qz.q+'</div>';
+  const opts=[];
+  qz.a.forEach((txt,j)=>{
+    const b=document.createElement('button'); b.className='opt'; b.textContent=txt; opts.push(b);
+    b.onclick=()=>{
+      if(box.dataset.done)return; box.dataset.done='1';
+      const fb=box.querySelector('.fb');
+      if(j===qz.correct){b.classList.add('correct');fb.className='fb show ok';fb.innerHTML='✓ Correct. '+qz.fb;}
+      else{b.classList.add('wrong');opts[qz.correct].classList.add('correct');fb.className='fb show no';fb.innerHTML='✗ Not quite. '+qz.fb;}
+      opts.forEach(o=>{if(!o.classList.contains('correct')&&!o.classList.contains('wrong'))o.classList.add('dim');});
+    };
+    box.appendChild(b);
+  });
+  const fb=document.createElement('div'); fb.className='fb'; box.appendChild(fb);
+  qh.appendChild(box);
+});
+
+/* ====================================================== */
+/* PAST PAPER DATA + RENDER                               */
+/* ====================================================== */
+const exams=[
+ {tag:"2019 · Q23 · 4 marks", q:"A world space has a conceptual camera at point E looking toward point C; the camera's axes are Ŝ, Û, F̂. Explain how to use this information to construct a viewing transformation Q that can be applied to objects.",
+  img:"assets/camera_basis_labels.jpg",
+  a:"<b>1. Build the orthonormal camera basis.</b> f̂ = normalise(E − C); ŝ = normalise(f̂ × v̂) using a supplied up vector v̂; û = normalise(f̂ × ŝ). This guarantees three perpendicular unit axes even if v̂ isn't exactly perpendicular to f̂.<br><b>2. Translate the eye to the origin.</b> T₁ shifts everything by −E so the camera sits at O.<br><b>3. Align the camera axes with the world axes.</b> T₂ is a rotation whose rows are ŝ, û, (−f̂), re-orienting the camera frame to the world frame (f̂ → −z by convention).<br><b>4. Compose.</b> Q = T_C = T₂·T₁. Apply Q to every object so the whole scene is expressed in camera coordinates — equivalent (by the duality) to moving the scene rather than the camera."},
+ {tag:"2017 · Q3 · 1 mark", q:"What is meant by the duality of modelling and viewing?",
+  a:"Moving the camera by a transform produces the same image as moving the entire world/scene by the <b>inverse</b> transform. Rotating the object 60° or rotating the camera −60° yields the same picture, so the viewing transform can be implemented as a modelling transform applied to the scene."},
+ {tag:"2017 · Q2 · 1 mark", q:"For 3D transformations, why do we use 4×4 matrices instead of 3×3 matrices?",
+  a:"Homogeneous coordinates. A 3×3 matrix can only express linear maps (rotation, scale, shear). Adding the fourth row/column lets <b>translation</b> be written as a matrix multiply, allows perspective via the w component, and lets every transform compose into a single matrix by multiplication."},
+ {tag:"2016 · Q1(b)(iii) · 3 marks", q:"Explain what is meant by hierarchically structured objects.",
+  a:"A complex model is built from parts, each with its own <b>local coordinate frame</b> referenced from its parent and ultimately from world coordinates. Transforms compose down the hierarchy, so moving a parent moves its children and the object's topology is preserved. Benefits: easier authoring, reuse of parts, and natural animation."},
+ {tag:"2017 · Q8 / 2016 · Q1(b)(i)", q:"Given a triangle ABC, explain how to compute the triangle's normal vector.",
+  a:"Form two edge vectors, e.g. e₁ = B − A and e₂ = C − A. Their cross product n = e₁ × e₂ is perpendicular to the triangle's plane. Normalise it to a unit normal. The vertex winding order (CW vs CCW) determines which way the normal faces."},
+ {tag:"2022 · Q24/Q25 · 3 + 1 marks", q:"A point is transformed by [scale][translate][rotate(30°)] (three 4×4 matrices). What is the purpose of the three matrices, and the overall effect?",
+  a:"Each 4×4 is a homogeneous transform; multiplying them composes the sequence into one matrix. They apply <b>right-to-left</b>: first rotate the point 30° about z, then translate it by (+1, +1, 0), then scale y by ×2. <b>Overall effect:</b> the point is rotated, shifted diagonally, then stretched vertically — in that order."}
+];
+const eh=document.getElementById('examHost');
+exams.forEach(ex=>{
+  const box=document.createElement('div'); box.className='exam';
+  let html='<span class="tag">'+ex.tag+'</span><div class="qtext">'+ex.q+'</div>';
+  if(ex.img) html+='<figure style="margin:14px 0 0;max-width:520px"><img src="'+ex.img+'" alt="exam figure"></figure>';
+  html+='<div class="reveal"><button class="btn">Show approach ▸</button></div>';
+  html+='<div class="answer">'+ex.a+'</div>';
+  box.innerHTML=html;
+  const btn=box.querySelector('.btn'), ans=box.querySelector('.answer');
+  btn.onclick=()=>{const open=ans.classList.toggle('show');btn.classList.toggle('active',open);btn.textContent=open?'Hide approach ▾':'Show approach ▸';};
+  eh.appendChild(box);
+});
+</script>
+</body>
+</html>
