@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>COMP27112 · Chapter 8 — File Formats, Exposure & Compression</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#15110e; --ink2:#1d1813; --panel:#221b15; --panel2:#2b221a;
+  --cream:#f4ecdf; --cream-dim:#cdc2b1; --faint:#8d8273;
+  --amber:#e87a3e; --amber-bright:#ff9248; --red:#d94f2a;
+  --teal:#5fb6a8; --phos:#9fd8b0; --line:#3a2f24;
+  --shadow:0 18px 50px rgba(0,0,0,.45);
+  --serif:"Spectral",Georgia,serif; --disp:"Fraunces",Georgia,serif; --mono:"IBM Plex Mono",monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--ink);color:var(--cream);font-family:var(--serif);font-size:18px;line-height:1.65;
+  background-image:radial-gradient(900px 500px at 80% -5%,rgba(232,122,62,.10),transparent 60%),radial-gradient(700px 600px at -5% 30%,rgba(95,182,168,.06),transparent 60%);}
+img{max-width:100%;display:block}
+a{color:var(--amber-bright)}
+::selection{background:var(--amber);color:#1a130d}
+
+/* grain */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.05;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");}
+
+.wrap{max-width:1060px;margin:0 auto;padding:0 24px;position:relative;z-index:2}
+
+/* ---------- Hero ---------- */
+header.hero{min-height:92vh;display:flex;flex-direction:column;justify-content:center;padding:60px 0 40px;position:relative;overflow:hidden}
+.kicker{font-family:var(--mono);font-size:13px;letter-spacing:.34em;text-transform:uppercase;color:var(--amber);margin-bottom:22px}
+h1.title{font-family:var(--disp);font-weight:900;font-size:clamp(44px,8vw,104px);line-height:.95;margin:0;letter-spacing:-.02em}
+h1.title em{font-style:italic;font-weight:500;color:var(--amber-bright);display:block}
+.lede{font-size:clamp(18px,2.4vw,23px);color:var(--cream-dim);max-width:640px;margin:30px 0 0;font-weight:300}
+.obj{display:flex;gap:14px;flex-wrap:wrap;margin-top:40px}
+.obj .chip{font-family:var(--mono);font-size:13px;letter-spacing:.08em;padding:11px 18px;border:1px solid var(--line);border-radius:999px;color:var(--cream);
+  background:linear-gradient(180deg,rgba(255,255,255,.03),transparent);transition:.3s}
+.obj .chip b{color:var(--amber)}
+.scrollcue{position:absolute;bottom:26px;left:24px;font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--faint);animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(8px)}}
+
+/* aperture mark in hero */
+.heromark{position:absolute;right:-40px;top:50%;transform:translateY(-50%);width:min(48vw,520px);height:min(48vw,520px);opacity:.5;pointer-events:none}
+
+/* ---------- sections ---------- */
+section{padding:70px 0;border-top:1px solid var(--line)}
+.sec-no{font-family:var(--mono);font-size:13px;color:var(--amber);letter-spacing:.2em}
+h2{font-family:var(--disp);font-weight:600;font-size:clamp(30px,5vw,52px);line-height:1.02;margin:8px 0 6px;letter-spacing:-.015em}
+h3{font-family:var(--disp);font-weight:600;font-size:clamp(21px,3vw,28px);margin:38px 0 6px;color:var(--cream)}
+h4{font-family:var(--mono);font-weight:600;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin:26px 0 8px}
+p{margin:12px 0}
+.muted{color:var(--cream-dim)}
+strong{color:#fff;font-weight:600}
+.lead{font-size:21px;color:var(--cream-dim);font-weight:300;max-width:760px}
+
+/* reveal anim */
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* cards / grid */
+.grid{display:grid;gap:22px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:760px){.g2,.g3{grid-template-columns:1fr}}
+.card{background:linear-gradient(180deg,var(--panel),var(--ink2));border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow)}
+.fig{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+.fig img{border-radius:8px;width:100%}
+.cap{font-family:var(--mono);font-size:12.5px;color:var(--faint);margin-top:10px;letter-spacing:.02em}
+.cap b{color:var(--amber)}
+
+ul.bul{list-style:none;padding:0;margin:14px 0}
+ul.bul li{position:relative;padding:8px 0 8px 30px;border-bottom:1px dashed var(--line)}
+ul.bul li:before{content:"▸";position:absolute;left:4px;color:var(--amber);font-size:14px;top:10px}
+ul.bul li b{color:#fff}
+
+.callout{border-left:3px solid var(--amber);background:linear-gradient(90deg,rgba(232,122,62,.10),transparent);
+  padding:14px 18px;border-radius:0 12px 12px 0;margin:20px 0;font-size:17px}
+.callout.teal{border-color:var(--teal);background:linear-gradient(90deg,rgba(95,182,168,.10),transparent)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);display:block;margin-bottom:4px}
+.callout.teal .lab{color:var(--teal)}
+
+.tag{display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 9px;border-radius:6px;background:rgba(95,182,168,.14);color:var(--phos);border:1px solid rgba(95,182,168,.3);margin-right:6px}
+.tag.lossy{background:rgba(217,79,42,.14);color:#f0a081;border-color:rgba(217,79,42,.35)}
+.tag.lossless{background:rgba(95,182,168,.14);color:var(--phos);border-color:rgba(95,182,168,.3)}
+
+/* controls */
+.ctrl{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0}
+input[type=range]{-webkit-appearance:none;appearance:none;height:5px;border-radius:5px;background:var(--line);outline:none;flex:1;min-width:160px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--amber);cursor:pointer;border:3px solid var(--ink);box-shadow:0 0 0 1px var(--amber)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--amber);cursor:pointer;border:3px solid var(--ink)}
+.val{font-family:var(--mono);font-size:15px;color:var(--amber-bright);min-width:84px;text-align:right}
+.btn{font-family:var(--mono);font-size:13px;letter-spacing:.06em;background:var(--panel2);color:var(--cream);border:1px solid var(--line);
+  padding:9px 16px;border-radius:9px;cursor:pointer;transition:.2s}
+.btn:hover{border-color:var(--amber);color:var(--amber-bright)}
+.btn.active{background:var(--amber);color:#1a130d;border-color:var(--amber)}
+.mono{font-family:var(--mono)}
+
+/* crossfade box */
+.xfade{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.xfade img{width:100%;display:block}
+.xfade img.top{position:absolute;inset:0;transition:opacity .25s linear}
+
+/* pixel byte demo */
+.pbmgrid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-width:360px}
+.pbmgrid .px{aspect-ratio:1;border-radius:5px;border:1px solid var(--line);cursor:pointer;transition:.12s}
+.byteout{font-family:var(--mono);font-size:clamp(18px,4vw,30px);letter-spacing:.18em;color:var(--phos);margin-top:14px}
+.byteout .hex{color:var(--amber-bright)}
+
+/* iris svg */
+.iriswrap{display:flex;flex-direction:column;align-items:center}
+svg.iris{width:min(70vw,300px);height:min(70vw,300px)}
+
+/* palette demo */
+.palgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;max-width:280px}
+.palgrid .sw{aspect-ratio:1;border-radius:6px;cursor:pointer;border:2px solid transparent;font-family:var(--mono);font-size:11px;display:flex;align-items:center;justify-content:center;color:rgba(0,0,0,.55)}
+.palgrid .sw.sel{border-color:#fff}
+.swatchbig{width:100%;height:90px;border-radius:10px;border:1px solid var(--line)}
+
+/* RLE */
+.rlecells{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0}
+.rlecells .c{width:38px;height:38px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+  font-weight:600;cursor:pointer;border:1px solid var(--line);user-select:none}
+.codeline{font-family:var(--mono);font-size:15px;background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;color:var(--phos)}
+.ratio{font-family:var(--disp);font-size:clamp(26px,6vw,42px);color:var(--amber-bright);font-weight:600}
+
+/* jpeg pipeline stepper */
+.stepper{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.stepframe img{border-radius:10px;border:1px solid var(--line)}
+
+/* quiz */
+.quiz{counter-reset:q}
+.qcard{background:linear-gradient(180deg,var(--panel),var(--ink2));border:1px solid var(--line);border-radius:16px;padding:24px;margin:20px 0;box-shadow:var(--shadow)}
+.qnum{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--amber)}
+.qtext{font-family:var(--disp);font-size:21px;margin:6px 0 16px;line-height:1.25}
+.opt{display:block;width:100%;text-align:left;font-family:var(--serif);font-size:16px;color:var(--cream);background:var(--ink2);
+  border:1px solid var(--line);border-radius:10px;padding:13px 16px;margin:9px 0;cursor:pointer;transition:.18s}
+.opt:hover{border-color:var(--amber)}
+.opt.correct{background:rgba(95,182,168,.16);border-color:var(--teal);color:var(--phos)}
+.opt.wrong{background:rgba(217,79,42,.16);border-color:var(--red);color:#f0a081}
+.opt.dim{opacity:.5}
+.fb{font-family:var(--mono);font-size:13.5px;margin-top:10px;display:none;color:var(--cream-dim);border-left:2px solid var(--teal);padding-left:12px}
+.fb.show{display:block}
+.score{font-family:var(--disp);font-size:28px;color:var(--amber-bright);text-align:center;margin-top:10px}
+
+footer{padding:60px 0 90px;border-top:1px solid var(--line);color:var(--faint);font-family:var(--mono);font-size:13px;line-height:1.9}
+.toc{position:fixed;right:18px;top:50%;transform:translateY(-50%);z-index:30;display:flex;flex-direction:column;gap:9px}
+.toc a{width:11px;height:11px;border-radius:50%;background:var(--line);border:1px solid #4a3c2c;transition:.2s}
+.toc a:hover,.toc a.active{background:var(--amber);transform:scale(1.35)}
+@media(max-width:900px){.toc{display:none}}
+.dl{display:inline-block;margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--faint)}
+.bignum{font-family:var(--disp);font-weight:900;font-size:clamp(40px,9vw,90px);color:var(--amber);line-height:1}
+.formula{font-family:var(--mono);font-size:14px;color:var(--cream-dim);background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;overflow-x:auto}
+</style>
+</head>
+<body>
+
+<nav class="toc" aria-label="section nav">
+  <a href="#top" data-s="top"></a>
+  <a href="#store" data-s="store"></a>
+  <a href="#bits" data-s="bits"></a>
+  <a href="#exposure" data-s="exposure"></a>
+  <a href="#hdr" data-s="hdr"></a>
+  <a href="#palette" data-s="palette"></a>
+  <a href="#extras" data-s="extras"></a>
+  <a href="#rle" data-s="rle"></a>
+  <a href="#jpeg" data-s="jpeg"></a>
+  <a href="#why" data-s="why"></a>
+  <a href="#quiz" data-s="quiz"></a>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero" id="top">
+  <svg class="heromark" viewBox="0 0 200 200" aria-hidden="true">
+    <g id="heroIris" fill="none" stroke="#e87a3e" stroke-width="1.4" opacity=".9"></g>
+  </svg>
+  <div class="wrap">
+    <div class="kicker">COMP27112 · Introduction to Visual Computing · Image Processing</div>
+    <h1 class="title">Chapter 8<em>File Formats, Exposure &amp; Compression</em></h1>
+    <p class="lede">Why are there so many image formats? What is your camera actually doing when it captures light? And how does a JPEG throw away most of an image without you noticing? Visual, interactive notes from Terence Morley's Lecture 8.</p>
+    <div class="obj">
+      <span class="chip"><b>01</b> &nbsp;File formats</span>
+      <span class="chip"><b>02</b> &nbsp;Exposure</span>
+      <span class="chip"><b>03</b> &nbsp;Compression</span>
+    </div>
+  </div>
+  <div class="scrollcue">scroll ↓ to develop</div>
+</header>
+
+<!-- ============ WHAT TO STORE ============ -->
+<section id="store">
+ <div class="wrap">
+  <div class="reveal">
+   <div class="sec-no">01 / FILE FORMATS</div>
+   <h2>What lives inside an image file?</h2>
+   <p class="lead">An image file is far more than a grid of pixels. The mix of things a format <em>can</em> hold is exactly why so many formats exist — each was designed around a different priority.</p>
+  </div>
+
+  <div class="grid g2 reveal" style="margin-top:30px;align-items:start">
+   <div>
+    <ul class="bul">
+      <li><b>Image data (pixels)</b> — greyscale or colour samples</li>
+      <li><b>Colour palette</b> — a small lookup table of colours used</li>
+      <li><b>Different-size versions</b> — e.g. icons at several resolutions</li>
+      <li><b>Transparency information</b> — an alpha channel</li>
+      <li><b>Camera data</b> — model, focal length, shutter speed, ISO…</li>
+      <li><b>Location</b> — GPS latitude &amp; longitude</li>
+    </ul>
+    <div class="callout"><span class="lab">Key idea</span>Formats differ by which of these they support, how they encode pixels, and whether they compress — lossy or lossless.</div>
+   </div>
+   <div class="fig">
+     <img src="assets/img/formats_wordcloud.png" alt="A cloud of image format names: PPM, GIF, BMP, RAW, PNG, TIFF, PCX, EXIF, WebP, JPEG, PGM">
+     <div class="cap"><b>Fig.</b> A small sample of the format zoo — each tuned to a different need.</div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- ============ BIT DEPTH / IMAGE DATA ============ -->
+<section id="bits">
+ <div class="wrap">
+  <div class="reveal">
+   <div class="sec-no">01 / IMAGE DATA</div>
+   <h2>Bit depth: how much per pixel?</h2>
+   <p class="lead">So far we've used an <strong>unsigned byte (8-bit, 0–255)</strong> for greyscale and <strong>24-bit colour</strong> (three 8-bit channels) for RGB. But a pixel doesn't always need a whole byte — and sometimes a byte isn't enough.</p>
+  </div>
+
+  <h3 class="reveal">1-bit — the Portable Bit Map (.pbm)</h3>
+  <p class="reveal muted">After thresholding, an image has only two values: black and white. Storing that as a full byte per pixel is wasteful — each pixel is really just <b>on / off</b>, one bit. The PBM format <strong>packs eight pixels into a single byte</strong>, giving an instant 8:1 saving.</p>
+
+  <div class="card reveal" style="margin-top:18px">
+    <h4>Interactive · pack 8 pixels into 1 byte</h4>
+    <p class="muted" style="margin-top:0">Click pixels to toggle black (1) / white (0). Watch the byte form.</p>
+    <div class="pbmgrid" id="pbmGrid"></div>
+    <div class="byteout">byte = <span id="pbmBits">00000000</span><sub>2</sub> &nbsp;=&nbsp; <span class="hex" id="pbmHex">0x00</span> &nbsp;=&nbsp; <span id="pbmDec">0</span><sub>10</sub></div>
+    <p class="cap">One byte → eight pixels. A 440×400 image = 176,000 pixels → just <b>22.1 kB</b> as PBM (vs 176 kB as one byte per pixel).</p>
+  </div>
+
+  <div class="card reveal" style="margin-top:22px">
+    <h4>Interactive · thresholding to 1-bit</h4>
+    <p class="muted" style="margin-top:0">Drag the threshold. Every pixel ≥ T becomes white, the rest black — the live result on the right is a true 1-bit image of the tadpoles.</p>
+    <div class="grid g2" style="align-items:center">
+      <div class="fig"><img src="assets/img/tadpole_original.png" alt="Original greyscale tadpoles"><div class="cap"><b>Original</b> · 8-bit greyscale</div></div>
+      <div class="fig"><canvas id="threshCanvas" width="240" height="218" style="width:100%;border-radius:8px;image-rendering:auto"></canvas><div class="cap"><b>Thresholded</b> · live 1-bit output</div></div>
+    </div>
+    <div class="ctrl"><span class="mono">T</span><input id="threshSlider" type="range" min="0" max="255" value="127"><span class="val" id="threshVal">127</span></div>
+  </div>
+
+  <div class="callout teal reveal"><span class="lab">Watch out · dithering</span>If you save a greyscale image as PBM <em>without</em> thresholding, software (e.g. GIMP) fakes greys using patterns of black &amp; white dots — <strong>dithering</strong>. It looks grey-ish to the eye, but for image processing it's pure high-frequency noise: edge detectors would light it up everywhere. Threshold first, then save.</div>
+
+  <div class="grid g2 reveal">
+    <div class="fig"><img src="assets/img/tadpole_threshold_pbm.png" alt="Tadpoles thresholded at 127 then saved as PBM"><div class="cap"><b>Thresholded at 127</b> → clean two-tone, ideal for processing.</div></div>
+    <div class="fig"><img src="assets/img/tadpole_dithered_pbm.png" alt="Tadpoles saved as PBM without thresholding, showing dithering"><div class="cap"><b>Dithered PBM</b> → grey simulated with dots. Not useful for our purposes.</div></div>
+  </div>
+ </div>
+</section>
+
+<!-- ============ EXPOSURE ============ -->
+<section id="exposure">
+ <div class="wrap">
+  <div class="reveal">
+   <div class="sec-no">02 / EXPOSURE — AN ASIDE</div>
+   <h2>Controlling the light</h2>
+   <p class="lead">How can one camera shoot a blazing sunny street <em>and</em> a dim room? It must <strong>vary how much light reaches the sensor</strong>. Two controls do this — and each has a side-effect on the picture.</p>
+  </div>
+
+  <!-- Aperture interactive -->
+  <h3 class="reveal">Aperture — the iris</h3>
+  <div class="card reveal">
+    <h4>Interactive · open and close the aperture</h4>
+    <div class="grid g2" style="align-items:center">
+      <div class="iriswrap">
+        <svg class="iris" viewBox="-110 -110 220 220" aria-label="adjustable camera iris">
+          <circle cx="0" cy="0" r="100" fill="#0c0a08" stroke="#3a2f24"/>
+          <g id="irisBlades"></g>
+          <circle id="irisHole" cx="0" cy="0" r="40" fill="#111"/>
+        </svg>
+      </div>
+      <div>
+        <div class="ctrl"><span class="mono" style="min-width:48px">f /</span><input id="apSlider" type="range" min="0" max="6" value="3" step="1"><span class="val" id="apVal">f/8</span></div>
+        <p class="muted"><b>Smaller f-number = larger hole = more light.</b> So f/1.8 is wide open; f/32 is a pinhole. It's a ratio (focal length ÷ aperture diameter), which is why the numbers feel "backwards".</p>
+        <div class="formula" id="apReadout">opening: 50% · light: medium</div>
+        <p class="cap" style="margin-top:12px">Compare it with the pupil of your eye, which widens in the dark and shrinks in bright light.</p>
+      </div>
+    </div>
+    <div class="fig" style="margin-top:16px"><img src="assets/img/camera_aperture.png" alt="Six photos of a camera aperture at decreasing sizes"><div class="cap"><b>Real iris</b> from an SLR lens, stepping from tiny to wide open.</div></div>
+  </div>
+
+  <!-- Aperture -> depth of field -->
+  <h3 class="reveal">Side-effect: depth of field</h3>
+  <p class="reveal muted">Aperture doesn't only change brightness — it changes how much of the scene is in focus. A <strong>small aperture (large f)</strong> keeps everything sharp; a <strong>large aperture (small f)</strong> blurs the background — a shallow <em>depth of field</em>.</p>
+  <div class="card reveal">
+    <h4>Interactive · slide between f/32 and f/5.6</h4>
+    <div class="xfade" id="dofFade">
+      <img src="assets/img/aperture_f32.png" alt="Flower at f/32, whole scene in focus">
+      <img class="top" id="dofTop" src="assets/img/aperture_f56.png" alt="Flower at f/5.6, blurred background" style="opacity:0">
+    </div>
+    <div class="ctrl"><span class="val" id="dofL">f/32 — deep</span><input id="dofSlider" type="range" min="0" max="100" value="0"><span class="val" id="dofR">f/5.6 — shallow</span></div>
+    <p class="cap">Same flower. At f/32 the lane behind stays sharp; at f/5.6 it melts away. This blur is optical — not an electronic phone-camera trick.</p>
+  </div>
+
+  <!-- Shutter interactive -->
+  <h3 class="reveal">Shutter — the time control</h3>
+  <p class="reveal muted">The shutter sets <strong>how long</strong> light is collected. A long exposure lets in more light but lets moving things <em>smear</em>; a fast shutter freezes motion but lets in less light.</p>
+  <div class="card reveal">
+    <h4>Interactive · slow shutter ↔ fast shutter</h4>
+    <div class="xfade" id="shutFade">
+      <img src="assets/img/shutter_slow.png" alt="Moving car blurred at 1/10 second">
+      <img class="top" id="shutTop" src="assets/img/shutter_fast.png" alt="Moving car frozen at 1/640 second" style="opacity:0">
+    </div>
+    <div class="ctrl"><span class="val" id="shutL">1/10 s</span><input id="shutSlider" type="range" min="0" max="100" value="0"><span class="val" id="shutR">1/640 s</span></div>
+    <p class="cap"><b>Slow (1/10 s):</b> the car smears across the frame. <b>Fast (1/640 s):</b> action frozen. (A slow shutter also blurs from <em>your own</em> hand-shake — hence tripods.)</p>
+  </div>
+
+  <div class="callout reveal"><span class="lab">The trade-off</span>Aperture &amp; shutter are two ways to hit the <em>same</em> total light. On a windy day you need a <b>fast shutter</b> to freeze a flower — so you must <b>open the aperture wider</b> to compensate, which shrinks the depth of field. Every choice ripples. On the mode dial: <span class="mono">A/Av</span> = Aperture priority, <span class="mono">S/Tv</span> = Shutter (Time) priority.</div>
+
+  <div class="grid g3 reveal">
+    <div class="fig"><img src="assets/img/slr_diagram.png" alt="SLR camera cross-section: lens, mirror, pentaprism, viewfinder, sensor"><div class="cap"><b>SLR path.</b> Light → mirror → pentaprism → viewfinder. Press the button: the mirror flips up (most of the "click") so light hits the sensor.</div></div>
+    <div class="fig"><img src="assets/img/mode_dial_canon.png" alt="Canon mode dial with P, Tv, Av, M"><div class="cap"><b>Mode dial.</b> P, Tv, Av, M plus scene modes (portrait, sport, macro…).</div></div>
+    <div class="fig"><img src="assets/img/mode_dial_nikon.png" alt="Nikon mode dial with P S A M and Auto"><div class="cap"><b>Different maker, same idea.</b> P / S / A / M and an Auto setting.</div></div>
+  </div>
+
+  <h3 class="reveal">Exposing for the scene</h3>
+  <p class="reveal muted">The meter averages the scene (or a chosen point) and picks settings. But a high-contrast scene can't all be exposed correctly at once.</p>
+  <div class="grid g2 reveal">
+    <div class="fig"><img src="assets/img/expose_church.png" alt="Exposure set for the church; gravestone too dark"><div class="cap"><b>Exposed for the church</b> → the foreground gravestone is too dark.</div></div>
+    <div class="fig"><img src="assets/img/expose_gravestone.png" alt="Exposure set for the gravestone; church too bright"><div class="cap"><b>Exposed for the gravestone</b> → the church is washed out, too bright.</div></div>
+  </div>
+ </div>
+</section>
+
+<!-- ============ HDR ============ -->
+<section id="hdr">
+ <div class="wrap">
+  <div class="reveal">
+   <div class="sec-no">02 / IMAGE DATA — HDR</div>
+   <h2>High Dynamic Range</h2>
+   <p class="lead">HDR is about capturing a <strong>larger range of brightness</strong> than a normal 8-bit image can hold — so both the dark gravestone and the bright sky survive in one picture.</p>
+  </div>
+
+  <div class="grid g2 reveal">
+    <div>
+      <h4>The crude version</h4>
+      <p class="muted">Take two shots — one exposed for each subject — and paste the good parts together. The lecture's "botched" example below stitches the well-exposed gravestone into the well-exposed church shot.</p>
+      <h4>Bracketing</h4>
+      <p class="muted">Some cameras fire several frames at once, each at a different exposure (<strong>bracketing</strong>), then merge them. Better: capture everything in <em>one</em> image with a wider-range sensor.</p>
+      <ul class="bul">
+        <li>Modern <b>CMOS</b> sensors reach higher dynamic range</li>
+        <li><b>RAW</b> formats are often <b>12-bit/channel → 4096 levels</b> (vs 256). RAW formats are proprietary per manufacturer.</li>
+        <li>Up-to-16-bit/channel formats: <span class="tag">TIFF</span><span class="tag">PNG</span><span class="tag">JPEG2000</span></li>
+        <li>24-bit = 8 bits/ch; <b>48-bit "deep colour"</b> = 16 bits/ch. The HDMI standard allows 16 bits per channel.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="grid g2" style="gap:14px">
+        <div class="fig"><img src="assets/img/hdr_left.png" alt="HDR composite, version 1"><div class="cap"><b>Composite</b> (botched) — both subjects visible.</div></div>
+        <div class="fig"><img src="assets/img/hdr_right.png" alt="HDR composite, version 2"><div class="cap">Cut-and-paste leaves tell-tale seams.</div></div>
+      </div>
+      <div class="fig" style="margin-top:14px"><img src="assets/img/cmos_sensor.png" alt="A CMOS camera sensor"><div class="cap"><b>CMOS sensor</b> — the source of those extra bits.</div></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- ============ COLOUR PALETTE ============ -->
+<section id="palette">
+ <div class="wrap">
+  <div class="reveal">
+   <div class="sec-no">01 / COLOUR PALETTE</div>
+   <h2>Doing more with fewer bits</h2>
+   <p class="lead">On older formats, embedded systems with little memory, or low-colour displays, we don't want to waste 24 bits per pixel. Two classic tricks: an <strong>indexed palette</strong>, and <strong>bit-packed</strong> colour.</p>
+  </div>
+
+  <h3 class="reveal">GIF — an indexed palette</h3>
+  <p class="reveal muted">GIF stores only <strong>8 bits per pixel</strong>, even for colour. Each pixel value is an <em>index</em> into a 256-entry palette of full 24-bit colours, saved inside the file. The palette is chosen per-image from its most common colours — so it differs for every picture.</p>
+
+  <div class="card reveal">
+    <h4>Interactive · palette lookup</h4>
+    <p class="muted" style="margin-top:0">A pixel just stores an index. Click an index to resolve it through the palette to a real RGB colour.</p>
+    <div class="grid g2" style="align-items:center">
+      <div>
+        <div class="palgrid" id="palGrid"></div>
+        <p class="cap">256 entries total (12 shown). Pixel byte = the chosen <b>index</b>.</p>
+      </div>
+      <div>
+        <div class="swatchbig" id="palBig"></div>
+        <div class="byteout" style="font-size:18px">index <span id="palIdx">0</span> &nbsp;→&nbsp; RGB(<span id="palRGB" class="hex">255, 0, 0</span>)</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="reveal">8-bit packed colour (3-3-2)</h3>
+  <p class="reveal muted">No palette needed — just split the 8 bits: <strong>3 for red, 3 for green, 2 for blue</strong>. Popular on embedded LCD displays.</p>
+  <div class="card reveal">
+    <h4>Interactive · build a 3-3-2 byte</h4>
+    <div class="grid g2" style="align-items:center">
+      <div>
+        <div class="ctrl"><span class="mono" style="color:#f08">R</span><input id="rR" type="range" min="0" max="7" value="5"><span class="val" id="rRv">5/7</span></div>
+        <div class="ctrl"><span class="mono" style="color:#5fb6a8">G</span><input id="rG" type="range" min="0" max="7" value="2"><span class="val" id="rGv">2/7</span></div>
+        <div class="ctrl"><span class="mono" style="color:#7aa6ff">B</span><input id="rB" type="range" min="0" max="3" value="1"><span class="val" id="rBv">1/3</span></div>
+        <div class="byteout">byte = <span id="packBits">10101001</span><sub>2</sub></div>
+      </div>
+      <div><div class="swatchbig" id="packSwatch" style="height:150px"></div><div class="cap">256 possible colours from a single byte, no lookup table.</div></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- ============ EXTRAS: sizes, transparency, EXIF, GPS ============ -->
+<section id="extras">
+ <div class="wrap">
+  <div class="reveal">
+   <div class="sec-no">01 / MORE THAN PIXELS</div>
+   <h2>Sizes, transparency &amp; metadata</h2>
+  </div>
+
+  <h3 class="reveal">Multiple sizes in one file (.ico)</h3>
+  <p class="reveal muted">A Windows <strong>.ico</strong> file holds the same icon drawn at several resolutions, so the OS picks the right one (title-bar vs desktop). Why redraw rather than shrink? Shrinking by dropping rows can erase thin lines and ruin a small icon — so each size is hand-tuned.</p>
+
+  <h3 class="reveal">Transparency — the alpha channel</h3>
+  <p class="reveal muted">An <strong>alpha channel</strong> says how "see-through" each pixel is. A JPEG (no alpha) lays an opaque white box over the scene; a PNG with alpha lets the background show through the deleted areas. And alpha isn't all-or-nothing — it's a smooth 0–100%.</p>
+  <div class="card reveal">
+    <h4>Interactive · vary the alpha</h4>
+    <div id="alphaStage" style="position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);background-size:cover;background-position:center;min-height:240px;display:flex;align-items:center;justify-content:center">
+      <div id="alphaPanel" style="width:62%;height:170px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);color:#222;background:rgba(255,255,255,1)">foreground panel</div>
+    </div>
+    <div class="ctrl"><span class="mono">opaque</span><input id="alphaSlider" type="range" min="0" max="100" value="100"><span class="mono">transparent</span><span class="val" id="alphaVal">α=255</span></div>
+    <p class="cap">α=255 → solid (like JPEG). Lower it → the garden behind shows through (like PNG). Real comparison slides below.</p>
+  </div>
+  <div class="grid g2 reveal">
+    <div class="fig"><img src="assets/img/transparency_alpha.png" alt="JPEG opaque vs PNG transparent overlay"><div class="cap"><b>JPEG vs PNG.</b> Left opaque white; right deleted to transparent.</div></div>
+    <div class="fig"><img src="assets/img/transparency_semi.png" alt="Semi-transparent overlay"><div class="cap"><b>50% transparent</b> white — alpha is a smooth value, not a switch.</div></div>
+  </div>
+
+  <h3 class="reveal">Camera data &amp; location (EXIF / GPS)</h3>
+  <div class="grid g2 reveal">
+    <div class="fig"><img src="assets/img/camera_data.png" alt="Image viewer showing EXIF: aperture f/2.8, exposure 1/31s, focal length, ISO, camera model, date"><div class="cap"><b>EXIF.</b> Aperture, exposure, focal length, ISO, model, date — stored alongside the pixels. (Focal length is given both as the real lens value and as a 35 mm-film equivalent so it's comparable between cameras with different sensor sizes.)</div></div>
+    <div class="fig"><img src="assets/img/location_phone.png" alt="Phone photo details showing latitude and longitude on a map"><div class="cap"><b>GPS.</b> Latitude &amp; longitude let you map exactly where a photo was taken. A compass / IMU direction would make it even more useful (e.g. for drone imagery).</div></div>
+  </div>
+ </div>
+</section>
+
+<!-- ============ RLE ============ -->
+<section id="rle">
+ <div class="wrap">
+  <div class="reveal">
+   <div class="sec-no">03 / COMPRESSION</div>
+   <h2>Run-Length Encoding</h2>
+   <p class="lead">The simplest compression: replace runs of identical values with <strong>(count, value)</strong> pairs. It's <span class="tag lossless">lossless</span> — the exact image can be rebuilt.</p>
+  </div>
+
+  <div class="card reveal">
+    <h4>Interactive · encode a row</h4>
+    <p class="muted" style="margin-top:0">Click a cell to change its value (cycles 2→9→4→2…). Try the presets to feel the best and worst cases.</p>
+    <div class="stepper">
+      <button class="btn active" id="rlePresetGood">Good case</button>
+      <button class="btn" id="rlePresetBad">Bad case (high frequency)</button>
+    </div>
+    <div class="rlecells" id="rleCells"></div>
+    <h4>encoded as (count, value)</h4>
+    <div class="codeline" id="rleCode"></div>
+    <div class="ctrl" style="margin-top:16px">
+      <div><div class="cap">pixels stored</div><div class="ratio" id="rlePix">8</div></div>
+      <div><div class="cap">RLE values</div><div class="ratio" id="rleVals">16</div></div>
+      <div><div class="cap">compression ratio</div><div class="ratio" id="rleRatio">0.5 : 1</div></div>
+    </div>
+    <p class="cap" id="rleNote"></p>
+  </div>
+
+  <div class="callout teal reveal"><span class="lab">Where it's used</span>RLE was the compression in the <b>PCX</b> format, and it's one stage <em>inside</em> the JPEG algorithm. Many RLE formats detect the bad (high-frequency) case and fall back to storing raw bytes so they never make the file <em>bigger</em>.</div>
+
+  <div class="fig reveal"><img src="assets/img/rle_demo.png" alt="Run-length encoding worked example from the slides"><div class="cap"><b>Lecture worked example.</b> 40 pixels → 22 values = 1.8:1. The bad case (2 3 2 3…) needs <em>more</em> values than pixels.</div></div>
+ </div>
+</section>
+
+<!-- ============ JPEG ============ -->
+<section id="jpeg">
+ <div class="wrap">
+  <div class="reveal">
+   <div class="sec-no">03 / COMPRESSION — JPEG</div>
+   <h2>How JPEG throws data away</h2>
+   <p class="lead">JPEG is <span class="tag lossy">lossy</span>: the exact image can't be recovered. It works on <strong>8×8 blocks</strong>, converts each to frequencies, then discards the high-frequency detail your eye barely notices.</p>
+  </div>
+
+  <div class="card reveal">
+    <h4>Step through the pipeline</h4>
+    <div class="stepper" id="jpegSteps"></div>
+    <div class="stepframe fig"><img id="jpegImg" src="assets/img/dct_block.png" alt="JPEG pipeline step"></div>
+    <div class="callout" id="jpegCap" style="margin-bottom:0"></div>
+  </div>
+
+  <div class="grid g2 reveal" style="margin-top:26px">
+    <div>
+      <h4>The DCT (Discrete Cosine Transform)</h4>
+      <p class="muted">Each 8×8 block of pixels becomes an 8×8 grid of frequency coefficients. <strong>Low frequencies cluster at the top-left, highs at the bottom-right.</strong> Most of the energy ends up top-left.</p>
+      <div class="formula">F(u,v) = ¼·C(u)C(v)·ΣΣ f(x,y)·cos[(2x+1)uπ/16]·cos[(2y+1)vπ/16]<br>C(0)=1/√2, otherwise C=1 &nbsp;·&nbsp; (easy way: OpenCV cv::dct())</div>
+    </div>
+    <div>
+      <h4>Quantise → zig-zag → RLE</h4>
+      <p class="muted">Divide the DCT by a <strong>quantisation table</strong> (big numbers at the high frequencies). Many coefficients round to <b>0</b>. Read the block in a <strong>zig-zag</strong> so all those zeros bunch together, then RLE-compress the run of zeros.</p>
+      <div class="formula" id="jpegRLE">RLE: (1,79) (1,0) (1,-2) (3,-1) (2,0) (2,-1) (54,0)</div>
+    </div>
+  </div>
+
+  <div class="callout teal reveal"><span class="lab">Decode</span>To rebuild: <b>multiply</b> by the same quantisation table (de-normalise), then run the <b>inverse DCT</b>. The pixels come back <em>very close</em> to the originals — even though most coefficients were thrown away.</div>
+
+  <!-- JPEG quality interactive -->
+  <h3 class="reveal">Quality vs file size</h3>
+  <p class="reveal muted">The "quality" setting just controls how aggressively the quantisation table crushes coefficients. <strong>Higher quality = less compression = bigger file.</strong></p>
+  <div class="card reveal">
+    <h4>Interactive · drag through quality levels</h4>
+    <div class="grid g2" style="align-items:center">
+      <div class="fig"><img id="qImg" src="assets/img/cat_q90.png" alt="JPEG cat at selected quality" style="image-rendering:auto;width:100%"><div class="cap" id="qCap"><b>Q90</b> · 21.2 kB</div></div>
+      <div>
+        <div class="ctrl"><span class="val" id="qLeft">Q5</span><input id="qSlider" type="range" min="0" max="5" value="5" step="1"><span class="val" id="qRight">Q90</span></div>
+        <div class="bignum" id="qBig">Q90</div>
+        <div class="ratio" id="qSize">21.2 kB</div>
+        <label style="display:block;margin-top:16px"><input type="checkbox" id="qZoom"> <span class="mono" style="font-size:13px">show blockiness close-up (Q10 / Q5)</span></label>
+        <p class="cap">At low quality the 8×8 DCT blocks become visible — the image goes <b>blocky</b>, and high-frequency detail (the cat's whiskers) breaks up first.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2 reveal" id="blockRow" style="display:none">
+    <div class="fig"><img src="assets/img/cat_block_q10.png" alt="Cat at Q10 showing blockiness"><div class="cap"><b>Q10</b> · 12.2 kB — blocks appearing.</div></div>
+    <div class="fig"><img src="assets/img/cat_block_q5.png" alt="Cat at Q5 showing severe blockiness"><div class="cap"><b>Q5</b> · 11.6 kB — 8×8 blocks obvious.</div></div>
+  </div>
+
+  <div class="grid g2 reveal" style="margin-top:24px">
+    <div class="card"><h4 style="color:var(--phos)">Lossless</h4><p class="muted" style="margin-top:0">Exact reconstruction. <b>RLE</b> (used in PCX). No information lost.</p></div>
+    <div class="card"><h4 style="color:#f0a081">Lossy</h4><p class="muted" style="margin-top:0"><b>JPEG.</b> Can't be reconstructed exactly, but stays very close while shrinking a lot. The DCT step is just one part of the full JPEG algorithm.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- ============ WHY SO MANY ============ -->
+<section id="why">
+ <div class="wrap">
+  <div class="reveal">
+   <div class="sec-no">SUMMARY</div>
+   <h2>So why <em>so many</em> formats?</h2>
+   <div class="grid g3" style="margin-top:24px">
+     <div class="card"><h4>Ownership</h4><p class="muted" style="margin-top:0"><b>Proprietary</b> (RAW, kept secret) vs <b>open standards</b> anyone can implement. GIF's patented compression pushed people to JPEG &amp; open formats in the '90s.</p></div>
+     <div class="card"><h4>Colour</h4><p class="muted" style="margin-top:0"><b>Greyscale vs colour</b>; <b>full colour vs palettes</b>; different <b>bit depths</b> (1, 8, 24, 48-bit).</p></div>
+     <div class="card"><h4>Growth</h4><p class="muted" style="margin-top:0"><b>New needs keep arriving</b> — transparency, location, camera info — and future formats will store things we don't even need yet.</p></div>
+   </div>
+   <div class="callout reveal" style="margin-top:24px"><span class="lab">In one line</span>File formats trade off <b>compatibility, size, colour fidelity, features and openness</b> — no single format wins on all axes, so we keep them all around.</div>
+  </div>
+ </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section id="quiz">
+ <div class="wrap">
+  <div class="reveal">
+   <div class="sec-no">CHECK YOURSELF</div>
+   <h2>Exam-style questions</h2>
+   <p class="lead">In COMP27112 papers, this material is examined through the restricted multiple-choice section (Q1–Q20). These are drawn from the course quiz bank and Lecture 8. Pick an answer to reveal feedback.</p>
+  </div>
+  <div class="quiz reveal" id="quizRoot"></div>
+  <div class="score" id="quizScore"></div>
+ </div>
+</section>
+
+<footer>
+ <div class="wrap">
+  COMP27112 · Introduction to Visual Computing — Image Processing<br>
+  Visual notes for <b>Chapter 8 · File Formats, Exposure &amp; Compression</b> (Lecture 8.1 &amp; 8.2, T. Morley).<br>
+  Slide images © School of Computer Science, The University of Manchester — used here for study.<br>
+  Interactive study aid · built from the lecture slides, transcripts and course quiz bank.
+ </div>
+</footer>
+
+<script>
+/* ============ HERO + IRIS GENERATOR ============ */
+function buildIris(svgGroupId, holeRadius){
+  // simple stylised iris blades
+}
+(function heroIris(){
+  const g=document.getElementById('heroIris');
+  let s='';
+  for(let i=0;i<6;i++){const a=i*60;s+=`<line x1="0" y1="0" x2="${95*Math.cos(a*Math.PI/180)}" y2="${95*Math.sin(a*Math.PI/180)}" transform="translate(100,100)"/>`;}
+  s+=`<circle cx="100" cy="100" r="95"/><circle cx="100" cy="100" r="55"/>`;
+  g.innerHTML=s;
+})();
+
+/* ============ SCROLL REVEAL ============ */
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')})},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* TOC active dot */
+const tocLinks=[...document.querySelectorAll('.toc a')];
+const secs=tocLinks.map(a=>document.getElementById(a.dataset.s)).filter(Boolean);
+const io2=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){tocLinks.forEach(a=>a.classList.toggle('active',a.dataset.s===e.target.id));}})},{rootMargin:'-45% 0px -45% 0px'});
+secs.forEach(s=>io2.observe(s));
+
+/* ============ PBM 8-pixel byte ============ */
+(function pbm(){
+  const grid=document.getElementById('pbmGrid');const bits=[1,0,1,1,0,0,1,0];
+  function paint(){
+    grid.querySelectorAll('.px').forEach((p,i)=>{p.style.background=bits[i]?'#111':'#f4ecdf';});
+    const str=bits.join('');
+    document.getElementById('pbmBits').textContent=str;
+    const dec=parseInt(str,2);
+    document.getElementById('pbmDec').textContent=dec;
+    document.getElementById('pbmHex').textContent='0x'+dec.toString(16).toUpperCase().padStart(2,'0');
+  }
+  bits.forEach((b,i)=>{const d=document.createElement('div');d.className='px';d.onclick=()=>{bits[i]^=1;paint();};grid.appendChild(d);});
+  paint();
+})();
+
+/* ============ THRESHOLD CANVAS (real tadpole, base64) ============ */
+(function thresh(){
+  const cv=document.getElementById('threshCanvas');const ctx=cv.getContext('2d');
+  const img=new Image();
+  let base=null;
+  img.onload=()=>{ctx.drawImage(img,0,0,cv.width,cv.height);base=ctx.getImageData(0,0,cv.width,cv.height);apply();};
+  img.src="data:image/png;base64,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";
+  const sl=document.getElementById('threshSlider');const vv=document.getElementById('threshVal');
+  function apply(){
+    if(!base)return;const T=+sl.value;vv.textContent=T;
+    const out=ctx.createImageData(cv.width,cv.height);const s=base.data,d=out.data;
+    for(let i=0;i<s.length;i+=4){const g=s[i];const v=g>=T?255:0;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255;}
+    ctx.putImageData(out,0,0);
+  }
+  sl.addEventListener('input',apply);
+})();
+
+/* ============ APERTURE IRIS ============ */
+(function aperture(){
+  const blades=document.getElementById('irisBlades');const hole=document.getElementById('irisHole');
+  const sl=document.getElementById('apSlider');const val=document.getElementById('apVal');const read=document.getElementById('apReadout');
+  const fstops=['f/32','f/22','f/16','f/8','f/5.6','f/2.8','f/1.8'];
+  // build blades
+  let s='';for(let i=0;i<8;i++){const a=i*45;s+=`<path d="M0,-100 A100,100 0 0,1 70.7,-70.7 L0,0 Z" transform="rotate(${a})" fill="#26201a" stroke="#3a2f24" stroke-width="0.6"/>`;}
+  blades.innerHTML=s;
+  function upd(){
+    const i=+sl.value;val.textContent=fstops[i];
+    const r=8+i*14; // hole radius grows with index (wider aperture)
+    hole.setAttribute('r',r);
+    const pct=Math.round((r-8)/(8+6*14-8)*100);
+    const light=['minimal','low','low-med','medium','med-high','high','maximum'][i];
+    read.textContent=`opening: ${pct}% · light: ${light} · depth of field: ${i<3?'deep (sharp throughout)':'shallow (blurred background)'}`;
+    blades.style.transform=`rotate(${i*4}deg)`;blades.style.transformOrigin='center';
+  }
+  sl.addEventListener('input',upd);upd();
+})();
+
+/* ============ CROSSFADE HELPERS ============ */
+function xfade(sliderId,topId,labLId,labRId,labels){
+  const sl=document.getElementById(sliderId);const top=document.getElementById(topId);
+  function u(){top.style.opacity=(+sl.value/100).toFixed(2);}
+  sl.addEventListener('input',u);u();
+}
+xfade('dofSlider','dofTop');
+xfade('shutSlider','shutTop');
+
+/* ============ GIF PALETTE ============ */
+(function palette(){
+  const grid=document.getElementById('palGrid');
+  const pal=[[255,0,0],[0,255,0],[0,0,255],[255,255,0],[255,0,255],[0,255,255],
+             [255,128,0],[128,0,255],[0,128,128],[200,200,200],[40,40,40],[255,255,255]];
+  const big=document.getElementById('palBig');const idx=document.getElementById('palIdx');const rgb=document.getElementById('palRGB');
+  function sel(i){
+    grid.querySelectorAll('.sw').forEach((s,k)=>s.classList.toggle('sel',k===i));
+    const c=pal[i];big.style.background=`rgb(${c[0]},${c[1]},${c[2]})`;
+    idx.textContent=i;rgb.textContent=`${c[0]}, ${c[1]}, ${c[2]}`;
+  }
+  pal.forEach((c,i)=>{const d=document.createElement('div');d.className='sw';d.style.background=`rgb(${c[0]},${c[1]},${c[2]})`;d.textContent=i;d.onclick=()=>sel(i);grid.appendChild(d);});
+  sel(0);
+})();
+
+/* ============ 3-3-2 PACK ============ */
+(function pack(){
+  const R=document.getElementById('rR'),G=document.getElementById('rG'),B=document.getElementById('rB');
+  const Rv=document.getElementById('rRv'),Gv=document.getElementById('rGv'),Bv=document.getElementById('rBv');
+  const sw=document.getElementById('packSwatch');const bitsEl=document.getElementById('packBits');
+  function u(){
+    const r=+R.value,g=+G.value,b=+B.value;
+    Rv.textContent=r+'/7';Gv.textContent=g+'/7';Bv.textContent=b+'/3';
+    const r8=Math.round(r/7*255),g8=Math.round(g/7*255),b8=Math.round(b/3*255);
+    sw.style.background=`rgb(${r8},${g8},${b8})`;
+    bitsEl.textContent=r.toString(2).padStart(3,'0')+g.toString(2).padStart(3,'0')+b.toString(2).padStart(2,'0');
+  }
+  [R,G,B].forEach(e=>e.addEventListener('input',u));u();
+})();
+
+/* ============ ALPHA ============ */
+(function alpha(){
+  const stage=document.getElementById('alphaStage');const panel=document.getElementById('alphaPanel');
+  const sl=document.getElementById('alphaSlider');const val=document.getElementById('alphaVal');
+  stage.style.backgroundImage="url('assets/img/transp_bg.png')";
+  function u(){const a=+sl.value/100;panel.style.background=`rgba(255,255,255,${a})`;val.textContent='α='+Math.round(a*255);panel.style.color=a>0.5?'#222':'#fff';}
+  sl.addEventListener('input',u);u();
+})();
+
+/* ============ RLE ============ */
+(function rle(){
+  const cells=document.getElementById('rleCells');const code=document.getElementById('rleCode');
+  const pixEl=document.getElementById('rlePix'),valsEl=document.getElementById('rleVals'),ratioEl=document.getElementById('rleRatio'),note=document.getElementById('rleNote');
+  const cycle=[2,9,4];const colors={2:'#3a4a55',9:'#c47a3a',4:'#5a7a55'};
+  let data=[2,3,2,3,2,3,2,3];
+  function render(){
+    cells.innerHTML='';
+    data.forEach((v,i)=>{const c=document.createElement('div');c.className='c';c.textContent=v;
+      c.style.background=v===3?'#7a3a4a':(colors[v]||'#444');c.style.color='#fff';
+      c.onclick=()=>{const cy=[2,9,4,3];data[i]=cy[(cy.indexOf(v)+1)%cy.length];render();};cells.appendChild(c);});
+    // encode
+    const pairs=[];let i=0;while(i<data.length){let j=i;while(j<data.length&&data[j]===data[i])j++;pairs.push([j-i,data[i]]);i=j;}
+    code.textContent=pairs.map(p=>`(${p[0]},${p[1]})`).join(' ');
+    const pix=data.length,vals=pairs.length*2;
+    pixEl.textContent=pix;valsEl.textContent=vals;
+    const r=(pix/vals);ratioEl.textContent=r.toFixed(2)+' : 1';
+    ratioEl.style.color=r>=1?'#9fd8b0':'#f0a081';
+    note.textContent=r>=1?'Good — RLE shrinks this row.':'Bad case — RLE produced MORE values than pixels. High-frequency data defeats run-length encoding.';
+  }
+  document.getElementById('rlePresetGood').onclick=function(){data=[2,2,2,2,2,2,2,9];setActive(this);render();};
+  document.getElementById('rlePresetBad').onclick=function(){data=[2,3,2,3,2,3,2,3];setActive(this);render();};
+  function setActive(b){document.querySelectorAll('#rle .btn,#rlePresetGood,#rlePresetBad').forEach(x=>x.classList.remove('active'));b.classList.add('active');}
+  render();
+})();
+
+/* ============ JPEG PIPELINE STEPPER ============ */
+(function jpeg(){
+  const steps=[
+    {img:'dct_block.png',cap:'<span class="lab">1 · Forward DCT</span>An 8×8 pixel block → 8×8 frequency coefficients. Notice the big values cluster at the top-left (low frequencies).'},
+    {img:'quant_table.png',cap:'<span class="lab">2 · Quantise</span>Divide by the quantisation table. Large divisors at high frequencies push most coefficients to 0 — only ~8 survive top-left.'},
+    {img:'rle_zigzag.png',cap:'<span class="lab">3 · Zig-zag + RLE</span>Read the block in a zig-zag so all the zeros bunch up, then run-length encode. The whole block → a handful of (count,value) pairs.'},
+    {img:'denormalise.png',cap:'<span class="lab">4 · Decode — de-normalise</span>To rebuild, multiply by the same quantisation table. Zeros stay zero; the kept coefficients return (slightly changed).'},
+    {img:'inverse_dct.png',cap:'<span class="lab">5 · Inverse DCT</span>Transform back to pixels. The reconstructed block is very close to the original — despite discarding most coefficients.'}
+  ];
+  const nav=document.getElementById('jpegSteps');const img=document.getElementById('jpegImg');const cap=document.getElementById('jpegCap');
+  let cur=0;
+  steps.forEach((s,i)=>{const b=document.createElement('button');b.className='btn'+(i===0?' active':'');b.textContent='Step '+(i+1);b.onclick=()=>go(i);nav.appendChild(b);});
+  function go(i){cur=i;img.src='assets/img/'+steps[i].img;cap.innerHTML=steps[i].cap;nav.querySelectorAll('.btn').forEach((b,k)=>b.classList.toggle('active',k===i));}
+  go(0);
+})();
+
+/* ============ JPEG QUALITY ============ */
+(function quality(){
+  const levels=[{q:'Q5',f:'11.6 kB',img:'cat_q5.png'},{q:'Q10',f:'12.2 kB',img:'cat_q10.png'},
+    {q:'Q30',f:'13.9 kB',img:'cat_q30.png'},{q:'Q50',f:'15.2 kB',img:'cat_q50.png'},
+    {q:'Q70',f:'17.1 kB',img:'cat_q70.png'},{q:'Q90',f:'21.2 kB',img:'cat_q90.png'}];
+  const sl=document.getElementById('qSlider');const im=document.getElementById('qImg');const cap=document.getElementById('qCap');
+  const big=document.getElementById('qBig');const size=document.getElementById('qSize');
+  function u(){const L=levels[+sl.value];im.src='assets/img/'+L.img;big.textContent=L.q;size.textContent=L.f;cap.innerHTML=`<b>${L.q}</b> · ${L.f}`;}
+  sl.addEventListener('input',u);u();
+  document.getElementById('qZoom').addEventListener('change',e=>{document.getElementById('blockRow').style.display=e.target.checked?'grid':'none';});
+})();
+
+/* ============ QUIZ ============ */
+(function quiz(){
+  const Q=[
+   {q:'A greyscale image is stored in an unsigned byte. How many shades of grey can it represent?',
+    o:['Depends on the camera','65,536','255','256'],a:3,fb:'8 bits → 2⁸ = 256 distinct values (0–255). 255 is the maximum value, not the count.'},
+   {q:'A 12-megapixel RGB image in raw (uncompressed) form takes roughly how much memory?',
+    o:['12 MB','48 MB','36 MB','1.5 MB'],a:2,fb:'12 million pixels × 3 bytes (R,G,B) ≈ 36 MB.'},
+   {q:'After simple thresholding, what is the maximum number of grey shades in the output?',
+    o:['256','2','255','Depends on the threshold value'],a:1,fb:'Thresholding produces a binary image: just black and white — 2 values.'},
+   {q:'The Portable Bit Map (.pbm) format stores a 1-bit image by…',
+    o:['storing one byte per pixel','packing eight pixels into one byte','using a 256-colour palette','dithering every pixel'],a:1,fb:'8 pixels per byte → an 8:1 saving over one-byte-per-pixel storage.'},
+   {q:'A smaller f-number (e.g. f/1.8 vs f/16) means…',
+    o:['a smaller aperture, less light','a larger aperture, more light','a faster shutter','a longer exposure'],a:1,fb:'f-number is a ratio: smaller number = wider opening = more light (and shallower depth of field).'},
+   {q:'You use a fast shutter to freeze a flower on a windy day. To keep the exposure correct you must…',
+    o:['open the aperture wider','close the aperture down','raise the threshold','use a smaller sensor'],a:0,fb:'Less time → less light, so widen the aperture to compensate (which also reduces depth of field).'},
+   {q:'Which is a LOSSLESS compression method?',
+    o:['JPEG','Run-Length Encoding','3-3-2 packing','Bracketing'],a:1,fb:'RLE rebuilds the exact image. JPEG (DCT + quantisation) is lossy.'},
+   {q:'Which raster format here is lossless?',
+    o:['JPEG','PNG','SVG','MP4'],a:1,fb:'PNG is lossless raster; JPEG is lossy, SVG is vector, MP4 is video.'},
+   {q:'In the JPEG DCT of an 8×8 block, where are the largest coefficients usually found?',
+    o:['bottom-right (high frequencies)','spread evenly','top-left (low frequencies)','only on the diagonal'],a:2,fb:'Energy concentrates at the top-left low frequencies; the quantisation step then discards the small high-frequency values.'},
+   {q:'A GIF image stores 8 bits per pixel. Those 8 bits are…',
+    o:['the full RGB colour','an index into a colour palette','an alpha value','a DCT coefficient'],a:1,fb:'GIF is indexed: each pixel is a palette index; the 256-entry palette of 24-bit colours is saved in the file.'},
+   {q:'What does an alpha channel encode?',
+    o:['the brightness of a pixel','how see-through a pixel is','the GPS location','the focal length'],a:1,fb:'Alpha = transparency, and it is smooth (0–100%), not all-or-nothing.'},
+   {q:'Why does lowering JPEG quality make the image look "blocky"?',
+    o:['the palette shrinks','the 8×8 DCT blocks lose detail and stop matching neighbours','the alpha channel is removed','RLE fails'],a:1,fb:'Heavy quantisation crushes coefficients so each 8×8 block no longer reconstructs accurately — the block boundaries show.'}
+  ];
+  const root=document.getElementById('quizRoot');const scoreEl=document.getElementById('quizScore');
+  let answered=0,correct=0;
+  Q.forEach((item,qi)=>{
+    const card=document.createElement('div');card.className='qcard';
+    card.innerHTML=`<div class="qnum">QUESTION ${qi+1} / ${Q.length}</div><div class="qtext">${item.q}</div>`;
+    const opts=document.createElement('div');
+    item.o.forEach((o,oi)=>{const b=document.createElement('button');b.className='opt';b.textContent=o;
+      b.onclick=()=>{
+        if(card.dataset.done)return;card.dataset.done='1';answered++;
+        opts.querySelectorAll('.opt').forEach((x,k)=>{x.classList.add('dim');if(k===item.a)x.classList.add('correct');});
+        if(oi===item.a){correct++;}else{b.classList.add('wrong');b.classList.remove('dim');}
+        fb.classList.add('show');
+        scoreEl.textContent=`Score: ${correct} / ${answered}`;
+      };
+      opts.appendChild(b);});
+    card.appendChild(opts);
+    const fb=document.createElement('div');fb.className='fb';fb.textContent='▸ '+item.fb;card.appendChild(fb);
+    root.appendChild(card);
+  });
+})();
+</script>
+</body>
+</html>
