@@ -278,28 +278,27 @@
         <span class="tag exam">Exam drill</span>
       </div>
     </a>
-
-        <!-- ===== CG 11 ===== -->
+<!-- ===== CG 11 ===== -->
     <a class="week-card" href="graphics/ch11/index.html">
       <div class="wk-num">G11</div>
-      <div class="wk-kicker">Computer Graphics · Lighting</div>
-      <h3>Lights &amp; Shading</h3>
-      <p>How a flat model becomes a believable surface: diffuse vs specular reflection, ambient light, Lambert's cosine law and the kₛ(R·V)ⁿ specular term. Building the Phong model, the reflection vector R = 2(L·N)N − L, Blinn-Phong's halfway vector for grazing angles, multiple lights and distance attenuation.</p>
+      <div class="wk-kicker">Computer Graphics · Shading</div>
+      <h3>Shading Transformations</h3>
+      <p>The Blinn-Phong equation and <em>where</em> you evaluate it: Flat (per face) → Gouraud (per vertex, interpolate colours) → Phong (per pixel, interpolate normals). Surface normals via the edge cross product, the vertex→raster→fragment pipeline with barycentric α/β/γ, model→world→view spaces, and the inverse-transpose normal matrix (MV)⁻ᵀ.</p>
       <div class="tags">
-        <span class="tag note">Phong &amp; Blinn-Phong</span>
-        <span class="tag hi">Lambert's law</span>
+        <span class="tag note">Flat · Gouraud · Phong</span>
+        <span class="tag hi">Normal matrix (MV)⁻ᵀ</span>
         <span class="tag exam">Exam drill</span>
       </div>
     </a>
-            <!-- ===== CG 12 ===== -->
+<!-- ===== CG 12 ===== -->
     <a class="week-card" href="graphics/ch12/index.html">
       <div class="wk-num">G12</div>
-      <div class="wk-kicker">Computer Graphics · Lighting</div>
-      <h3>Lights &amp; Shading</h3>
-      <p>How a flat model becomes a believable surface: diffuse vs specular reflection, ambient light, Lambert's cosine law and the kₛ(R·V)ⁿ specular term. Building the Phong model, the reflection vector R = 2(L·N)N − L, Blinn-Phong's halfway vector for grazing angles, multiple lights and distance attenuation.</p>
+      <div class="wk-kicker">Computer Graphics · Optimisation</div>
+      <h3>Refining &amp; Optimising</h3>
+      <p>Graphics as approximation: sampling &amp; aliasing, the Nyquist–Shannon limit (fs &gt; 2·f<sub>max</sub>), and pixels as point samples. Anti-aliasing from SSAA → MSAA → FXAA/TAA → DLSS, variable-rate &amp; foveated shading, plus back-face culling (v·n̂), frustum culling, and LOD up to Nanite.</p>
       <div class="tags">
-        <span class="tag note">Phong &amp; Blinn-Phong</span>
-        <span class="tag hi">Lambert's law</span>
+        <span class="tag note">Nyquist–Shannon</span>
+        <span class="tag hi">SSAA vs MSAA</span>
         <span class="tag exam">Exam drill</span>
       </div>
     </a>
