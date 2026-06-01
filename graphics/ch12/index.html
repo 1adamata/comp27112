@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch.12 — Refining &amp; Optimising · COMP27112</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@10..48,300..800&family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0d11; --bg2:#0f1218; --panel:#14181f; --panel2:#191e27;
+  --ink:#e9ebef; --muted:#959cab; --faint:#5d646f;
+  --teal:#35e0c2; --teal-d:#159e89; --amber:#ffb02e; --amber-d:#c97e12;
+  --red:#ff5d5d; --blue:#5aa9ff; --green:#5fe08a;
+  --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.05);
+  --mono:'JetBrains Mono',monospace; --disp:'Bricolage Grotesque',sans-serif; --body:'Newsreader',serif;
+  --maxw:980px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--body);
+  font-size:19px; line-height:1.65; font-weight:380;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+body::before{ /* grain + grid atmosphere */
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.5;
+  background:
+    radial-gradient(1200px 700px at 80% -10%, rgba(53,224,194,.07), transparent 60%),
+    radial-gradient(900px 600px at -10% 30%, rgba(255,176,46,.06), transparent 60%),
+    linear-gradient(transparent 0 31px, rgba(255,255,255,.018) 31px 32px),
+    linear-gradient(90deg, transparent 0 31px, rgba(255,255,255,.018) 31px 32px);
+  background-size:auto,auto,32px 32px,32px 32px;
+}
+.wrap{position:relative; z-index:1; max-width:var(--maxw); margin:0 auto; padding:0 24px}
+
+/* ---------- top progress + nav ---------- */
+#progress{position:fixed; top:0; left:0; height:3px; width:0%; z-index:60;
+  background:linear-gradient(90deg,var(--teal),var(--amber)); box-shadow:0 0 12px var(--teal)}
+nav#toc{position:fixed; top:0; left:0; right:0; z-index:50; backdrop-filter:blur(10px);
+  background:rgba(11,13,17,.72); border-bottom:1px solid var(--line);
+  transform:translateY(-110%); transition:transform .35s ease}
+nav#toc.show{transform:translateY(0)}
+nav#toc .nrow{max-width:var(--maxw); margin:0 auto; display:flex; align-items:center; gap:18px;
+  padding:11px 24px; font-family:var(--mono); font-size:12.5px; overflow-x:auto}
+nav#toc .brand{color:var(--teal); font-weight:700; white-space:nowrap; letter-spacing:.04em}
+nav#toc a{color:var(--muted); text-decoration:none; white-space:nowrap; transition:color .2s}
+nav#toc a:hover,nav#toc a.active{color:var(--ink)}
+
+/* ---------- hero ---------- */
+header.hero{position:relative; min-height:96vh; display:flex; flex-direction:column; justify-content:center;
+  padding:120px 0 80px; overflow:hidden}
+.hero .heroimg{position:absolute; inset:0; z-index:0;
+  background:url(assets/intro-chrome-sphere.jpg) center/cover no-repeat;
+  opacity:.22; filter:contrast(1.05) saturate(.9); mask-image:linear-gradient(to bottom,#000 30%,transparent 92%)}
+.hero .wrap{position:relative; z-index:2}
+.kicker{font-family:var(--mono); font-size:13px; letter-spacing:.32em; text-transform:uppercase;
+  color:var(--teal); display:flex; align-items:center; gap:14px}
+.kicker::before{content:""; width:46px; height:1px; background:var(--teal); display:inline-block}
+h1.title{font-family:var(--disp); font-weight:700; font-size:clamp(44px,8.5vw,104px); line-height:.95;
+  letter-spacing:-.02em; margin:22px 0 8px}
+h1.title .opt{font-style:italic; font-family:var(--body); font-weight:500; color:var(--amber)}
+.subtitle{font-family:var(--body); font-size:clamp(20px,2.5vw,27px); color:var(--muted); max-width:680px; font-weight:360}
+.herometa{margin-top:38px; display:flex; flex-wrap:wrap; gap:10px; font-family:var(--mono); font-size:12.5px}
+.herometa span{border:1px solid var(--line); padding:7px 13px; border-radius:100px; color:var(--muted)}
+.herometa span b{color:var(--teal); font-weight:500}
+.scrollcue{margin-top:60px; font-family:var(--mono); font-size:12px; color:var(--faint); letter-spacing:.2em;
+  animation:bob 1.8s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(8px)}}
+
+/* ---------- sections ---------- */
+section{padding:78px 0; position:relative}
+.secnum{font-family:var(--mono); font-size:13px; color:var(--amber); letter-spacing:.2em}
+h2{font-family:var(--disp); font-weight:650; font-size:clamp(30px,5vw,50px); line-height:1.02;
+  letter-spacing:-.015em; margin:8px 0 6px}
+h3{font-family:var(--disp); font-weight:600; font-size:clamp(21px,3vw,28px); margin:42px 0 12px; letter-spacing:-.01em}
+.lead{font-size:21px; color:#cfd3db; max-width:62ch; margin-bottom:8px}
+p{margin:16px 0; max-width:64ch}
+p .hl{color:var(--teal); font-weight:500}
+p .hlr{color:var(--red); font-weight:500}
+p .hla{color:var(--amber); font-weight:500}
+strong{font-weight:600; color:#fff}
+.mono{font-family:var(--mono); font-size:.82em; background:var(--panel2); border:1px solid var(--line);
+  padding:.12em .42em; border-radius:5px; color:var(--teal)}
+a.link{color:var(--amber); text-decoration:none; border-bottom:1px dotted var(--amber-d)}
+
+/* figures */
+figure{margin:30px 0; }
+figure img{width:100%; display:block; border-radius:10px; border:1px solid var(--line);
+  background:#000; box-shadow:0 18px 50px rgba(0,0,0,.5)}
+figure figcaption{font-family:var(--mono); font-size:12px; color:var(--faint); margin-top:10px; letter-spacing:.02em}
+figure figcaption b{color:var(--muted); font-weight:500}
+.figrow{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+@media(max-width:720px){ .figrow{grid-template-columns:1fr} }
+
+/* callout cards */
+.card{background:linear-gradient(180deg,var(--panel),var(--bg2)); border:1px solid var(--line);
+  border-radius:14px; padding:24px 26px; margin:26px 0}
+.card.teal{border-left:3px solid var(--teal)}
+.card.amber{border-left:3px solid var(--amber)}
+.card.red{border-left:3px solid var(--red)}
+.card .ctag{font-family:var(--mono); font-size:11.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted)}
+.card.teal .ctag{color:var(--teal)} .card.amber .ctag{color:var(--amber)} .card.red .ctag{color:var(--red)}
+.card h4{font-family:var(--disp); font-size:20px; margin:6px 0 4px; font-weight:600}
+.card p{margin:8px 0; font-size:18px; max-width:none}
+
+/* key term pill list */
+.deflist{display:grid; gap:0; margin:24px 0; border-top:1px solid var(--line)}
+.deflist .row{display:grid; grid-template-columns:200px 1fr; gap:18px; padding:16px 4px;
+  border-bottom:1px solid var(--line2)}
+.deflist .row dt{font-family:var(--mono); font-size:13.5px; color:var(--teal); padding-top:3px; letter-spacing:.01em}
+.deflist .row dd{font-size:18px; color:#cdd1d9}
+@media(max-width:640px){ .deflist .row{grid-template-columns:1fr; gap:4px} }
+
+/* interactive demo shell */
+.demo{background:radial-gradient(120% 120% at 50% 0%,var(--panel2),var(--bg2));
+  border:1px solid var(--line); border-radius:16px; padding:22px; margin:30px 0;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 20px 60px rgba(0,0,0,.45)}
+.demo .dhead{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px}
+.demo .dtag{font-family:var(--mono); font-size:11px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--bg); background:var(--teal); padding:5px 11px; border-radius:100px; font-weight:700}
+.demo h4{font-family:var(--disp); font-size:19px; font-weight:600}
+.demo canvas{width:100%; display:block; border-radius:10px; background:#070809; border:1px solid var(--line); touch-action:none}
+.ctrls{display:flex; flex-wrap:wrap; align-items:center; gap:18px 22px; margin-top:16px;
+  font-family:var(--mono); font-size:13px}
+.ctrl{display:flex; flex-direction:column; gap:7px; min-width:170px; flex:1}
+.ctrl label{color:var(--muted); display:flex; justify-content:space-between}
+.ctrl label b{color:var(--teal); font-weight:500}
+input[type=range]{-webkit-appearance:none; appearance:none; height:5px; border-radius:5px;
+  background:linear-gradient(90deg,var(--teal),var(--teal-d)); outline:none; cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+  background:#fff; border:3px solid var(--teal); cursor:pointer; box-shadow:0 0 10px rgba(53,224,194,.6)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--teal);cursor:pointer}
+.btn{font-family:var(--mono); font-size:13px; font-weight:500; cursor:pointer; user-select:none;
+  background:var(--panel2); color:var(--ink); border:1px solid var(--line); border-radius:9px;
+  padding:10px 16px; transition:all .15s}
+.btn:hover{border-color:var(--teal); color:var(--teal)}
+.btn.on{background:var(--teal); color:var(--bg); border-color:var(--teal); font-weight:700}
+.btn.amber.on{background:var(--amber); border-color:var(--amber)}
+.statline{font-family:var(--mono); font-size:13px; margin-top:14px; color:var(--muted);
+  border-top:1px dashed var(--line); padding-top:12px; display:flex; flex-wrap:wrap; gap:8px 22px}
+.statline b{color:var(--ink); font-weight:500}
+.verdict{font-weight:700}
+.verdict.ok{color:var(--green)} .verdict.bad{color:var(--red)} .verdict.warn{color:var(--amber)}
+
+/* reveal on scroll */
+.reveal{opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease}
+.reveal.in{opacity:1; transform:none}
+
+/* section divider tag */
+.divtag{font-family:var(--mono); font-size:12px; color:var(--faint); text-align:center;
+  letter-spacing:.3em; margin:30px 0; text-transform:uppercase}
+hr.rule{border:none; border-top:1px solid var(--line); margin:0}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<nav id="toc"><div class="nrow">
+  <span class="brand">CH12 ▸ OPTIMISING</span>
+  <a href="#approx">Approximation</a>
+  <a href="#sampling">Sampling</a>
+  <a href="#nyquist">Nyquist</a>
+  <a href="#graphics-alias">Pixels</a>
+  <a href="#aa">Anti-aliasing</a>
+  <a href="#vrs">VRS</a>
+  <a href="#backface">Back-face</a>
+  <a href="#frustum">Frustum &amp; LOD</a>
+  <a href="#quiz">Quiz</a>
+  <a href="#exam">Past papers</a>
+</div></nav>
+
+<header class="hero">
+  <div class="heroimg"></div>
+  <div class="wrap">
+    <div class="kicker">COMP27112 · Chapter 12 · Computer Graphics</div>
+    <h1 class="title">Refining<br>&amp; <span class="opt">Optimising</span></h1>
+    <p class="subtitle">Everything you see on screen is a beautiful lie. These are the hacks that keep the lie convincing &mdash; and keep the GPU from melting.</p>
+    <div class="herometa">
+      <span>Lecturer: <b>David Petrescu</b></span>
+      <span>Sampling &amp; <b>Aliasing</b></span>
+      <span><b>Anti-aliasing</b>: SSAA · MSAA · FXAA · TAA</span>
+      <span><b>VRS</b> &amp; perceptual rendering</span>
+      <span>Culling · <b>LOD</b> · Nanite</span>
+    </div>
+    <div class="scrollcue">↓ SCROLL TO BEGIN</div>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ 1. APPROXIMATION ============ -->
+<section id="approx"><div class="wrap reveal">
+  <div class="secnum">01 — THE BIG IDEA</div>
+  <h2>Graphics is an approximation</h2>
+  <p class="lead">We have come a very long way toward photorealistic rendering. But everything in the graphics world is only an <span class="hl">approximation of the real world</span> &mdash; keep that in mind for this whole chapter.</p>
+  <p>We can't build GPUs with infinite resources that simulate every light particle bouncing off every material. So instead we invent <strong>hacks</strong> that squeeze the best possible image out of the hardware we actually have. The catch: every time we improve one thing, we usually break another technique that was working fine. Rendering is a constant game of catch-up.</p>
+
+  <figure>
+    <img src="assets/gpu-tradeoff-meme.jpg" alt="GPU settings tradeoff meme">
+    <figcaption><b>The eternal trade-off.</b> Max resolution + MSAA + ray tracing maxed out… and now you're rendering at 800×600 to hold 200 FPS. Quality vs. performance is the whole story of this chapter.</figcaption>
+  </figure>
+
+  <div class="card amber">
+    <div class="ctag">Exam favourite</div>
+    <h4>"Graphics images are always approximations"</h4>
+    <p>This exact framing appears across multiple past papers (2016, 2018, 2019). It is the thesis of the entire lecture, so it is worth being able to argue it cold with concrete examples (aliasing, finite polygon counts, discrete pixels, limited bandwidth, LOD swaps).</p>
+  </div>
+</div></section>
+
+<hr class="rule">
+
+<!-- ============ 2. SAMPLING & ALIASING ============ -->
+<section id="sampling"><div class="wrap reveal">
+  <div class="secnum">02 — SAMPLING &amp; ALIASING</div>
+  <h2>Why a smooth wave goes wrong</h2>
+  <p class="lead">Before pixels, start with sound &mdash; it is the same maths, and easier to hear.</p>
+  <p>A sound wave is, in theory, perfectly <strong>continuous</strong>. But a microphone can only capture it as discrete <strong>samples</strong> taken at some <em>sampling rate</em>. We can approximate an infinitely smooth wave, but we can never represent it perfectly &mdash; exactly the same reason we don't get truly photorealistic rendering.</p>
+
+  <figure>
+    <img src="assets/continuous-vs-sampled.jpg" alt="Continuous wave versus sampled wave">
+    <figcaption><b>Continuous vs. sampled.</b> The top wave is the ideal signal; the bottom is what we actually store after sampling at discrete points.</figcaption>
+  </figure>
+
+  <p>For a 5&nbsp;Hz signal sampled at ~32 samples/second, the reconstruction is excellent. Lower the rate and it degrades gracefully &mdash; until you cross a threshold where the samples no longer describe the original wave at all. The reconstructed signal becomes a <span class="hlr">completely different, lower-frequency wave</span>. That phantom is <strong>aliasing</strong>.</p>
+
+  <figure class="figrow">
+    <img src="assets/undersampled-wave.jpg" alt="Under-sampled wave">
+    <img src="assets/aliasing-red-wave.jpg" alt="Aliasing produces a phantom low-frequency wave">
+  </figure>
+  <p style="margin-top:-6px"><span style="font-family:var(--mono);font-size:13px;color:var(--faint)">Left: too few samples to capture the wave. Right (red): the alias — a frequency that was never there. Aliasing literally <em>hallucinates</em> frequencies.</span></p>
+
+  <!-- INTERACTIVE: sampling demo -->
+  <div class="demo" id="sampleDemo">
+    <div class="dhead"><h4>Try it — under-sample a signal</h4><span class="dtag">Interactive</span></div>
+    <canvas id="cvSample" width="900" height="320"></canvas>
+    <div class="ctrls">
+      <div class="ctrl">
+        <label>Signal frequency <b id="sigVal">5 Hz</b></label>
+        <input type="range" id="sigF" min="2" max="14" value="5" step="1">
+      </div>
+      <div class="ctrl">
+        <label>Sampling rate <b id="rateVal">32 /s</b></label>
+        <input type="range" id="rateF" min="3" max="60" value="32" step="1">
+      </div>
+    </div>
+    <div class="statline">
+      <span>Nyquist limit: <b id="nyq">10 Hz</b></span>
+      <span>Perceived (alias) freq: <b id="alias">5.0 Hz</b></span>
+      <span id="verdict" class="verdict ok">✓ Faithfully reconstructed</span>
+    </div>
+    <p style="font-size:14px;color:var(--faint);margin:12px 0 0;max-width:none">Drag the sampling rate <em>below twice the signal frequency</em> and watch the reconstructed (dashed) wave collapse into a slow phantom that the dots never actually traced.</p>
+  </div>
+</div></section>
+
+<hr class="rule">
+
+<!-- ============ 3. NYQUIST ============ -->
+<section id="nyquist"><div class="wrap reveal">
+  <div class="secnum">03 — THE RULE</div>
+  <h2>Nyquist&ndash;Shannon</h2>
+  <p class="lead">There is a precise threshold for "enough samples", and it has a name.</p>
+
+  <div class="card teal">
+    <div class="ctag">Sampling theorem</div>
+    <h4>f<sub>s</sub> &gt; 2·f<sub>max</sub></h4>
+    <p>To faithfully sample a signal, the <strong>sampling rate must be more than twice the highest frequency</strong> present. From this we derive the <strong>Nyquist frequency</strong> = f<sub>s</sub>/2: the maximum frequency that can be represented faithfully with a given sampling rate.</p>
+  </div>
+
+  <figure class="figrow">
+    <img src="assets/nyquist-shannon.jpg" alt="Nyquist-Shannon sampling theory">
+    <img src="assets/nyquist-frequency.jpg" alt="Nyquist-Shannon theorem and Nyquist frequency">
+  </figure>
+  <p style="margin-top:-6px"><span style="font-family:var(--mono);font-size:13px;color:var(--faint)"><b>Nyquist&ndash;Shannon.</b> Sample at more than twice the max frequency; the Nyquist frequency is half the sampling rate.</span></p>
+
+  <p>Humans hear roughly <strong>20&nbsp;Hz&ndash;20&nbsp;kHz</strong>, so recording devices sample at around <strong>40+&nbsp;kHz</strong> (twice the upper bound). A dolphin, hearing past 150&nbsp;kHz, would need sampling above ~300&nbsp;kHz for a good listening experience.</p>
+
+  <figure>
+    <img src="assets/hearing-range-chart.jpg" alt="Animal hearing ranges chart">
+    <figcaption><b>Why 44.1/48&nbsp;kHz exists.</b> Sampling rate is chosen to cover twice the highest frequency the listener can perceive.</figcaption>
+  </figure>
+
+  <h3>The wagon-wheel effect</h3>
+  <p>Sample <em>exactly</em> at the Nyquist frequency and the reconstruction can flat-line: samples keep landing on the same phase of the wave. This is why a helicopter's rotor &mdash; or a car wheel on film &mdash; can appear frozen or even spin <span class="hlr">backwards</span> when the camera's frame rate lines up with the blade frequency.</p>
+
+  <figure>
+    <img src="assets/helicopter-blades.jpg" alt="Helicopter rotor blades aliasing">
+    <figcaption><b>Temporal aliasing in the wild.</b> When camera frame-rate ≈ 2× blade frequency, the rotor appears static. The slower tail rotor reconstructs fine.</figcaption>
+  </figure>
+
+  <!-- INTERACTIVE: wagon wheel -->
+  <div class="demo" id="wheelDemo">
+    <div class="dhead"><h4>Strobe a spinning wheel</h4><span class="dtag">Interactive</span></div>
+    <canvas id="cvWheel" width="900" height="300"></canvas>
+    <div class="ctrls">
+      <button class="btn on" id="wheelPlay">❚❚ Pause</button>
+      <div class="ctrl">
+        <label>True rotation <b id="rpmVal">6.0 rev/s</b></label>
+        <input type="range" id="rpm" min="1" max="12" value="6" step="0.5">
+      </div>
+      <div class="ctrl">
+        <label>Camera shutter (sampling) <b id="shutVal">12 fps</b></label>
+        <input type="range" id="shut" min="4" max="60" value="12" step="1">
+      </div>
+    </div>
+    <div class="statline">
+      <span>Left: <b>real motion</b></span><span>Right: <b>what the camera samples</b></span>
+      <span id="wheelVerdict" class="verdict warn">↺ appears to drift</span>
+    </div>
+  </div>
+</div></section>
+
+<hr class="rule">
+
+<!-- ============ 4. ALIASING IN GRAPHICS ============ -->
+<section id="graphics-alias"><div class="wrap reveal">
+  <div class="secnum">04 — BACK TO PIXELS</div>
+  <h2>Pixels are samples, not squares</h2>
+  <p class="lead">The single most important idea from week 1, finally cashing in.</p>
+  <p>A pixel is <strong>not a little square</strong>. It is a dimensionless <strong>point sample</strong>, represented using a box filter. The word "sample" was stressed all course for exactly this moment: if we point-sample something continuous, we get aliasing &mdash; the same demon as the sound wave.</p>
+
+  <figure>
+    <img src="assets/teapot-point-sample.jpg" alt="Teapot sampled with box filter point samples">
+    <figcaption><b>Point samples + box filter.</b> Each pixel asks one question — "what colour is at this single point?" — and fills its whole box with the answer.</figcaption>
+  </figure>
+
+  <p>In images, the <strong>Nyquist frequency is set by the spacing between pixels</strong> (true of any array of receptors). At a hard edge, the signal jumps almost vertically &mdash; a <strong>step function</strong> in the spatial domain. To reproduce a perfectly vertical edge with waves you'd need to sample at infinity, which is impossible. So instead we <span class="hl">smooth the jump</span>.</p>
+
+  <figure class="figrow">
+    <img src="assets/nyquist-pixel-spacing.jpg" alt="Nyquist frequency from pixel spacing">
+    <img src="assets/step-function-smoothed.jpg" alt="Step function smoothed in the spatial domain">
+  </figure>
+  <p style="margin-top:-6px"><span style="font-family:var(--mono);font-size:13px;color:var(--faint)">Smoothing the spatial step is exactly what texture filtering already did for us &mdash; closer to reality <em>and</em> fewer artefacts.</span></p>
+
+  <figure>
+    <img src="assets/checkerboard-perspective.jpg" alt="Checkerboard receding into perspective showing aliasing">
+    <figcaption><b>Every frequency at once.</b> A checkerboard receding into perspective: clean near the camera, hitting the Nyquist boundary mid-frame, and aliasing badly toward the horizon.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="assets/aniso-vs-mipmap.jpg" alt="Anisotropic versus mipmap filtering">
+    <figcaption><b>The checkerboard is the worst case.</b> Receding into perspective it contains every frequency at once — clean foreground, the Nyquist boundary, and severe aliasing toward the horizon, all in one image. That's why graphics & eye-test charts use it constantly.</figcaption>
+  </figure>
+
+  <div class="card red">
+    <div class="ctag">The problem</div>
+    <h4>Jagged edges = under-sampling</h4>
+    <p>Solid textured areas look fine, but around <strong>edges</strong> the box-filter sampling produces blocky, jagged "stair-steps". Picture a pixel grid laid over the image: the rails of this roller-coaster fall apart at every diagonal.</p>
+  </div>
+  <figure class="figrow">
+    <img src="assets/fallout-no-aa.jpg" alt="Game scene with no anti-aliasing">
+    <img src="assets/rollercoaster-jagged.jpg" alt="Jagged rollercoaster edges under pixel grid">
+  </figure>
+</div></section>
+
+<hr class="rule">
+
+<!-- ============ 5. ANTI-ALIASING ============ -->
+<section id="aa"><div class="wrap reveal">
+  <div class="secnum">05 — THE SOLUTIONS</div>
+  <h2>Anti-aliasing</h2>
+  <p class="lead">Aliasing is an under-sampling problem, so the fixes all come down to: get more information, cleverly.</p>
+
+  <h3>SSAA — Super-Sample Anti-Aliasing</h3>
+  <p>The brute-force fix: just <strong>sample at sub-pixel level</strong>. Run rasterisation <em>and</em> the fragment shader for every sub-sample, then average. Edges get blended, smooth colours.</p>
+  <figure class="figrow">
+    <img src="assets/triangle-blocky.jpg" alt="Blocky triangle, no AA">
+    <img src="assets/ssaa-subpixel.jpg" alt="SSAA sub-pixel sampling blends edges">
+  </figure>
+  <div class="card red">
+    <div class="ctag">Cost</div>
+    <h4>Brutally expensive</h4>
+    <p>Both rasterisation <strong>and</strong> the fragment shader run at <em>every</em> sub-sample, so cost scales linearly with the sample count: <span class="mono">N× (Rasterisation + Shading)</span>. At 4K with 4× or 16× sampling, that's an enormous amount of redundant work. Old games expose it as a setting; modern engines mostly avoid it.</p>
+  </div>
+  <figure class="figrow">
+    <img src="assets/ssaa-title.jpg" alt="SSAA 4x rasterisation and shading">
+    <img src="assets/ssaa-gpu-config.jpg" alt="GPU anti-aliasing configuration menu">
+  </figure>
+
+  <!-- INTERACTIVE: AA triangle -->
+  <div class="demo" id="aaDemo">
+    <div class="dhead"><h4>No&nbsp;AA → SSAA on one triangle</h4><span class="dtag">Interactive</span></div>
+    <canvas id="cvAA" width="900" height="340"></canvas>
+    <div class="ctrls">
+      <button class="btn" id="aaToggle">Anti-aliasing: OFF</button>
+      <div class="ctrl">
+        <label>Sub-samples per pixel <b id="ssVal">1× (centre only)</b></label>
+        <input type="range" id="ssRate" min="1" max="4" value="1" step="1">
+      </div>
+      <button class="btn" id="gridToggle">Show pixel grid</button>
+    </div>
+    <div class="statline">
+      <span>Shader calls/pixel: <b id="aaCost">1</b></span>
+      <span id="aaNote" class="verdict bad">Hard box test → jagged</span>
+    </div>
+  </div>
+
+  <h3>MSAA — Multi-Sample Anti-Aliasing</h3>
+  <p>The key insight: you don't need to <em>shade</em> every sub-sample &mdash; only test <strong>coverage &amp; depth</strong> there. So MSAA does the z-buffer test at multiple sub-positions to compute a <strong>fractional coverage</strong>, but the fragment shader runs <span class="hl">once per covered pixel</span>. Much cheaper, and it still smooths geometry edges beautifully &mdash; especially with overlapping triangles.</p>
+  <figure class="figrow">
+    <img src="assets/msaa-coverage.jpg" alt="MSAA fractional coverage">
+    <img src="assets/msaa-overlapping.jpg" alt="MSAA blending overlapping triangles">
+  </figure>
+  <div class="deflist">
+    <div class="row"><dt>SSAA</dt><dd>Rasterise + <strong>shade</strong> every sub-sample. Highest quality, highest cost.</dd></div>
+    <div class="row"><dt>MSAA</dt><dd>Sub-sample <strong>coverage &amp; depth only</strong>; shade once per pixel. Great for edges, far cheaper.</dd></div>
+  </div>
+
+  <h3>FXAA &amp; TAA — the post-process era</h3>
+  <p><strong>FXAA</strong> (Fast Approximate AA) is a cheap post-processing <em>blur</em> that detects and softens jagged edges. Low cost, compatible with almost any renderer, but can look soft/blurry.</p>
+  <p><strong>TAA</strong> (Temporal AA) is one of the most popular methods today. Each frame applies a tiny <strong>sub-pixel jitter</strong> to the projection matrix, then <strong>accumulates samples across frames</strong> &mdash; a high effective sample rate for very little per-frame cost. The downside is ghosting and lost detail in motion (look at the specular highlights smearing around the eyes).</p>
+  <figure class="figrow">
+    <img src="assets/fxaa-vs-taa.jpg" alt="No AA vs FXAA vs TAA comparison">
+    <img src="assets/taa-vs-no-taa.jpg" alt="TAA versus no TAA detail loss">
+  </figure>
+
+  <h3>DSR &amp; DLSS — the modern frontier</h3>
+  <p>NVIDIA's <strong>DSR</strong> (Dynamic Super Resolution) is essentially SSAA but driver-level, scene-aware and hyper-optimised. <strong>DLSS</strong> (Deep Learning Super Sampling) uses machine learning &mdash; promising, but it can <em>hallucinate</em> detail, occasionally inventing crispness that produces its own kind of aliasing.</p>
+  <figure>
+    <img src="assets/dlss-yennefer.jpg" alt="Modern AA techniques compared (DLDSR)">
+    <figcaption><b>Source: NVIDIA DLDSR / DigitalFoundry.</b> The takeaway: anti-aliasing can be solved at <em>any</em> stage of the pipeline — not just post-processing.</figcaption>
+  </figure>
+</div></section>
+
+<hr class="rule">
+
+<!-- ============ 6. VRS ============ -->
+<section id="vrs"><div class="wrap reveal">
+  <div class="secnum">06 — SHADE LESS, SMARTLY</div>
+  <h2>Variable Rate Shading</h2>
+  <p class="lead">We've stopped overloading rasterisation. Can we optimise the <em>shading</em> itself?</p>
+  <p>Shading is one of the most expensive operations in graphics. Do we really need to run the fragment shader once for <em>every</em> pixel? <strong>Variable Rate Shading</strong> (VRS) &mdash; NVIDIA's term; AMD has equivalents &mdash; says no. In perceptually important regions we shade per-pixel; elsewhere we shade in coarse tiles, e.g. <strong>one shader call per 4×4 = 16 pixels</strong>.</p>
+
+  <div class="card teal">
+    <div class="ctag">Analogy</div>
+    <h4>A painter's brushes</h4>
+    <p>Fine detail → fine brush, careful strokes. Background or sky → broad strokes that cover lots of canvas fast. VRS hands the GPU both brushes and lets it choose per region.</p>
+  </div>
+
+  <figure class="figrow">
+    <img src="assets/vrs-car.jpg" alt="VRS applied to a driving scene">
+    <img src="assets/vrs-saliency.jpg" alt="VRS saliency overlay on scene">
+  </figure>
+
+  <h3>How do we know <em>where</em> to be coarse?</h3>
+  <p>This is where graphics meets biology. Our retinas have a <strong>finite number of photoreceptors</strong>, spaced non-uniformly &mdash; and that spacing sets the <strong>maximum sampling rate of the eye</strong>. From it we can build a mathematical model of vision: the <strong>contrast sensitivity function (CSF)</strong>. Where frequency is too high or contrast too low, we simply can't resolve detail &mdash; our eyes are doing texture filtering for us.</p>
+
+  <figure class="figrow">
+    <img src="assets/eye-photoreceptors.jpg" alt="Eye photoreceptors and sampling">
+    <img src="assets/contrast-sensitivity.jpg" alt="Contrast sensitivity function and saliency map">
+  </figure>
+
+  <p>Feed these perceptual models in as <strong>oracles</strong> and you get <strong>saliency maps</strong>: predictions of where users will notice detail. Allocating render resources by saliency is called <strong>perceptually-driven rendering</strong>. In VR with eye-tracking, the gaze point gets fine shading (foveated rendering) while the periphery goes coarse &mdash; you can also drop MIP levels there to cut texture work.</p>
+
+  <figure>
+    <img src="assets/vrs-modes.jpg" alt="Content adaptive, motion adaptive and foveated rendering">
+    <figcaption><b>Source: NVIDIA.</b> Content-adaptive, motion-adaptive and foveated shading — VRS gives <em>local</em> control, so it pairs with many other optimisations.</figcaption>
+  </figure>
+</div></section>
+
+<hr class="rule">
+
+<!-- ============ 7. BACK-FACE CULLING ============ -->
+<section id="backface"><div class="wrap reveal">
+  <div class="secnum">07 — GO DEEPER: GEOMETRY</div>
+  <h2>Back-face culling</h2>
+  <p class="lead">Now we move up the pipeline into the vertex shader. The deeper you optimise, the bigger the savings.</p>
+  <figure>
+    <img src="assets/pipeline-overview.jpg" alt="Overview of the graphics pipeline stages">
+    <figcaption><b>The pipeline so far.</b> 3D vertices → vertex/tessellation → rasterisation → fragment shader → render-output → framebuffer. Each optimisation in this chapter targets a different stage — and the earlier the stage, the more downstream work it saves.</figcaption>
+  </figure>
+  <p>In the vertex shader we have the <strong>vertex normals</strong>, and we know the <strong>camera position</strong> (vector <span class="mono">v</span> — we need it for shading anyway). Take a triangle's normal <span class="mono">n̂</span> and dot it with the view vector:</p>
+
+  <div class="deflist">
+    <div class="row"><dt>v · n̂ &gt; 0</dt><dd>Vectors point roughly the same way → triangle <strong>faces the camera</strong> → keep it.</dd></div>
+    <div class="row"><dt>v · n̂ = 0</dt><dd>Perpendicular — edge-on.</dd></div>
+    <div class="row"><dt>v · n̂ &lt; 0</dt><dd>Normal points <strong>away</strong> → on a solid (opaque) object this face is invisible → <span class="hlr">discard it</span>.</dd></div>
+  </div>
+
+  <p>For a closed opaque mesh that discards roughly <strong>50% of triangles</strong> &mdash; half as much barycentric interpolation and shading &mdash; and the price is a single <strong>dot product</strong>. Enormous saving for almost nothing.</p>
+
+  <figure class="figrow">
+    <img src="assets/backface-cow-camera.jpg" alt="Back-face culling on a cow with camera vector">
+    <img src="assets/backface-dotproduct.jpg" alt="Dot product determines facing">
+  </figure>
+  <figure>
+    <img src="assets/backface-normals.jpg" alt="Visualised surface normals, red faces point away from camera">
+    <figcaption><b>Red = facing away.</b> Normals shown in red describe faces invisible from this camera angle — simply don't render them, and the triangle count roughly halves.</figcaption>
+  </figure>
+
+  <!-- INTERACTIVE: backface cull -->
+  <div class="demo" id="cullDemo">
+    <div class="dhead"><h4>Cull a rotating mesh</h4><span class="dtag">Interactive</span></div>
+    <canvas id="cvCull" width="900" height="340"></canvas>
+    <div class="ctrls">
+      <button class="btn" id="cullToggle">Back-face culling: OFF</button>
+      <button class="btn on" id="cullSpin">❚❚ Pause spin</button>
+      <button class="btn" id="windFlip">Flip winding order</button>
+    </div>
+    <div class="statline">
+      <span>Triangles total: <b id="triTot">12</b></span>
+      <span>Drawn: <b id="triDrawn">12</b></span>
+      <span>Culled: <b id="triCull">0</b></span>
+      <span id="cullVerdict" class="verdict warn">Rendering everything</span>
+    </div>
+  </div>
+
+  <div class="card amber">
+    <div class="ctag">Watch out</div>
+    <h4>Winding order matters</h4>
+    <p>Culling relies on consistent <strong>winding order</strong> (your right/left-handed convention). Get it wrong and you cull all the <em>visible</em> faces instead, leaving you staring at the inside of the model. Flip the winding in the demo above to see the artefact.</p>
+  </div>
+  <figure>
+    <img src="assets/backface-car.jpg" alt="Back-face culling on a car, solid versus wireframe">
+    <figcaption><b>50% gone, look identical.</b> Solid car vs. the surviving front-facing shell after culling.</figcaption>
+  </figure>
+</div></section>
+
+<hr class="rule">
+
+<!-- ============ 8. FRUSTUM + LOD ============ -->
+<section id="frustum"><div class="wrap reveal">
+  <div class="secnum">08 — BEFORE THE GPU EVEN STARTS</div>
+  <h2>Frustum culling &amp; Level of Detail</h2>
+  <p class="lead">"We need to go deeper" — back to the CPU, where data is read from memory and pushed to the GPU.</p>
+  <p>The CPU→GPU hand-off is a <strong>massive bottleneck</strong>. Often it isn't computation at all &mdash; it's literally <strong>bandwidth</strong>: not enough capacity on the physical connections to feed the pipeline fast enough. So can we send <em>less data</em>?</p>
+
+  <h3>Frustum culling</h3>
+  <p>We already define the camera's <strong>viewing frustum</strong> (near plane, far plane, field of view) before the vertex shader runs. So we can run a trivial, cheap test on the <strong>CPU</strong>: is this object even inside the frustum? If not, <span class="hlr">don't send it into the pipeline at all</span>. Objects that are never visible never cost a single pipeline stage &mdash; which is exactly why it's so effective.</p>
+
+  <div class="card teal">
+    <div class="ctag">Why two planes?</div>
+    <h4>Near plane &amp; far plane</h4>
+    <p>The <strong>near plane</strong> stops geometry sitting inside the camera from projecting incorrectly; the <strong>far plane</strong> bounds the depth range so z-buffer precision isn't wasted on things too distant to matter.</p>
+  </div>
+
+  <figure class="figrow">
+    <img src="assets/frustum-culling.jpg" alt="Frustum culling diagram">
+    <img src="assets/frustum-statue.jpg" alt="Frustum culling with statue">
+  </figure>
+
+  <div class="card amber">
+    <div class="ctag">Trade-off</div>
+    <h4>Popping artefacts</h4>
+    <p>Cull too aggressively and objects visibly snap into existence as you turn &mdash; jarring "popping". The fix: <strong>pre-load data in a slightly larger area</strong> than the strict frustum so things are ready before they're needed.</p>
+  </div>
+  <figure>
+    <img src="assets/frustum-popping-game.jpg" alt="Popping artefact in a game">
+    <figcaption><b>Popping in-game.</b> Geometry that should already be there appears late — immersion-breaking.</figcaption>
+  </figure>
+
+  <h3>Level of Detail (LOD)</h3>
+  <p>A statue right at the near plane deserves full polygons. The same statue far across the scene? Render a <strong>lower-poly version</strong> &mdash; the silhouette survives and you save huge amounts of computation. Most engine assets ship with several pre-built LOD meshes; the basic algorithm just checks <strong>distance from camera</strong> and picks a level.</p>
+
+  <figure>
+    <img src="assets/lod-levels.jpg" alt="Multiple LOD levels of a statue with polygon percentages">
+    <figcaption><b>LOD ladder.</b> From 100% down to a few percent of the polygons — note how well the silhouette is preserved even at the lowest level.</figcaption>
+  </figure>
+
+  <!-- INTERACTIVE: LOD slider -->
+  <div class="demo" id="lodDemo">
+    <div class="dhead"><h4>Push the model away</h4><span class="dtag">Interactive</span></div>
+    <canvas id="cvLod" width="900" height="320"></canvas>
+    <div class="ctrls">
+      <div class="ctrl">
+        <label>Distance from camera <b id="distVal">near</b></label>
+        <input type="range" id="dist" min="0" max="100" value="10" step="1">
+      </div>
+      <button class="btn" id="lodPop">Popping: ON</button>
+    </div>
+    <div class="statline">
+      <span>Active LOD: <b id="lodLevel">LOD0</b></span>
+      <span>Polygons: <b id="lodPoly">100%</b></span>
+      <span id="lodVerdict" class="verdict ok">full detail</span>
+    </div>
+    <p style="font-size:14px;color:var(--faint);margin:12px 0 0;max-width:none">Toggle popping off to <em>cross-fade</em> between levels instead of snapping — the smooth-transition idea behind continuous LOD.</p>
+  </div>
+
+  <figure class="figrow">
+    <img src="assets/lod-high-poly.jpg" alt="High poly statue near camera">
+    <img src="assets/lod-discus.jpg" alt="Lower poly statue further away">
+  </figure>
+
+  <h3>Continuous LOD &amp; Nanite</h3>
+  <p>What if we don't pre-bake the levels? The <strong>tessellation shader</strong> &mdash; the part of the pipeline that divides objects into triangles &mdash; can generate meshes <em>on the fly</em>. Adaptively generated detail is <strong>continuous LOD</strong>.</p>
+  <p>Unreal Engine 5's <strong>Nanite</strong> takes this furthest: the LOD decision moves from CPU to GPU, becomes <strong>per-cluster</strong>, continuous, and driven by <strong>screen-space error</strong> rather than raw camera distance. This is <strong>virtualised geometry</strong> &mdash; and research here is far from finished.</p>
+  <figure class="figrow">
+    <img src="assets/continuous-lod.jpg" alt="Continuous level of detail">
+    <img src="assets/nanite-ue5.jpg" alt="Unreal Engine 5 Nanite tech demo">
+  </figure>
+
+  <div class="card teal">
+    <div class="ctag">Tessellation — exam definition</div>
+    <h4>Splitting a polygon into a set of separate convex polygons</h4>
+    <p>Needed because hardware works best with simple convex primitives (triangles); concave polygons and polygons-with-holes must be broken down before rendering.</p>
+  </div>
+</div></section>
+
+<hr class="rule">
+
+<!-- ============ 9. QUIZ ============ -->
+<section id="quiz"><div class="wrap reveal">
+  <div class="secnum">09 — CHECK YOURSELF</div>
+  <h2>Quiz</h2>
+  <p class="lead">Twelve questions drawn straight from the course quiz bank. Tap an answer &mdash; you get instant feedback.</p>
+  <div class="statline" style="border:none;justify-content:flex-start;margin-bottom:8px">
+    <span>Score: <b id="qScore">0 / 0</b></span>
+    <button class="btn" id="quizReset" style="margin-left:auto">Reset quiz</button>
+  </div>
+  <div id="quizHost"></div>
+</div></section>
+
+<hr class="rule">
+
+<!-- ============ 10. PAST PAPERS ============ -->
+<section id="exam"><div class="wrap reveal">
+  <div class="secnum">10 — EXAM PRACTICE</div>
+  <h2>From the past papers</h2>
+  <p class="lead">Real COMP27112 questions that map onto this chapter. Click to reveal a model answer.</p>
+  <div id="examHost"></div>
+</div></section>
+
+<hr class="rule">
+
+<!-- ============ 11. CHEAT SHEET ============ -->
+<section id="cheat"><div class="wrap reveal">
+  <div class="secnum">11 — ONE-PAGE RECAP</div>
+  <h2>The cheat sheet</h2>
+  <div class="deflist">
+    <div class="row"><dt>Core thesis</dt><dd>All graphics is an <strong>approximation</strong>; optimisation = best image for finite GPU + bandwidth.</dd></div>
+    <div class="row"><dt>Aliasing</dt><dd>Under-sampling a continuous signal → phantom (alias) frequencies. Pixels are <strong>point samples</strong>.</dd></div>
+    <div class="row"><dt>Nyquist&ndash;Shannon</dt><dd><strong>f<sub>s</sub> &gt; 2·f<sub>max</sub></strong>. Nyquist freq = f<sub>s</sub>/2. Sample <em>at</em> it → wagon-wheel flat-line.</dd></div>
+    <div class="row"><dt>SSAA</dt><dd>Rasterise + <strong>shade</strong> every sub-sample. Best quality, cost ∝ samples.</dd></div>
+    <div class="row"><dt>MSAA</dt><dd>Sub-sample <strong>coverage + depth only</strong>; shade once/pixel. Cheap edge AA.</dd></div>
+    <div class="row"><dt>FXAA</dt><dd>Cheap post-process blur of edges. Soft but universal.</dd></div>
+    <div class="row"><dt>TAA</dt><dd><strong>Jitter projection per frame</strong>, accumulate across frames. Ghosting in motion.</dd></div>
+    <div class="row"><dt>DSR / DLSS</dt><dd>Driver-level SSAA / ML upscaling. DLSS can hallucinate detail.</dd></div>
+    <div class="row"><dt>VRS</dt><dd>Shade <strong>once per pixel-block</strong> where detail doesn't matter. Guided by <strong>saliency / CSF</strong>.</dd></div>
+    <div class="row"><dt>Back-face culling</dt><dd>Discard triangles with <strong>v · n̂ &lt; 0</strong>. ~50% saved; needs consistent winding.</dd></div>
+    <div class="row"><dt>Frustum culling</dt><dd><strong>CPU-side</strong> test before the GPU; skip objects outside the view frustum. Watch popping.</dd></div>
+    <div class="row"><dt>LOD</dt><dd>Swap mesh detail by <strong>distance</strong>. Popping when it snaps at a threshold.</dd></div>
+    <div class="row"><dt>Continuous LOD / Nanite</dt><dd>Tessellation generates detail on the fly; Nanite = per-cluster, GPU, screen-space-error driven.</dd></div>
+    <div class="row"><dt>Tessellation</dt><dd>Splitting a polygon into separate <strong>convex</strong> polygons.</dd></div>
+  </div>
+
+  <div class="divtag">— end of chapter 12 —</div>
+  <p style="text-align:center;font-family:var(--mono);font-size:12px;color:var(--faint);max-width:none">
+    Notes compiled from the <em>Refining &amp; Optimising</em> lecture · slide imagery © University of Manchester / source attributions on slides ·
+    quiz items from the course quiz bank · exam prompts from COMP27112 2016&ndash;2025 papers.
+  </p>
+</div></section>
+
+</main>
+
+<script>
+/* ============================================================= UTIL */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+/* progress + nav + reveal + active link */
+const prog=$('#progress'), toc=$('#toc');
+const secs=$$('section[id]'), links=$$('#toc a');
+addEventListener('scroll',()=>{
+  const h=document.documentElement, sc=h.scrollTop, max=h.scrollHeight-h.clientHeight;
+  prog.style.width=(sc/max*100)+'%';
+  toc.classList.toggle('show', sc>innerHeight*0.7);
+  let cur='';
+  secs.forEach(s=>{ if(s.getBoundingClientRect().top<innerHeight*0.35) cur=s.id; });
+  links.forEach(a=>a.classList.toggle('active', a.getAttribute('href')==='#'+cur));
+},{passive:true});
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.12});
+$$('.reveal').forEach(el=>io.observe(el));
+
+/* helper: high-DPI canvas sizing */
+function fit(cv){
+  const dpr=Math.min(devicePixelRatio||1,2);
+  const w=cv.clientWidth, h=parseInt(cv.getAttribute('height'))*(w/parseInt(cv.getAttribute('width')));
+  cv.style.height=h+'px';
+  cv.width=w*dpr; cv.height=h*dpr;
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w,h};
+}
+
+/* ============================================================= 1. SAMPLING */
+(function(){
+  const cv=$('#cvSample'); if(!cv)return;
+  const sigF=$('#sigF'),rateF=$('#rateF');
+  function draw(){
+    const {ctx,w,h}=fit(cv); const mid=h/2, A=h*0.32, T=1.0;
+    const f=+sigF.value, r=+rateF.value;
+    $('#sigVal').textContent=f+' Hz'; $('#rateVal').textContent=r+' /s';
+    $('#nyq').textContent=(r/2).toFixed(0)+' Hz';
+    ctx.clearRect(0,0,w,h);
+    // baseline
+    ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(w,mid);ctx.stroke();
+    // continuous signal
+    ctx.strokeStyle='rgba(255,255,255,.45)';ctx.lineWidth=2;ctx.beginPath();
+    for(let x=0;x<=w;x++){const t=x/w*T;const y=mid-A*Math.sin(2*Math.PI*f*t);x?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+    ctx.stroke();
+    // alias frequency (folded)
+    const k=Math.round(f/r), fa=Math.abs(f-r*k);
+    // reconstructed dashed wave at alias freq
+    ctx.strokeStyle='rgba(255,93,93,.9)';ctx.lineWidth=2.5;ctx.setLineDash([7,6]);ctx.beginPath();
+    const phaseSign=(f-r*k)<0?-1:1;
+    for(let x=0;x<=w;x++){const t=x/w*T;const y=mid-A*Math.sin(2*Math.PI*fa*t*phaseSign);x?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+    ctx.stroke();ctx.setLineDash([]);
+    // samples
+    const n=Math.floor(r*T);
+    for(let i=0;i<=n;i++){const t=i/r;if(t>T)break;const x=t/T*w;const y=mid-A*Math.sin(2*Math.PI*f*t);
+      ctx.strokeStyle='rgba(53,224,194,.35)';ctx.beginPath();ctx.moveTo(x,mid);ctx.lineTo(x,y);ctx.stroke();
+      ctx.fillStyle='#35e0c2';ctx.beginPath();ctx.arc(x,y,4,0,7);ctx.fill();}
+    $('#alias').textContent=fa.toFixed(1)+' Hz';
+    const v=$('#verdict');
+    if(r>2*f){v.className='verdict ok';v.textContent='✓ Faithfully reconstructed';}
+    else if(Math.abs(r-2*f)<0.6){v.className='verdict warn';v.textContent='⚠ Exactly at Nyquist — can flat-line';}
+    else {v.className='verdict bad';v.textContent='✗ ALIASING — phantom '+fa.toFixed(1)+' Hz wave';}
+  }
+  sigF.oninput=rateF.oninput=draw; addEventListener('resize',draw); draw();
+})();
+
+/* ============================================================= 2. WAGON WHEEL */
+(function(){
+  const cv=$('#cvWheel'); if(!cv)return;
+  const rpm=$('#rpm'),shut=$('#shut'),play=$('#wheelPlay');
+  let running=true, t0=performance.now(), trueA=0, sampA=0, lastSamp=0, raf;
+  function spokes(ctx,cx,cy,R,ang,col){
+    ctx.strokeStyle=col;ctx.lineWidth=4;
+    ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.stroke();
+    ctx.lineWidth=5;
+    for(let i=0;i<6;i++){const a=ang+i*Math.PI/3;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);ctx.stroke();}
+    ctx.fillStyle=col;ctx.beginPath();ctx.arc(cx,cy,6,0,7);ctx.fill();
+    // marker spoke
+    ctx.strokeStyle='#fff';ctx.lineWidth=5;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(ang)*R,cy+Math.sin(ang)*R);ctx.stroke();
+  }
+  function frame(now){
+    const {ctx,w,h}=fit(cv); const dt=(now-t0)/1000; t0=now;
+    const rev=+rpm.value, s=+shut.value;
+    $('#rpmVal').textContent=rev.toFixed(1)+' rev/s'; $('#shutVal').textContent=s+' fps';
+    if(running){ trueA+=rev*2*Math.PI*dt;
+      if(now-lastSamp>=1000/s){ sampA=trueA; lastSamp=now; } }
+    ctx.clearRect(0,0,w,h);
+    const R=Math.min(h*0.36,110);
+    ctx.font='12px JetBrains Mono';ctx.fillStyle='#959cab';ctx.textAlign='center';
+    spokes(ctx,w*0.28,h/2,R,trueA,'#35e0c2'); ctx.fillText('TRUE MOTION',w*0.28,h/2+R+24);
+    spokes(ctx,w*0.72,h/2,R,sampA,'#ffb02e'); ctx.fillText('SAMPLED (camera)',w*0.72,h/2+R+24);
+    // verdict
+    let delta=rev/s; let wrapped=delta-Math.round(delta);
+    const app=wrapped*s; const vv=$('#wheelVerdict');
+    if(Math.abs(app)<0.25){vv.className='verdict warn';vv.textContent='■ appears FROZEN';}
+    else if(wrapped<0){vv.className='verdict bad';vv.textContent='↺ appears to spin BACKWARD ('+Math.abs(app).toFixed(1)+' rev/s)';}
+    else {vv.className='verdict ok';vv.textContent='↻ appears forward, slowed ('+app.toFixed(1)+' rev/s)';}
+    raf=requestAnimationFrame(frame);
+  }
+  play.onclick=()=>{running=!running;play.textContent=running?'❚❚ Pause':'▶ Play';play.classList.toggle('on',running);t0=performance.now();};
+  addEventListener('resize',()=>{}); raf=requestAnimationFrame(frame);
+})();
+
+/* ============================================================= 3. AA TRIANGLE */
+(function(){
+  const cv=$('#cvAA'); if(!cv)return;
+  const tog=$('#aaToggle'),ss=$('#ssRate'),gridT=$('#gridToggle');
+  let N=1, showGrid=false;
+  const tri=[[0.12,0.85],[0.62,0.12],[0.92,0.78]]; // normalised
+  function inside(px,py,t,w,h){
+    const [a,b,c]=t.map(p=>[p[0]*w,p[1]*h]);
+    const d1=(px-b[0])*(a[1]-b[1])-(a[0]-b[0])*(py-b[1]);
+    const d2=(px-c[0])*(b[1]-c[1])-(b[0]-c[0])*(py-c[1]);
+    const d3=(px-a[0])*(c[1]-a[1])-(c[0]-a[0])*(py-a[1]);
+    const neg=(d1<0)||(d2<0)||(d3<0), pos=(d1>0)||(d2>0)||(d3>0);
+    return !(neg&&pos);
+  }
+  function draw(){
+    const {ctx,w,h}=fit(cv);
+    const cell=Math.max(14,Math.round(w/40)); const cols=Math.ceil(w/cell), rows=Math.ceil(h/cell);
+    ctx.clearRect(0,0,w,h);
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+      let cov=0;
+      for(let sy=0;sy<N;sy++)for(let sx=0;sx<N;sx++){
+        const px=c*cell+(sx+0.5)/N*cell, py=r*cell+(sy+0.5)/N*cell;
+        if(inside(px,py,tri,w,h))cov++;
+      }
+      cov/=N*N;
+      if(cov>0){ctx.fillStyle='rgba(53,224,194,'+cov+')';ctx.fillRect(c*cell,r*cell,cell,cell);}
+      if(showGrid){ctx.strokeStyle='rgba(255,255,255,.06)';ctx.strokeRect(c*cell,r*cell,cell,cell);}
+    }
+    // true triangle outline
+    ctx.strokeStyle='#ffb02e';ctx.lineWidth=2;ctx.beginPath();
+    tri.forEach((p,i)=>{const x=p[0]*w,y=p[1]*h;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+    ctx.closePath();ctx.stroke();
+    $('#aaCost').textContent=N*N; $('#ssVal').textContent=N===1?'1× (centre only)':N+'×'+N+' = '+(N*N)+' samples';
+    const note=$('#aaNote');
+    if(N===1){note.className='verdict bad';note.textContent='Hard box test → jagged';tog.textContent='Anti-aliasing: OFF';tog.classList.remove('on');}
+    else{note.className='verdict ok';note.textContent='Super-sampled → smooth edges';tog.textContent='Anti-aliasing: ON';tog.classList.add('on');}
+  }
+  tog.onclick=()=>{N=(N===1)?4:1;ss.value=N;draw();};
+  ss.oninput=()=>{N=+ss.value;draw();};
+  gridT.onclick=()=>{showGrid=!showGrid;gridT.classList.toggle('on',showGrid);draw();};
+  addEventListener('resize',draw);draw();
+})();
+
+/* ============================================================= 4. BACKFACE CULL */
+(function(){
+  const cv=$('#cvCull'); if(!cv)return;
+  const tog=$('#cullToggle'),spin=$('#cullSpin'),flip=$('#windFlip');
+  let cull=false, spinning=true, wind=1, ang=0.6, t0=performance.now();
+  // cube
+  const V=[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+  // faces as two tris each, CCW outward
+  const F=[[0,3,2],[0,2,1],[4,5,6],[4,6,7],[0,1,5],[0,5,4],[2,3,7],[2,7,6],[1,2,6],[1,6,5],[0,4,7],[0,7,3]];
+  const colF=['#35e0c2','#2fb9a4','#ffb02e','#d68f1d','#5aa9ff','#3f7fcf','#ff8f6b','#d6694a','#9b7bff','#7a5fd6','#5fe08a','#46b86b'];
+  function rot(p,ay,ax){
+    let [x,y,z]=p;
+    let X=x*Math.cos(ay)+z*Math.sin(ay), Z=-x*Math.sin(ay)+z*Math.cos(ay);
+    let Y=y*Math.cos(ax)-Z*Math.sin(ax); Z=y*Math.sin(ax)+Z*Math.cos(ax);
+    return [X,Y,Z];
+  }
+  function frame(now){
+    const {ctx,w,h}=fit(cv);const dt=(now-t0)/1000;t0=now; if(spinning)ang+=dt*0.7;
+    ctx.clearRect(0,0,w,h);
+    const cx=w/2,cy=h/2,sc=Math.min(w,h)*0.30,ax=0.45;
+    const proj=V.map(p=>{const q=rot(p,ang,ax);const f=3/(3-q[2]*0.0001+ (q[2]*0+0));return [cx+q[0]*sc,cy-q[1]*sc,q[2]];});
+    // build face list with avg depth
+    let drawn=0,culled=0;
+    const list=F.map((f,i)=>{
+      const a=proj[f[0]],b=proj[f[1]],c=proj[f[2]];
+      const z=(a[2]+b[2]+c[2])/3;
+      // signed area in screen space → winding
+      const area=(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+      const front=(area*wind)>0;
+      return {i,a,b,c,z,front};
+    }).sort((p,q)=>p.z-q.z);
+    list.forEach(o=>{
+      const visible = !cull || o.front;
+      if(cull && !o.front){culled++;return;}
+      drawn++;
+      ctx.beginPath();ctx.moveTo(o.a[0],o.a[1]);ctx.lineTo(o.b[0],o.b[1]);ctx.lineTo(o.c[0],o.c[1]);ctx.closePath();
+      if(o.front){ctx.fillStyle=colF[o.i];ctx.globalAlpha=.92;}
+      else{ctx.fillStyle='#3a4150';ctx.globalAlpha=.5;}
+      ctx.fill();ctx.globalAlpha=1;
+      ctx.strokeStyle='rgba(0,0,0,.45)';ctx.lineWidth=1.5;ctx.stroke();
+    });
+    $('#triTot').textContent=12;$('#triDrawn').textContent=drawn;$('#triCull').textContent=culled;
+    const vv=$('#cullVerdict');
+    if(!cull){vv.className='verdict warn';vv.textContent='Rendering everything (12 tris)';}
+    else if(wind<0){vv.className='verdict bad';vv.textContent='✗ Winding flipped — culling the VISIBLE faces!';}
+    else{vv.className='verdict ok';vv.textContent='✓ ~50% discarded for one dot product';}
+    requestAnimationFrame(frame);
+  }
+  tog.onclick=()=>{cull=!cull;tog.textContent='Back-face culling: '+(cull?'ON':'OFF');tog.classList.toggle('on',cull);};
+  spin.onclick=()=>{spinning=!spinning;spin.textContent=spinning?'❚❚ Pause spin':'▶ Spin';spin.classList.toggle('on',spinning);t0=performance.now();};
+  flip.onclick=()=>{wind*=-1;flip.classList.toggle('on',wind<0);};
+  requestAnimationFrame(frame);
+})();
+
+/* ============================================================= 5. LOD */
+(function(){
+  const cv=$('#cvLod'); if(!cv)return;
+  const dist=$('#dist'),pop=$('#lodPop'); let popping=true;
+  const levels=[{n:'LOD0',pct:1.00,seg:64},{n:'LOD1',pct:0.50,seg:24},{n:'LOD2',pct:0.25,seg:12},{n:'LOD3',pct:0.08,seg:7}];
+  function draw(){
+    const {ctx,w,h}=fit(cv);const d=+dist.value;
+    ctx.clearRect(0,0,w,h);
+    // perspective floor lines
+    ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;
+    for(let i=0;i<=8;i++){const y=h*0.55+i*i*1.5;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+    // choose level
+    let idx = d<25?0 : d<50?1 : d<75?2 : 3;
+    let seg, pct;
+    if(popping){ seg=levels[idx].seg; pct=levels[idx].pct; }
+    else { // continuous: interpolate seg by distance
+      const f=d/100; seg=Math.max(7,Math.round(64-f*57)); pct=Math.max(0.08,1-f*0.92);
+    }
+    const scale=(1-d/130)*Math.min(w,h)*0.42;
+    const cx=w/2 - d/100*w*0.12, cy=h*0.55;
+    // faceted blob (statue proxy)
+    ctx.beginPath();
+    for(let i=0;i<=seg;i++){const a=i/seg*Math.PI*2;
+      const r=scale*(0.62+0.30*Math.sin(a*3)+0.10*Math.cos(a*5));
+      const x=cx+Math.cos(a)*r, y=cy-Math.sin(a)*r*0.9 - scale*0.2;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+    ctx.closePath();
+    const g=ctx.createLinearGradient(cx-scale,cy-scale,cx+scale,cy+scale);
+    g.addColorStop(0,'#cfd3db');g.addColorStop(1,'#7c8392');
+    ctx.fillStyle=g;ctx.fill();
+    ctx.strokeStyle='#35e0c2';ctx.lineWidth=1.2;ctx.stroke();
+    // labels
+    $('#distVal').textContent=d<25?'near':d<50?'mid':d<75?'far':'very far';
+    $('#lodLevel').textContent=popping?levels[idx].n:'continuous';
+    $('#lodPoly').textContent=Math.round(pct*100)+'%';
+    const vv=$('#lodVerdict');
+    if(pct>0.8){vv.className='verdict ok';vv.textContent='full detail';}
+    else if(pct>0.3){vv.className='verdict warn';vv.textContent='reduced — silhouette intact';}
+    else{vv.className='verdict warn';vv.textContent='very coarse, cheap to render';}
+  }
+  dist.oninput=draw; pop.onclick=()=>{popping=!popping;pop.textContent='Popping: '+(popping?'ON':'OFF (cross-fade)');pop.classList.toggle('on',!popping);draw();};
+  addEventListener('resize',draw);draw();
+})();
+
+/* ============================================================= 6. QUIZ */
+const QUIZ=[
+ {q:"What does the Nyquist–Shannon sampling theorem state about avoiding aliasing?",
+  o:["The sampling rate needs to match exactly the highest frequency present in the signal",
+     "The sampling rate must be more than twice the highest frequency in the signal",
+     "The sampling rate should be at least half the highest frequency for fidelity",
+     "The sampling rate is irrelevant provided the signal is bandlimited before capture"],c:1,
+  f:"The rate must be greater than twice the highest frequency. Sampling exactly at the Nyquist frequency can still alias, because samples may repeatedly land on zero-crossings of the wave."},
+ {q:"Why is Super-Sample Anti-Aliasing (SSAA) considered very expensive?",
+  o:["It loads a separate texture atlas for each sub-pixel sample location",
+     "It needs a neural-network inference step to upscale every frame",
+     "Rasterisation and the fragment shader both run at every sub-pixel, multiplying shading cost",
+     "It doubles the size of the depth buffer for every frame"],c:2,
+  f:"SSAA runs both rasterisation and the fragment shader at every sub-sample, so cost scales linearly with sample count — which is exactly why cheaper methods like MSAA dominate."},
+ {q:"What makes MSAA cheaper than SSAA while still smoothing geometry edges?",
+  o:["Coverage and depth tests run per sub-sample, but shading runs once per covered pixel",
+     "It accumulates colour samples across consecutive frames",
+     "It replaces the depth buffer with a smaller stencil buffer",
+     "It only processes pixels at the framebuffer boundary"],c:0,
+  f:"MSAA tests coverage and depth at the sub-pixel level (so edges still anti-alias) but the fragment shader runs only once per covered pixel. That is where the saving comes from."},
+ {q:"How does Temporal Anti-Aliasing (TAA) differ from MSAA?",
+  o:["It increases framebuffer resolution by a fixed integer factor each frame",
+     "It runs a small neural network for every pixel in every frame",
+     "It evaluates the full shader at multiple sub-pixel positions within each frame",
+     "It jitters the projection matrix by a sub-pixel offset each frame and accumulates samples across frames"],c:3,
+  f:"TAA jitters the projection matrix per frame and accumulates into a running history — a high effective sample rate for low per-frame cost, at the price of motion ghosting."},
+ {q:"What does Variable Rate Shading (VRS) save compared to shading every pixel?",
+  o:["It reduces the number of triangles the vertex shader processes for distant objects",
+     "The fragment shader runs once per block of pixels where fine detail is unnecessary",
+     "It removes the need for mipmaps by always sampling the lowest texture level",
+     "It lowers the depth-buffer resolution across the whole image"],c:1,
+  f:"VRS lets the fragment shader run once per pixel-block in less important regions. Coverage and geometry still run at full resolution; only the shading rate varies."},
+ {q:"What is back-face culling, and why is it useful?",
+  o:["Removing vertices behind the far clipping plane to reduce vertex work",
+     "Preventing the z-buffer writing depth for surfaces the camera cannot see",
+     "Discarding triangles whose normal faces away from the camera, saving rasterisation and fragment shader work",
+     "Merging back-facing triangles into larger polygons to reduce draw calls"],c:2,
+  f:"For a closed solid object, faces pointing away are invisible, so discarding them saves roughly half the rasterisation and shading work."},
+ {q:"How is back-face culling typically implemented in the vertex stage?",
+  o:["The fragment shader checks each fragment against a per-triangle visibility texture",
+     "The rasteriser discards triangles overlapping ones drawn earlier this frame",
+     "The sign of the dot product between the triangle's normal and the view direction is tested",
+     "The geometry shader checks each triangle against the z-buffer"],c:2,
+  f:"Test the sign of v · n̂. Faces pointing away (negative) are discarded before further processing — and it relies on a consistent winding order."},
+ {q:"Where does frustum culling typically happen, and why is it effective?",
+  o:["On the CPU before geometry is sent to the GPU, so no pipeline work is wasted on invisible objects",
+     "In the fragment shader, discarding fragments outside the canonical view volume",
+     "After rasterisation, in a unit that rejects fragments outside the visible region",
+     "In the geometry shader, splitting triangles that cross the frustum boundary"],c:0,
+  f:"It is a cheap CPU-side test using bounding volumes, done before submission. Objects outside the frustum never enter the pipeline at all."},
+ {q:"What causes the “popping” artefact in Level-of-Detail (LOD) systems?",
+  o:["Edge pixels are dropped to save bandwidth, leaving a dark frame",
+     "Mipmap levels become mismatched with UV coordinates as the camera moves",
+     "The depth buffer loses precision near the far plane, causing z-fighting",
+     "The mesh swaps between LOD levels when the object crosses a distance threshold"],c:3,
+  f:"Popping is the visible jump when an object crosses a threshold and a different LOD mesh is swapped in. Continuous LOD or cross-fading removes the discrete transition."},
+ {q:"What is tessellation?",
+  o:["Combining an odd number of triangles to form a single triangle",
+     "Combining simple polygons to make a complex polygon",
+     "Splitting a polygon into a set of separate convex polygons",
+     "Splitting a polygon into separate concave polygons"],c:2,
+  f:"Tessellation breaks a polygon down into simpler convex pieces (ultimately triangles) that the hardware can render efficiently."},
+ {q:"Why do we need both a near plane and a far plane when defining the view frustum?",
+  o:["They define the resolution of the output image",
+     "They are only required for orthographic projection",
+     "The near plane controls ambient light; the far plane controls fog",
+     "The near plane prevents geometry inside the camera projecting incorrectly; the far plane bounds depth range so z-buffer precision isn't wasted"],c:3,
+  f:"The near plane avoids ill-defined projection of geometry at/behind the camera; the far plane keeps the depth range finite so z-buffer precision is spent where it matters."},
+ {q:"What problem does mipmapping solve?",
+  o:["Textures looking pixelated when the camera is too close",
+     "Aliasing and shimmering when a high-resolution texture is viewed at a distance",
+     "UV seams causing visible stitching on complex meshes",
+     "GPU memory running out when textures are too large"],c:1,
+  f:"When a high-res texture covers only a few pixels, point-sampling it under-samples and shimmers. Pre-filtered lower-res mip levels remove that aliasing."},
+];
+(function(){
+  const host=$('#quizHost'); if(!host)return; let answered=0,correct=0;
+  function render(){
+    host.innerHTML='';answered=0;correct=0;upd();
+    QUIZ.forEach((item,qi)=>{
+      const c=document.createElement('div');c.className='card';c.style.margin='18px 0';
+      c.innerHTML='<div class="ctag">Question '+(qi+1)+'</div><h4 style="font-size:18px;line-height:1.4">'+item.q+'</h4>';
+      const opts=document.createElement('div');opts.style.display='grid';opts.style.gap='9px';opts.style.marginTop='12px';
+      item.o.forEach((txt,oi)=>{
+        const b=document.createElement('button');b.className='btn';b.style.textAlign='left';b.style.width='100%';
+        b.style.fontFamily='var(--body)';b.style.fontSize='16.5px';b.style.whiteSpace='normal';b.style.lineHeight='1.4';
+        b.textContent=txt;
+        b.onclick=()=>{
+          if(c.dataset.done)return; c.dataset.done='1'; answered++;
+          [...opts.children].forEach((bb,bi)=>{bb.disabled=true;
+            if(bi===item.c){bb.style.background='rgba(95,224,138,.16)';bb.style.borderColor='var(--green)';bb.style.color='#cfeed8';}
+            else if(bi===oi){bb.style.background='rgba(255,93,93,.14)';bb.style.borderColor='var(--red)';bb.style.color='#f6cccc';}
+            else bb.style.opacity='.5';});
+          if(oi===item.c)correct++;
+          const fb=document.createElement('p');fb.style.cssText='font-size:15.5px;margin:14px 0 0;color:#bfc4cd;border-top:1px dashed var(--line);padding-top:12px';
+          fb.innerHTML=(oi===item.c?'<b style="color:var(--green)">Correct. </b>':'<b style="color:var(--red)">Not quite. </b>')+item.f;
+          c.appendChild(fb);upd();
+        };
+        opts.appendChild(b);
+      });
+      c.appendChild(opts);host.appendChild(c);
+    });
+  }
+  function upd(){$('#qScore').textContent=correct+' / '+answered;}
+  $('#quizReset').onclick=render; render();
+})();
+
+/* ============================================================= 7. PAST PAPERS */
+const EXAM=[
+ {y:"2016 · Section B · Q1a · (3 marks)",
+  q:"Consider the statement: “Synthetic images created using computer graphics techniques are always approximations.” Explain whether it is true, justified with examples.",
+  a:"True. We cannot simulate infinite light–material interactions in real time, so the whole pipeline is built on approximations: (1) continuous surfaces are reduced to finite polygon meshes; (2) the image is point-sampled onto a discrete pixel grid, causing aliasing; (3) lighting/shading models (e.g. Phong) are empirical approximations of real reflectance; (4) optimisations such as LOD, culling and texture filtering deliberately trade accuracy for speed. Each is a visible, justifiable example of approximation."},
+ {y:"2018 · Section B · Q2 · (1 mark)",
+  q:"Give two examples of the undesirable results caused by approximation in computer graphics.",
+  a:"Aliasing — jagged/stair-stepped edges and texture shimmering from point-sampling a continuous signal below the Nyquist rate; and popping — visible snapping when LOD meshes or frustum-culled objects switch in/out at a threshold. (Other valid answers: z-fighting, banding, ghosting from TAA.)"},
+ {y:"2019 · Section B · Q22 · (3 marks)",
+  q:"Give three different examples of software or hardware limitations that mean computer graphics images are always approximations of conceptual models.",
+  a:"(1) Finite GPU compute — we cannot evaluate every light path, so we approximate with empirical shading. (2) Discrete display resolution / finite pixel sampling rate — continuous geometry is point-sampled, producing aliasing. (3) Limited CPU→GPU memory bandwidth — we cannot stream unlimited geometry, forcing culling and LOD. (Also acceptable: finite floating-point precision causing z-buffer fighting.)"},
+ {y:"2018 · Section B · Q5 · (2 marks)",
+  q:"Describe what is meant by tessellation, and when it is necessary.",
+  a:"Tessellation is splitting a polygon into a set of simpler convex polygons (ultimately triangles). It is necessary because GPU hardware renders simple convex primitives efficiently, so concave polygons or polygons containing holes must be broken down first; it also lets the tessellation shader generate surface detail on the fly for continuous level-of-detail."},
+ {y:"2018 · Section B · Q6 · (3 marks)",
+  q:"Describe a hidden-surface-removal technique that operates in display-space.",
+  a:"The z-buffer (depth-buffer) algorithm. Alongside the colour framebuffer we keep a per-pixel depth buffer initialised to the far value. As each fragment is rasterised, its interpolated depth is compared with the stored depth; if it is closer, both the colour and depth are written, otherwise it is discarded. Operating per-pixel in display-space, it resolves visibility for arbitrary overlapping geometry. (Back-face culling is a complementary object-space pre-pass that removes ~50% of triangles before this stage.)"},
+];
+(function(){
+  const host=$('#examHost'); if(!host)return;
+  EXAM.forEach(e=>{
+    const c=document.createElement('div');c.className='card amber';c.style.margin='16px 0';c.style.cursor='pointer';
+    c.innerHTML='<div class="ctag">'+e.y+'</div><h4 style="font-size:18px;line-height:1.4;margin-top:6px">'+e.q+'</h4>'+
+      '<div class="reveal-ans" style="max-height:0;overflow:hidden;transition:max-height .4s ease"></div>'+
+      '<div class="tapr" style="font-family:var(--mono);font-size:12px;color:var(--amber);margin-top:12px">▸ tap to reveal model answer</div>';
+    const ans=c.querySelector('.reveal-ans'),tap=c.querySelector('.tapr');
+    ans.innerHTML='<p style="font-size:16.5px;margin:14px 0 4px;color:#d3d7df;border-top:1px dashed var(--line);padding-top:14px">'+e.a+'</p>';
+    let open=false;
+    c.onclick=()=>{open=!open;ans.style.maxHeight=open?ans.scrollHeight+40+'px':'0';tap.textContent=open?'▾ hide answer':'▸ tap to reveal model answer';};
+    host.appendChild(c);
+  });
+})();
+</script>
+</body>
+</html>
