@@ -1,0 +1,25 @@
+<svg viewBox="0 0 640 420" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono', monospace">
+  <defs>
+    <marker id="neW" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#fff"/></marker>
+    <marker id="neO" markerWidth="11" markerHeight="11" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#ff8a3d"/></marker>
+    <marker id="neY" markerWidth="11" markerHeight="11" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#d8e34a"/></marker>
+  </defs>
+  <rect width="640" height="420" fill="none"/>
+
+  <!-- the planar polygon (blue) -->
+  <polygon points="150,250 250,225 360,250 320,300 200,310" fill="#5fb6e6" opacity="0.85"/>
+
+  <!-- edges E1, E2 from a shared vertex (255,250-ish) -->
+  <line x1="255" y1="262" x2="150" y2="262" stroke="#d8e34a" stroke-width="5" marker-end="url(#neY)"/>
+  <text x="185" y="298" fill="#d8e34a" font-size="22" font-weight="700">E&#8321;</text>
+  <line x1="255" y1="262" x2="350" y2="232" stroke="#d8e34a" stroke-width="5" marker-end="url(#neY)"/>
+  <text x="360" y="252" fill="#d8e34a" font-size="22" font-weight="700">E&#8322;</text>
+
+  <!-- normal n-hat -->
+  <line x1="255" y1="262" x2="255" y2="120" stroke="#ff8a3d" stroke-width="5" marker-end="url(#neO)"/>
+  <text x="268" y="118" fill="#ff8a3d" font-size="26" font-weight="700">n&#770;</text>
+
+  <!-- equations -->
+  <text x="330" y="368" fill="#e7e7ea" font-size="26">N = E&#8321; &#215; &#8722;E&#8322;</text>
+  <text x="290" y="408" fill="#9ddb8f" font-size="24">n&#770; = normalise( E&#8321; &#215; &#8722;E&#8322; )</text
+></svg>

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch11 · Shading Transformations — COMP27112 Visual Notes</title>
+<link rel="stylesheet" href="css/notes.css">
+</head>
+<body>
+<div id="progress"></div>
+<div id="chiptag">COMP27112 · CH 11</div>
+
+<!-- ============ HERO ============ -->
+<header id="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow reveal in">Computer Graphics &amp; Image Processing</span>
+      <h1 class="title reveal in d1">Shading<br><em>Transformations</em></h1>
+      <p class="lede reveal in d2">How a faceted mesh of flat triangles becomes a smooth, lit surface — and the matrix maths that keeps the lighting correct along the way.</p>
+      <p class="byline reveal in d2">Chapter 11 · after David Petrescu's lecture · The University of Manchester</p>
+      <div class="scrollcue reveal in d3"><span class="dot"></span> drag the spheres · scroll to begin</div>
+    </div>
+    <div class="hero-spheres reveal in d2">
+      <canvas id="h-flat" class="mini-sphere" width="180" height="180" title="Flat"></canvas>
+      <canvas id="h-gouraud" class="mini-sphere" width="180" height="180" title="Gouraud"></canvas>
+      <canvas id="h-phong" class="mini-sphere" width="180" height="180" title="Phong"></canvas>
+    </div>
+  </div>
+</header>
+
+<!-- ============ INTRO / TOC ============ -->
+<section id="intro">
+  <div class="wrap">
+    <span class="sec-no reveal">00 · Orientation</span>
+    <h2 class="reveal">Same equation, three places to evaluate it</h2>
+    <p class="big reveal d1">Everything in this chapter hangs off one lighting equation. The art is <strong>where</strong> in the pipeline you evaluate it — per face, per vertex, or per pixel — and how you keep your <strong>normals</strong> honest when the model is transformed.</p>
+
+    <div class="note reveal d1">
+      <b>A note on sources.</b> The original <span class="k">COMP27112_shadingtransforms.pdf</span>, <span class="k">quizzes.docx</span> and past-paper files were not accessible on disk in this session — only the rendered slides came through. So every diagram below is a faithful <strong>vector recreation</strong> of the slide it represents (cleaner and interactive, rather than a screenshot), and the quiz / exam questions are written from the slide content and standard COMP27112 style. Drop the real <span class="k">quizzes.docx</span> + past papers in and I can swap in the exact wording.
+    </div>
+
+    <div class="toc reveal d2">
+      <a href="#problem">01<b>The Problem</b></a>
+      <a href="#reflect">02<b>Reflection Model</b></a>
+      <a href="#normals">03<b>Surface Normals</b></a>
+      <a href="#flat">04<b>Flat Shading</b></a>
+      <a href="#gouraud">05<b>Gouraud + Pipeline</b></a>
+      <a href="#phong">06<b>Phong Shading</b></a>
+      <a href="#compare">07<b>Side by Side</b></a>
+      <a href="#spaces">08<b>Coordinate Spaces</b></a>
+      <a href="#normalmatrix">09<b>The Normal Matrix</b></a>
+      <a href="#svd">10<b>Decomposition</b></a>
+      <a href="#quiz">11<b>Quiz</b></a>
+      <a href="#exam">12<b>Exam Practice</b></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 01 PROBLEM ============ -->
+<section id="problem">
+  <div class="wrap">
+    <span class="sec-no reveal">01 · The Problem</span>
+    <h2 class="reveal">Triangles are flat. Surfaces are not.</h2>
+    <div class="grid2">
+      <div>
+        <p class="reveal d1">A 3D model is just a mesh of flat triangles. Render each triangle with a single colour and you get an obviously <strong>faceted</strong> object — you can see every polygon, like the chunky teapot on the left of the lecture's opening slides.</p>
+        <p class="reveal d1">We want the smooth, ceramic look on the right instead. The geometry hasn't changed — the mesh is just as coarse. What changes is <strong>how we shade</strong> it: where we sample the lighting equation and how we treat the normals. That's the whole chapter.</p>
+        <p class="reveal d2">Subdividing the mesh (more triangles) helps but is expensive. Smart shading gets most of the way there for free.</p>
+      </div>
+      <div class="card reveal d1">
+        <h3>The recurring motif</h3>
+        <p style="margin-bottom:8px">Three coloured spheres run through the slides as a visual key:</p>
+        <table>
+          <tr><td class="tag-flat">crimson</td><td>Flat shading — faceted</td></tr>
+          <tr><td class="tag-gouraud">amber</td><td>Gouraud — smooth-ish</td></tr>
+          <tr><td class="tag-phong">teal</td><td>Phong — smoothest</td></tr>
+        </table>
+        <p class="hint" style="text-align:left;margin-top:8px">Watch the same colours reappear in the demos.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 REFLECTION MODEL ============ -->
+<section id="reflect">
+  <div class="wrap">
+    <span class="sec-no reveal">02 · Reflection Model</span>
+    <h2 class="reveal">The Blinn–Phong lighting equation</h2>
+    <p class="big reveal d1">Every shading method evaluates the <em>same</em> equation. Learn it once.</p>
+
+    <div class="math reveal d1" style="font-size:1.18rem;text-align:center">
+      C = <span class="o">I</span>( <span class="o">k</span><sub class="o">d</sub>(<span class="p">N̂</span>·<span class="v">L̂</span>) + <span class="o">k</span><sub class="o">s</sub>(<span class="v">Ĥ</span>·<span class="p">N̂</span>)<sup>n</sup> )
+    </div>
+
+    <figure class="reveal d1">
+      <img src="assets/reflection-model.svg" alt="Blinn-Phong reflection model: surface normal N, light vector L, view vector V, half vector H">
+      <figcaption>Recreation of slide 7 — the vectors meeting at a surface micro-patch</figcaption>
+    </figure>
+
+    <div class="grid2 reveal d1">
+      <div class="card">
+        <h3>The terms</h3>
+        <table>
+          <tr><td><span class="p">N̂</span></td><td>surface normal (unit)</td></tr>
+          <tr><td><span class="v">L̂</span></td><td>direction to the light</td></tr>
+          <tr><td>V̂</td><td>direction to the viewer/camera</td></tr>
+          <tr><td><span class="v">Ĥ</span></td><td>half-vector = <span class="k">normalize(L̂ + V̂)</span></td></tr>
+          <tr><td><span class="o">I</span></td><td>light intensity / colour</td></tr>
+          <tr><td><span class="o">k</span><sub>d</sub>, <span class="o">k</span><sub>s</sub></td><td>diffuse &amp; specular coefficients</td></tr>
+          <tr><td>n</td><td>shininess exponent (Phong exponent)</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Two pieces of light</h3>
+        <p><strong>Diffuse</strong> <span class="k">k<sub>d</sub>(N̂·L̂)</span> — Lambert's law. Brightest where the surface faces the light; fades by the cosine of the angle. Independent of where you stand.</p>
+        <p><strong>Specular</strong> <span class="k">k<sub>s</sub>(Ĥ·N̂)<sup>n</sup></span> — the shiny highlight. Peaks when the normal bisects light and viewer (i.e. <strong>Ĥ ≈ N̂</strong>). The angle <strong>ω</strong> between Ĥ and N̂ drives it; raising <strong>n</strong> tightens the highlight.</p>
+      </div>
+    </div>
+
+    <h3 class="reveal d1">Play with it — drag the light, move the sliders</h3>
+    <div class="stage-box reveal d1">
+      <canvas id="bpCanvas" width="320" height="320"></canvas>
+      <div class="controls">
+        <div class="ctl"><label>diffuse k<sub>d</sub> <b id="kdv">1.00</b></label><input type="range" id="kd" min="0" max="1.2" step="0.01" value="1.0"></div>
+        <div class="ctl"><label>specular k<sub>s</sub> <b id="ksv">0.80</b></label><input type="range" id="ks" min="0" max="1.2" step="0.01" value="0.8"></div>
+        <div class="ctl"><label>shininess n <b id="shinv">32</b></label><input type="range" id="shin" min="2" max="120" step="1" value="32"></div>
+        <div class="ctl"><label>ambient <b id="ambv">0.12</b></label><input type="range" id="amb" min="0" max="0.5" step="0.01" value="0.12"></div>
+        <div class="chkrow">
+          <label><input type="checkbox" id="difChk" checked> diffuse</label>
+          <label><input type="checkbox" id="specChk" checked> specular</label>
+        </div>
+        <p class="hint">drag on the sphere to move the light · watch the highlight tighten as n rises</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 NORMALS ============ -->
+<section id="normals">
+  <div class="wrap">
+    <span class="sec-no reveal">03 · Surface Normals</span>
+    <h2 class="reveal">Everything depends on the normal</h2>
+    <p class="reveal d1">The lighting equation is full of <span class="p">N̂</span>. A normal is a unit vector pointing straight out of the surface. For a flat triangle we get one from two of its edges with a <strong>cross product</strong>:</p>
+
+    <div class="grid2">
+      <figure class="reveal d1" style="margin-top:0">
+        <img src="assets/normal-edges.svg" alt="Normal computed from edge vectors E1 and E2 by cross product">
+        <figcaption>Recreation of slide 13 — n̂ from the edge cross product</figcaption>
+      </figure>
+      <div>
+        <div class="math reveal d1">N = <span class="o">E₁</span> × −<span class="o">E₂</span></div>
+        <div class="math reveal d1">n̂ = normalise( <span class="o">E₁</span> × −<span class="o">E₂</span> )</div>
+        <p class="reveal d2">The cross product gives a vector perpendicular to both edges — i.e. perpendicular to the whole triangle. We <strong>normalise</strong> it because the lighting dot-products assume unit length. Edge order / sign decides which way it points (outward vs inward), so winding order matters.</p>
+        <div class="note reveal d2"><b>Key idea.</b> A triangle has exactly one geometric normal. How many normals we <em>choose</em> to store and use is what separates Flat, Gouraud and Phong.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 FLAT ============ -->
+<section id="flat">
+  <div class="wrap">
+    <span class="sec-no reveal" style="color:var(--crimson)">04 · Flat Shading</span>
+    <h2 class="reveal">One normal per triangle</h2>
+    <div class="grid2">
+      <div>
+        <p class="reveal d1">The simplest scheme. Take the triangle's single face normal <span class="p">N̂</span>, evaluate the lighting equation <strong>once</strong>, and paint the whole triangle that one flat colour.</p>
+        <p class="reveal d1">Fast, but every facet is a uniform block, so adjacent triangles jump in brightness. The result is the unmistakable faceted look — the crimson sphere where you can count the polygons.</p>
+        <div class="math reveal d2">C = I( k<sub>d</sub>(<span class="p">N̂</span>·L̂) + k<sub>s</sub>(Ĥ·<span class="p">N̂</span>)<sup>n</sup> )<br><span style="color:var(--muted)">— evaluated once, with the face normal, for the entire triangle</span></div>
+      </div>
+      <div class="card flat reveal d1">
+        <h3 class="tag-flat">Recipe</h3>
+        <p style="margin-bottom:6px">1. Compute the face normal (edge cross product).</p>
+        <p style="margin-bottom:6px">2. Evaluate lighting once.</p>
+        <p style="margin-bottom:6px">3. Fill the triangle with that colour.</p>
+        <p class="hint" style="text-align:left;margin-top:10px">Try the <b>Flat</b> button in the big demo (§07) — note how each facet is one solid tone.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 05 GOURAUD + PIPELINE ============ -->
+<section id="gouraud">
+  <div class="wrap">
+    <span class="sec-no reveal" style="color:var(--amber)">05 · Gouraud Shading</span>
+    <h2 class="reveal">Shade the vertices, interpolate the colours</h2>
+    <p class="reveal d1">Instead of one normal per face, store one normal <span class="p">per vertex</span> (<span class="p">N̂₀, N̂₁, N̂₂</span>) — usually the average of the normals of all faces meeting at that vertex, which "rounds off" the surface.</p>
+
+    <p class="reveal d1">Now the lighting equation runs in the <strong>vertex shader</strong>, producing a colour at each corner: <span class="k">c₀, c₁, c₂</span>. The rasteriser then blends those three colours across every pixel of the triangle.</p>
+
+    <h3 class="reveal d1">The pipeline — click a stage</h3>
+    <div class="pipeline reveal d1">
+      <div class="stage vs" data-stage="vs">Vertex&nbsp;Shader</div>
+      <div class="arrow"></div>
+      <div class="stage ras" data-stage="ras">Rasterisation</div>
+      <div class="arrow"></div>
+      <div class="stage fs" data-stage="fs">Fragment&nbsp;Shader</div>
+    </div>
+    <div class="pipe-info reveal d1" id="pipeInfo"></div>
+
+    <h3 class="reveal d1">Barycentric interpolation — drag the white dot</h3>
+    <p class="reveal d1">Rasterisation blends vertex values with weights <strong>α, β, γ</strong> (they always sum to 1). A pixel's colour is <span class="k">α·c₀ + β·c₁ + γ·c₂</span>. Near a corner, that corner dominates.</p>
+    <div class="stage-box reveal d1">
+      <canvas id="baryCanvas" width="340" height="300"></canvas>
+      <div class="controls">
+        <div class="readout" id="baryOut">α = 0.33  β = 0.33  γ = 0.33</div>
+        <div class="math" style="margin:0">colour = <br>&nbsp;α·c₀ + β·c₁ + γ·c₂</div>
+        <p class="hint">the same weights interpolate <em>any</em> per-vertex value — colour, depth, normals…</p>
+      </div>
+    </div>
+
+    <div class="note reveal d2"><b>The Gouraud weakness.</b> Because colour is computed only at vertices, a <strong>specular highlight that lands in the middle of a triangle has nowhere to be born</strong> — no vertex sampled it, and linear colour blending can't invent it. Highlights smear, dull, or vanish, and you can get Mach-band-like edges. The faceted Gouraud face on slide 27 shows exactly this.</p>
+  </div>
+</section>
+
+<!-- ============ 06 PHONG ============ -->
+<section id="phong">
+  <div class="wrap">
+    <span class="sec-no reveal" style="color:var(--teal)">06 · Phong Shading</span>
+    <h2 class="reveal">Interpolate the normals, not the colours</h2>
+    <p class="big reveal d1">Same per-vertex normals. Different stage. That one change fixes the highlight.</p>
+
+    <p class="reveal d1">In Phong shading the vertex shader passes the normals through as a <span class="k">varying vec3</span>. The rasteriser interpolates <span class="p">N̂₀, N̂₁, N̂₂</span> across the triangle (with α, β, γ), giving an interpolated normal at every pixel:</p>
+
+    <div class="math reveal d1" style="text-align:center">
+      N<sub>i</sub> = ( α<span class="p">N̂₀</span> + β<span class="p">N̂₁</span> + γ<span class="p">N̂₂</span> ) / | α<span class="p">N̂₀</span> + β<span class="p">N̂₁</span> + γ<span class="p">N̂₂</span> |
+    </div>
+    <p class="reveal d1">Interpolating two unit vectors generally gives a shorter vector, so we <strong>re-normalise</strong> per pixel — that's the denominator. Then the <strong>fragment shader</strong> runs the full lighting equation <em>per pixel</em> using that fresh normal:</p>
+
+    <div class="math reveal d1" style="text-align:center">
+      C = I( k<sub>d</sub>(<span class="teal" style="color:var(--teal)">N̂ᵢ</span>·L̂) + k<sub>s</sub>(Ĥ·<span style="color:var(--teal)">N̂ᵢ</span>)<sup>n</sup> )
+    </div>
+
+    <div class="grid2 reveal d1">
+      <div class="card phong">
+        <h3 class="tag-phong">Why it works</h3>
+        <p>The normal varies smoothly across the face, so the specular peak can occur <strong>anywhere</strong> a pixel's normal happens to bisect light and viewer — even deep inside a triangle. Highlights are crisp and round.</p>
+      </div>
+      <div class="card">
+        <h3>Cost</h3>
+        <p>The lighting maths now runs <strong>once per fragment</strong> instead of once per vertex. More expensive, but on modern GPUs it's the default for smooth specular surfaces.</p>
+      </div>
+    </div>
+
+    <div class="note reveal d2"><b>Naming trap.</b> The <em>Phong reflection model</em> (the equation) and <em>Phong shading</em> (per-pixel normal interpolation) are different things that share a name. Gouraud and Phong shading can both use the Blinn–Phong reflection model — they differ only in <strong>where</strong> they evaluate it.</div>
+  </div>
+</section>
+
+<!-- ============ 07 COMPARE ============ -->
+<section id="compare">
+  <div class="wrap">
+    <span class="sec-no reveal">07 · Side by Side</span>
+    <h2 class="reveal">Flat · Gouraud · Phong — live</h2>
+    <p class="reveal d1">A real software-rendered sphere. Switch the model and watch the same coarse mesh change character. Drag to rotate; toggle the wireframe to see the triangles underneath.</p>
+    <div class="stage-box reveal d1">
+      <canvas id="shadingCanvas" width="340" height="340"></canvas>
+      <div class="controls">
+        <div class="seg">
+          <button data-mode="flat" class="active">FLAT</button>
+          <button data-mode="gouraud">GOURAUD</button>
+          <button data-mode="phong">PHONG</button>
+        </div>
+        <div class="chkrow">
+          <label><input type="checkbox" id="wireToggle"> wireframe</label>
+          <label><input type="checkbox" id="spinToggle" checked> auto-spin</label>
+        </div>
+        <p class="hint"><b>Flat</b>: solid facets · <b>Gouraud</b>: smooth tone, soft highlight · <b>Phong</b>: crisp highlight. Same mesh throughout.</p>
+      </div>
+    </div>
+
+    <table class="reveal d1">
+      <tr><th>Model</th><th>Evaluated</th><th>Interpolates</th><th>Highlights</th><th>Cost</th></tr>
+      <tr><td class="tag-flat">Flat</td><td>once / face</td><td>nothing</td><td>blocky</td><td>cheapest</td></tr>
+      <tr><td class="tag-gouraud">Gouraud</td><td>once / vertex</td><td>colours</td><td>can be missed</td><td>medium</td></tr>
+      <tr><td class="tag-phong">Phong</td><td>once / pixel</td><td>normals</td><td>crisp, correct</td><td>priciest</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 08 SPACES ============ -->
+<section id="spaces">
+  <div class="wrap">
+    <span class="sec-no reveal">08 · Coordinate Spaces</span>
+    <h2 class="reveal">From model space to the camera</h2>
+    <p class="reveal d1">Before any shading, a vertex travels through a chain of spaces. Each object is born in its own <strong>model space</strong>, placed into a shared <strong>world space</strong>, then expressed relative to the camera in <strong>view space</strong> — finally projected to the screen (perspective or orthographic).</p>
+
+    <figure class="reveal d1">
+      <img src="assets/spaces.svg" alt="Model space to world space to view space transformation chain">
+      <figcaption>Recreation of slides 51–64 — Model → World → View</figcaption>
+    </figure>
+
+    <p class="reveal d1">In a GLSL vertex shader these transforms are matrices. Lighting is normally done in <strong>view space</strong>, so positions <em>and</em> normals are carried there:</p>
+
+    <pre class="reveal d1"><span class="kw">void</span> <span class="fn">main</span>() {
+  <span class="cm">// position into view space (w = 1)</span>
+  <span class="kw">vec4</span> mv = modelViewMatrix * <span class="fn">vec4</span>(position, <span class="kw">1.0</span>);
+
+  vPos    = mv.xyz;
+<span class="hl">  vNormal = <span class="fn">normalize</span>(normalMatrix * normal);   <span class="cm">// not just modelView!</span></span>
+  gl_Position = projectionMatrix * mv;
+}</pre>
+    <p class="reveal d2">Notice the position uses <span class="k">modelViewMatrix</span>, but the normal uses a different <span class="k">normalMatrix</span>. Why they can't be the same matrix is the next — and trickiest — section.</p>
+  </div>
+</section>
+
+<!-- ============ 09 NORMAL MATRIX ============ -->
+<section id="normalmatrix">
+  <div class="wrap">
+    <span class="sec-no reveal" style="color:var(--purple)">09 · The Normal Matrix</span>
+    <h2 class="reveal">Why normals need their own matrix</h2>
+    <p class="big reveal d1">Transform a normal with the model-view matrix and, under non-uniform scaling, it stops pointing out of the surface. Here's the fix and the proof.</p>
+
+    <div class="grid2">
+      <div>
+        <p class="reveal d1">A normal is defined by being <strong>perpendicular to the surface</strong> — i.e. perpendicular to every tangent <span class="v">T̂</span> lying in it:</p>
+        <div class="math reveal d1"><span class="p">N̂</span> · <span class="v">T̂</span> = 0 &nbsp;⇒&nbsp; n<sub>x</sub>t<sub>x</sub> + n<sub>y</sub>t<sub>y</sub> + n<sub>z</sub>t<sub>z</sub> = 0</div>
+        <p class="reveal d1">A tangent is a difference of surface points, so it transforms like geometry — scale it by <strong>S</strong> and it still lies in the surface. But if we also scale the normal by <strong>S</strong>, the perpendicularity breaks.</p>
+      </div>
+      <figure class="reveal d1" style="margin-top:0">
+        <img src="assets/normal-tangent.svg" alt="Normal N perpendicular to tangent T on a slanted surface">
+        <figcaption>Recreation of slides 67–69 — N̂ ⟂ T̂</figcaption>
+      </figure>
+    </div>
+
+    <h3 class="reveal d1">See it break — drag the scale, flip the matrix</h3>
+    <p class="reveal d1">Stretch the surface along x. With the <span style="color:var(--crimson)">wrong</span> matrix the arrows tilt away from the surface; with the <span style="color:var(--teal)">correct</span> inverse-transpose they stay perpendicular.</p>
+    <div class="stage-box reveal d1">
+      <canvas id="nmCanvas" width="420" height="300"></canvas>
+      <div class="controls">
+        <div class="ctl"><label>x-scale s<sub>x</sub> <b id="nmScaleV">2.4</b></label><input type="range" id="nmScale" min="1" max="3.2" step="0.1" value="2.4"></div>
+        <div class="chkrow" style="flex-direction:column;gap:8px">
+          <label><input type="radio" name="nmmode" value="wrong" checked> use <b style="color:var(--crimson)">MV</b> (wrong)</label>
+          <label><input type="radio" name="nmmode" value="correct"> use <b style="color:var(--teal)">(MV)⁻ᵀ</b> (correct)</label>
+        </div>
+        <p class="hint">with uniform scale both look fine — the bug only appears when sx ≠ sy</p>
+      </div>
+    </div>
+
+    <h3 class="reveal d1">The derivation (worth memorising)</h3>
+    <div class="card reveal d1">
+      <p>Start from the constraint and apply a scale <strong>S = diag(s<sub>x</sub>, s<sub>y</sub>, s<sub>z</sub>)</strong> to the tangent. We need a matrix <strong>Q</strong> on the normal so that the dot product stays zero:</p>
+      <div class="math">(Q<span class="p">N̂</span>) · (S<span class="v">T̂</span>) = 0</div>
+      <p>Try <strong>Q = S</strong> (the naive choice). Then the dot product becomes</p>
+      <div class="math">s<sub>x</sub>(n<sub>x</sub>t<sub>x</sub>) + s<sub>y</sub>(n<sub>y</sub>t<sub>y</sub>) + s<sub>z</sub>(n<sub>z</sub>t<sub>z</sub>)</div>
+      <p>which only collapses back to <span class="k">n<sub>x</sub>t<sub>x</sub>+n<sub>y</sub>t<sub>y</sub>+n<sub>z</sub>t<sub>z</sub></span> when <strong>s<sub>x</sub>=s<sub>y</sub>=s<sub>z</sub></strong> (uniform scale). Otherwise it ≠ 0 — the normal is wrong. Now try <strong>Q = S⁻¹</strong>:</p>
+      <div class="math">(n<sub>x</sub>/s<sub>x</sub>)(s<sub>x</sub>t<sub>x</sub>) + (n<sub>y</sub>/s<sub>y</sub>)(s<sub>y</sub>t<sub>y</sub>) + (n<sub>z</sub>/s<sub>z</sub>)(s<sub>z</sub>t<sub>z</sub>) = n<sub>x</sub>t<sub>x</sub>+n<sub>y</sub>t<sub>y</sub>+n<sub>z</sub>t<sub>z</sub> = 0 ✓</div>
+      <p>The scale factors cancel exactly. Generalising from pure scale to any model-view transform gives the famous result:</p>
+      <div class="math" style="text-align:center;font-size:1.1rem">normalMatrix = (MV)⁻ᵀ = transpose( inverse( modelView ) )</div>
+      <p style="margin-bottom:0">For pure rotation/uniform scale, <span class="k">(MV)⁻ᵀ</span> equals the rotation part, so people often get away with using <span class="k">MV</span> directly — but it's only <em>exactly</em> right with the inverse-transpose.</p>
+    </div>
+
+    <div class="note reveal d1"><b>Homogeneous w trick.</b> Positions are points → use <span class="k">w = 1</span> so translation applies. Normals are directions → use <span class="k">w = 0</span> so translation is ignored. Same 4×4 matrix, different fourth coordinate.</div>
+  </div>
+</section>
+
+<!-- ============ 10 SVD ============ -->
+<section id="svd">
+  <div class="wrap">
+    <span class="sec-no reveal">10 · Decomposition</span>
+    <h2 class="reveal">Any deformation = rotate · scale · rotate</h2>
+    <p class="reveal d1">The lecture's cow shows that a shear/skew isn't a primitive — it factors into a rotation, an axis-aligned scale, and another rotation:</p>
+
+    <figure class="reveal d1">
+      <img src="assets/svd-cow.svg" alt="Shear decomposed into rotation R1, scale S, rotation R2">
+      <figcaption>Recreation of slides 85–87 — the skew/shear factorisation</figcaption>
+    </figure>
+
+    <div class="math reveal d1" style="text-align:center;font-size:1.1rem">M = R₁ · S · R₂</div>
+    <p class="reveal d1">This is exactly the <strong>Singular Value Decomposition</strong>, usually written</p>
+    <div class="math reveal d1" style="text-align:center">M = U · Σ · Vᵀ</div>
+    <p class="reveal d2">The two rotations are <strong>U</strong> and <strong>Vᵀ</strong>; the diagonal scale <strong>Σ</strong> holds the singular values. It tells you the principal stretch directions of <em>any</em> linear transform — and it's the rigorous way to reason about what a transform does to normals (the inverse-transpose effectively inverts that scale step), which is why §09's result falls out of it.</p>
+  </div>
+</section>
+
+<!-- ============ 11 QUIZ ============ -->
+<section id="quiz">
+  <div class="wrap">
+    <span class="sec-no reveal">11 · Quiz</span>
+    <h2 class="reveal">Check yourself</h2>
+    <p class="reveal d1">Seven questions in the COMP27112 style (written from the slide content — swap in <span class="k">quizzes.docx</span> for the exact set). <span id="scoreboard" class="quizscore">Score: 0 / 0 answered · 7 total</span></p>
+
+    <div class="quiz reveal d1">
+      <span class="qn">Question 1</span>
+      <div class="q">Which shading model evaluates the lighting equation <em>once per pixel</em>?</div>
+      <button class="opt">Flat shading</button>
+      <button class="opt">Gouraud shading</button>
+      <button class="opt" data-correct="1">Phong shading</button>
+      <button class="opt">Wireframe shading</button>
+      <div class="explain"><b>Phong.</b> Flat = once per face, Gouraud = once per vertex, Phong = once per fragment (pixel) using an interpolated, re-normalised normal.</div>
+    </div>
+
+    <div class="quiz reveal d1">
+      <span class="qn">Question 2</span>
+      <div class="q">In Gouraud shading, what does rasterisation interpolate across the triangle?</div>
+      <button class="opt" data-correct="1">The per-vertex colours c₀, c₁, c₂</button>
+      <button class="opt">The per-vertex normals</button>
+      <button class="opt">A single face normal</button>
+      <button class="opt">The projection matrix</button>
+      <div class="explain"><b>Colours.</b> Gouraud computes lighting at the vertices, then blends the resulting <em>colours</em>. Interpolating <em>normals</em> instead is what makes it Phong.</div>
+    </div>
+
+    <div class="quiz reveal d1">
+      <span class="qn">Question 3</span>
+      <div class="q">The half-vector Ĥ in the Blinn–Phong specular term is:</div>
+      <button class="opt">L̂ × V̂</button>
+      <button class="opt" data-correct="1">normalize(L̂ + V̂)</button>
+      <button class="opt">L̂ − V̂</button>
+      <button class="opt">the reflection of L̂ about V̂</button>
+      <div class="explain"><b>normalize(L̂ + V̂).</b> The specular peak occurs when Ĥ aligns with N̂; the angle ω between them, raised to the power n, controls highlight tightness.</div>
+    </div>
+
+    <div class="quiz reveal d1">
+      <span class="qn">Question 4</span>
+      <div class="q">Why can Gouraud shading miss a specular highlight?</div>
+      <button class="opt" data-correct="1">If the highlight falls between vertices, no vertex samples it and colour interpolation can't recreate it</button>
+      <button class="opt">Because it uses the wrong reflection model</button>
+      <button class="opt">Because it never computes specular terms at all</button>
+      <button class="opt">Because the normals are not normalised</button>
+      <div class="explain"><b>Between-vertex highlights vanish.</b> Lighting is only sampled at corners; a sharp highlight in the triangle interior has no corner to be born at, and linear colour blending can't invent one.</div>
+    </div>
+
+    <div class="quiz reveal d1">
+      <span class="qn">Question 5</span>
+      <div class="q">Under <em>non-uniform</em> scaling, the correct matrix to transform a surface normal is:</div>
+      <button class="opt">the model-view matrix MV</button>
+      <button class="opt">the inverse MV⁻¹</button>
+      <button class="opt" data-correct="1">the inverse-transpose (MV)⁻ᵀ</button>
+      <button class="opt">the projection matrix</button>
+      <div class="explain"><b>(MV)⁻ᵀ.</b> The inverse-transpose cancels the scale factors so the transformed normal stays perpendicular to the transformed tangent. With uniform scale/rotation only, MV happens to work.</div>
+    </div>
+
+    <div class="quiz reveal d1">
+      <span class="qn">Question 6</span>
+      <div class="q">A flat triangle's normal is computed from two edge vectors using the:</div>
+      <button class="opt">dot product</button>
+      <button class="opt" data-correct="1">cross product</button>
+      <button class="opt">sum of edges</button>
+      <button class="opt">average of the vertices</button>
+      <div class="explain"><b>Cross product.</b> N = E₁ × −E₂ is perpendicular to both edges, hence to the triangle; then normalise to unit length.</div>
+    </div>
+
+    <div class="quiz reveal d1">
+      <span class="qn">Question 7</span>
+      <div class="q">When transforming a normal (a direction) with a 4×4 matrix, the homogeneous w component should be:</div>
+      <button class="opt" data-correct="1">0 — so translation is ignored</button>
+      <button class="opt">1 — so translation applies</button>
+      <button class="opt">the depth value</button>
+      <button class="opt">the scale factor</button>
+      <div class="explain"><b>w = 0.</b> Directions/normals use w = 0 so the matrix's translation column has no effect; positions use w = 1.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 12 EXAM ============ -->
+<section id="exam">
+  <div class="wrap">
+    <span class="sec-no reveal" style="color:var(--purple)">12 · Exam Practice</span>
+    <h2 class="reveal">Past-paper-style questions</h2>
+    <p class="reveal d1">No real past papers were supplied this session, so these are written in the typical COMP27112 long-answer style for this topic. Click to reveal a model answer.</p>
+
+    <div class="exam reveal d1">
+      <span class="lbl">Exam-style · ~6 marks</span>
+      <p style="margin:8px 0 0"><strong>(a)</strong> Compare Gouraud and Phong shading in terms of the graphics pipeline. State one visual artefact of Gouraud shading and explain why Phong avoids it.</p>
+      <details><summary>Show model answer</summary>
+        <div class="ans">Both use per-vertex normals and the same reflection model. <strong>Gouraud</strong> evaluates the lighting equation in the <em>vertex shader</em>, producing a colour per vertex; rasterisation then linearly interpolates those <em>colours</em> across the triangle. <strong>Phong</strong> passes the normals through as varyings; rasterisation interpolates the <em>normals</em>, which are re-normalised per pixel, and the <em>fragment shader</em> evaluates the lighting equation per pixel. Artefact: Gouraud can <strong>miss or smear specular highlights</strong> that fall between vertices (and shows Mach-band-like edges), because lighting is sampled only at corners. Phong avoids it by computing lighting per pixel with a smoothly varying normal, so a highlight can appear anywhere on the face. Trade-off: Phong costs more (lighting runs per fragment, not per vertex).</div>
+      </details>
+    </div>
+
+    <div class="exam reveal d1">
+      <span class="lbl">Exam-style · ~8 marks</span>
+      <p style="margin:8px 0 0"><strong>(b)</strong> Starting from the orthogonality condition N̂·T̂ = 0, derive why the inverse-transpose of the model-view matrix must be used to transform normals under non-uniform scaling.</p>
+      <details><summary>Show model answer</summary>
+        <div class="ans">A normal is perpendicular to every surface tangent: <span class="k">N̂·T̂ = 0</span>. A tangent is a difference of surface points, so under a scale <strong>S = diag(s<sub>x</sub>,s<sub>y</sub>,s<sub>z</sub>)</strong> it maps to <strong>S T̂</strong>. We seek <strong>Q</strong> with (Q N̂)·(S T̂)=0. With Q = S we get s<sub>x</sub>n<sub>x</sub>t<sub>x</sub>+s<sub>y</sub>n<sub>y</sub>t<sub>y</sub>+s<sub>z</sub>n<sub>z</sub>t<sub>z</sub>, which is 0 only for uniform scale. With <strong>Q = S⁻¹</strong>: (n<sub>x</sub>/s<sub>x</sub>)(s<sub>x</sub>t<sub>x</sub>)+… = n<sub>x</sub>t<sub>x</sub>+n<sub>y</sub>t<sub>y</sub>+n<sub>z</sub>t<sub>z</sub> = N̂·T̂ = 0, so perpendicularity is preserved. Generalising from a pure scale to an arbitrary linear model-view transform gives <strong>normalMatrix = (MV)⁻ᵀ</strong>. (For rotations / uniform scale this reduces to the rotation part, so MV alone suffices there.) Normals are transformed as directions with w = 0.</div>
+      </details>
+    </div>
+
+    <div class="exam reveal d1">
+      <span class="lbl">Exam-style · ~5 marks</span>
+      <p style="margin:8px 0 0"><strong>(c)</strong> For C = I(k<sub>d</sub>(N̂·L̂) + k<sub>s</sub>(Ĥ·N̂)ⁿ), describe the role of each term, and state what happens to the highlight as n increases.</p>
+      <details><summary>Show model answer</summary>
+        <div class="ans"><strong>I</strong> = incoming light colour/intensity. <strong>k<sub>d</sub>(N̂·L̂)</strong> = diffuse (Lambert) term: brightness ∝ cosine of the angle between surface and light; view-independent. <strong>k<sub>s</sub>(Ĥ·N̂)ⁿ</strong> = specular term: bright when the half-vector Ĥ = normalize(L̂+V̂) aligns with the normal, i.e. near a mirror reflection toward the eye. <strong>k<sub>d</sub>, k<sub>s</sub></strong> weight the two contributions; <strong>n</strong> is the shininess exponent. As <strong>n increases the highlight becomes smaller, sharper and more concentrated</strong> (a glossier surface); as n→ small it spreads into a broad, soft sheen.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>COMP27112 · Chapter 11 — Shading Transformations · interactive visual notes</p>
+    <p>Diagrams recreated as vector art from the lecture slides · all demos are live-rendered, no screenshots</p>
+    <p style="margin-top:14px;color:var(--teal)">Flat → Gouraud → Phong · normals via (MV)⁻ᵀ</p>
+  </div>
+</footer>
+
+<script src="js/sphere.js"></script>
+<script src="js/notes.js"></script>
+</body>
+</html>

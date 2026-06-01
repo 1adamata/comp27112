@@ -1,0 +1,44 @@
+<svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono', monospace">
+  <defs>
+    <marker id="csA" markerWidth="12" markerHeight="12" refX="3" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#cfd6e6"/></marker>
+  </defs>
+
+  <!-- model space axis + object -->
+  <g transform="translate(60,150)">
+    <line x1="0" y1="0" x2="0" y2="-44" stroke="#4caf50" stroke-width="4"/>
+    <line x1="0" y1="0" x2="40" y2="0" stroke="#42a5f5" stroke-width="4"/>
+    <line x1="0" y1="0" x2="-22" y2="20" stroke="#ff7043" stroke-width="4"/>
+    <ellipse cx="6" cy="-10" rx="26" ry="20" fill="#3a3f4a"/>
+    <text x="-30" y="60" fill="#7bdc7f" font-size="16">Model</text>
+  </g>
+
+  <path d="M150 150 q 60 -30 110 0" fill="none" stroke="#cfd6e6" stroke-width="3" stroke-dasharray="2 6" marker-end="url(#csA)"/>
+
+  <!-- world space -->
+  <g transform="translate(330,150)">
+    <line x1="0" y1="0" x2="0" y2="-44" stroke="#4caf50" stroke-width="4"/>
+    <line x1="0" y1="0" x2="40" y2="0" stroke="#42a5f5" stroke-width="4"/>
+    <line x1="0" y1="0" x2="-22" y2="20" stroke="#ff7043" stroke-width="4"/>
+    <ellipse cx="6" cy="-12" rx="30" ry="24" fill="#3a3f4a"/>
+    <rect x="34" y="-16" width="40" height="26" rx="4" fill="#e7c46b"/>
+    <text x="-30" y="60" fill="#ffab7a" font-size="16">World</text>
+  </g>
+
+  <path d="M430 145 q 70 -45 140 -10" fill="none" stroke="#cfd6e6" stroke-width="3" stroke-dasharray="2 6" marker-end="url(#csA)"/>
+
+  <!-- camera / view space -->
+  <g transform="translate(600,110)">
+    <rect x="-30" y="-18" width="60" height="38" rx="6" fill="#111"/>
+    <circle r="12" fill="#222" stroke="#444" stroke-width="3"/>
+    <circle r="5" fill="#0a0a0a"/>
+    <text x="-22" y="58" fill="#7ec8e8" font-size="16">View</text>
+  </g>
+
+  <!-- shaded sphere far right (what camera sees) -->
+  <radialGradient id="csSph" cx="40%" cy="35%" r="75%">
+    <stop offset="0%" stop-color="#d7fff6"/>
+    <stop offset="60%" stop-color="#39c4ac"/>
+    <stop offset="100%" stop-color="#157a6c"/>
+  </radialGradient>
+  <circle cx="700" cy="80" r="34" fill="url(#csSph)"/>
+</svg>
