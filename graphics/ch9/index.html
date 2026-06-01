@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMP27112 · Chapter 9 — Textures · Visual Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0d11;
+  --bg2:#121319;
+  --panel:#16181f;
+  --panel2:#1c1f28;
+  --line:#2a2d38;
+  --ink:#ecebe6;
+  --mut:#9b988f;
+  --mut2:#6f6d66;
+  --amber:#ff9a4d;
+  --amber-h:#ffc081;
+  --cyan:#37e0d2;
+  --green:#7ee787;
+  --blue:#6cb6ff;
+  --mag:#ff79c6;
+  --red:#ff6b6b;
+  --maxw:1080px;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --disp:'Syne',sans-serif;
+  --body:'Hanken Grotesk',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:17px;line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+/* grain + glow background */
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(255,154,77,.10), transparent 60%),
+    radial-gradient(1000px 700px at -10% 30%, rgba(55,224,210,.07), transparent 55%),
+    var(--bg);
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+
+/* ---------- progress + nav ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--amber),var(--cyan));box-shadow:0 0 12px rgba(255,154,77,.6)}
+#topbar{position:fixed;top:0;left:0;right:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 22px;background:rgba(12,13,17,.72);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);transform:translateY(-110%);transition:transform .35s ease}
+#topbar.show{transform:translateY(0)}
+#topbar .brand{font-family:var(--disp);font-weight:800;letter-spacing:.5px;font-size:15px}
+#topbar .brand b{color:var(--amber)}
+#topbar nav{display:flex;gap:4px;flex-wrap:wrap}
+#topbar nav a{color:var(--mut);text-decoration:none;font-size:12.5px;font-weight:600;
+  padding:6px 9px;border-radius:7px;white-space:nowrap;transition:.2s}
+#topbar nav a:hover{color:var(--ink);background:var(--panel2)}
+#topbar nav a.active{color:var(--bg);background:var(--amber)}
+@media(max-width:880px){#topbar nav{display:none}}
+
+/* ---------- hero ---------- */
+#hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;position:relative;padding:80px 0 60px}
+#hero canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;opacity:.5}
+#hero .wrap{position:relative;z-index:2}
+.kicker{font-family:var(--mono);font-size:13px;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);margin-bottom:18px}
+.kicker .dot{color:var(--amber)}
+#hero h1{font-family:var(--disp);font-weight:800;font-size:clamp(58px,13vw,150px);line-height:.92;letter-spacing:-2px;margin-bottom:4px}
+#hero h1 .grad{background:linear-gradient(100deg,var(--amber) 10%,var(--amber-h) 40%,var(--cyan) 95%);-webkit-background-clip:text;background-clip:text;color:transparent}
+#hero .sub{font-size:clamp(18px,2.4vw,24px);color:var(--mut);max-width:640px;margin-top:22px}
+#hero .meta{display:flex;gap:26px;flex-wrap:wrap;margin-top:34px;font-family:var(--mono);font-size:13px;color:var(--mut2)}
+#hero .meta b{color:var(--ink);font-weight:500}
+.scrollcue{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);z-index:2;
+  font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--mut);text-transform:uppercase;text-align:center}
+.scrollcue .arrow{display:block;margin:8px auto 0;width:18px;height:18px;border-right:2px solid var(--amber);border-bottom:2px solid var(--amber);transform:rotate(45deg);animation:bob 1.6s infinite ease-in-out}
+@keyframes bob{0%,100%{transform:rotate(45deg) translate(0,0);opacity:.4}50%{transform:rotate(45deg) translate(4px,4px);opacity:1}}
+
+/* ---------- sections ---------- */
+section.chap{padding:70px 0;border-top:1px solid var(--line);position:relative}
+.sec-num{font-family:var(--mono);font-size:13px;color:var(--amber);letter-spacing:2px;font-weight:500}
+h2{font-family:var(--disp);font-weight:800;font-size:clamp(30px,5vw,46px);line-height:1.05;letter-spacing:-1px;margin:10px 0 6px}
+h3{font-family:var(--disp);font-weight:700;font-size:24px;margin:34px 0 12px;letter-spacing:-.3px}
+.lead{font-size:19px;color:var(--mut);max-width:760px;margin-bottom:8px}
+p{margin:14px 0;max-width:760px}
+p.tight{max-width:760px}
+b,strong{color:var(--ink);font-weight:700}
+em.k{font-style:normal;color:var(--amber);font-weight:600}
+em.c{font-style:normal;color:var(--cyan);font-weight:600}
+a.lnk{color:var(--cyan)}
+.mono{font-family:var(--mono)}
+
+/* reveal */
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* figure / slide */
+figure{margin:26px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+figure img{display:block;width:100%;height:auto;background:#16181f}
+figcaption{padding:11px 16px;font-size:13.5px;color:var(--mut);border-top:1px solid var(--line);font-family:var(--mono)}
+figcaption b{color:var(--amber-h);font-weight:500}
+.fig-grid{display:grid;gap:20px;margin:26px 0}
+.fig-grid.two{grid-template-columns:1fr 1fr}
+.fig-grid.three{grid-template-columns:1fr 1fr 1fr}
+.fig-grid figure{margin:0}
+@media(max-width:720px){.fig-grid.two,.fig-grid.three{grid-template-columns:1fr}}
+
+/* callout */
+.note{border-left:3px solid var(--cyan);background:linear-gradient(90deg,rgba(55,224,210,.07),transparent);
+  padding:14px 18px;border-radius:0 10px 10px 0;margin:22px 0;font-size:16px}
+.note.warn{border-color:var(--amber);background:linear-gradient(90deg,rgba(255,154,77,.08),transparent)}
+.note .tag{font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:4px}
+.note.warn .tag{color:var(--amber)}
+
+/* keyword cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:24px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;transition:.25s}
+.card:hover{border-color:var(--amber);transform:translateY(-3px)}
+.card .ic{font-family:var(--mono);font-size:12px;color:var(--amber);letter-spacing:1px}
+.card h4{font-family:var(--disp);font-size:19px;margin:8px 0 6px}
+.card p{font-size:14.5px;color:var(--mut);margin:0;max-width:none}
+
+/* code */
+.codewrap{margin:24px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#0f1015}
+.codetabs{display:flex;gap:2px;background:var(--panel2);border-bottom:1px solid var(--line)}
+.codetabs button{flex:0 0 auto;background:none;border:none;color:var(--mut);font-family:var(--mono);font-size:13px;
+  padding:11px 16px;cursor:pointer;border-bottom:2px solid transparent;transition:.2s}
+.codetabs button:hover{color:var(--ink)}
+.codetabs button.active{color:var(--amber);border-bottom-color:var(--amber);background:#0f1015}
+pre{padding:18px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.65;color:#cdd2dc}
+pre .cm{color:var(--mut2)}
+pre .kw{color:var(--mag)}
+pre .fn{color:var(--cyan)}
+pre .st{color:var(--green)}
+pre .nm{color:var(--amber-h)}
+.codepane{display:none}.codepane.active{display:block}
+
+/* interactive panel shell */
+.lab{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:16px;
+  padding:22px;margin:28px 0;position:relative;overflow:hidden}
+.lab::before{content:"INTERACTIVE";position:absolute;top:14px;right:16px;font-family:var(--mono);font-size:10px;
+  letter-spacing:2px;color:var(--mut2);border:1px solid var(--line);padding:3px 7px;border-radius:6px}
+.lab h4{font-family:var(--disp);font-size:20px;margin-bottom:4px}
+.lab .hint{font-size:14px;color:var(--mut);margin-bottom:16px;max-width:640px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.btnrow button{font-family:var(--mono);font-size:13px;background:var(--panel2);color:var(--mut);
+  border:1px solid var(--line);border-radius:9px;padding:9px 14px;cursor:pointer;transition:.18s}
+.btnrow button:hover{color:var(--ink);border-color:var(--mut)}
+.btnrow button.on{background:var(--amber);color:#1a1205;border-color:var(--amber);font-weight:700}
+.slider{display:flex;align-items:center;gap:12px;margin:14px 0;font-family:var(--mono);font-size:13px;color:var(--mut)}
+input[type=range]{-webkit-appearance:none;appearance:none;height:5px;border-radius:4px;background:var(--line);flex:1;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+  background:var(--amber);cursor:pointer;box-shadow:0 0 0 4px rgba(255,154,77,.18)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-radius:50%;background:var(--amber);cursor:pointer}
+canvas.cv{display:block;width:100%;height:auto;border-radius:10px;background:#0a0b0e;border:1px solid var(--line);image-rendering:auto}
+.cv-label{font-family:var(--mono);font-size:12px;color:var(--mut);text-align:center;margin-top:7px}
+.cv-label b{color:var(--amber-h);font-weight:500}
+
+/* quiz */
+.quiz{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;margin:20px 0}
+.quiz .qn{font-family:var(--mono);font-size:12px;color:var(--amber);letter-spacing:1px}
+.quiz .qtext{font-size:17px;font-weight:600;margin:8px 0 14px}
+.quiz .opt{display:block;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--line);
+  border-radius:10px;padding:12px 15px;margin:8px 0;color:var(--ink);font-size:15px;cursor:pointer;transition:.18s;font-family:var(--body)}
+.quiz .opt:hover{border-color:var(--mut)}
+.quiz .opt.correct{border-color:var(--green);background:rgba(126,231,135,.12);color:#bdf0c2}
+.quiz .opt.wrong{border-color:var(--red);background:rgba(255,107,107,.1);color:#ffb8b8}
+.quiz .opt .mk{float:right;font-family:var(--mono);font-weight:700}
+.quiz .fb{margin-top:10px;font-size:14px;color:var(--mut);padding:10px 14px;border-left:2px solid var(--cyan);
+  background:rgba(55,224,210,.06);border-radius:0 8px 8px 0;display:none}
+.quiz .fb.show{display:block}
+#score{position:sticky;top:64px;z-index:30;float:right;font-family:var(--mono);font-size:13px;
+  background:var(--panel2);border:1px solid var(--line);padding:8px 14px;border-radius:30px;color:var(--amber)}
+
+/* exam accordion */
+.exam{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:var(--panel)}
+.exam summary{list-style:none;cursor:pointer;padding:16px 18px;display:flex;align-items:center;gap:14px;font-weight:600}
+.exam summary::-webkit-details-marker{display:none}
+.exam summary .yr{font-family:var(--mono);font-size:12px;color:var(--bg);background:var(--cyan);padding:3px 9px;border-radius:6px;font-weight:700}
+.exam summary .mk{font-family:var(--mono);font-size:12px;color:var(--amber);margin-left:auto}
+.exam summary .qq{flex:1;min-width:0}
+.exam[open] summary{border-bottom:1px solid var(--line)}
+.exam .body{padding:16px 18px;font-size:15.5px;color:var(--mut)}
+.exam .body .q{color:var(--ink);font-weight:500;margin-bottom:12px;font-style:italic}
+.exam .body .ans{border-left:2px solid var(--green);padding:8px 14px;background:rgba(126,231,135,.05);border-radius:0 8px 8px 0}
+.exam .body .ans .tag{font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--green);display:block;margin-bottom:5px}
+
+/* TOC chips on hero */
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:42px}
+.toc a{text-decoration:none;color:var(--mut);background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:13px 15px;font-size:14px;transition:.2s;display:flex;gap:10px;align-items:baseline}
+.toc a:hover{border-color:var(--amber);color:var(--ink);transform:translateY(-2px)}
+.toc a span{font-family:var(--mono);font-size:12px;color:var(--amber)}
+
+/* footer */
+footer{padding:60px 0 80px;border-top:1px solid var(--line);color:var(--mut);font-size:14px}
+footer .big{font-family:var(--disp);font-weight:800;font-size:34px;color:var(--ink);margin-bottom:10px;letter-spacing:-1px}
+.swatch{display:inline-block;width:13px;height:13px;border-radius:3px;vertical-align:middle;margin-right:5px}
+
+hr.soft{border:none;border-top:1px solid var(--line);margin:34px 0}
+.pill{display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:1px;
+  border:1px solid var(--line);border-radius:20px;padding:3px 10px;color:var(--mut);margin:2px 4px 2px 0}
+.pill.a{color:var(--amber);border-color:rgba(255,154,77,.4)}
+.pill.c{color:var(--cyan);border-color:rgba(55,224,210,.4)}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="topbar">
+  <div class="brand">COMP27112 · <b>Textures</b></div>
+  <nav id="navlinks"></nav>
+</div>
+
+<!-- ============ HERO ============ -->
+<header id="hero">
+  <canvas id="heroCanvas"></canvas>
+  <div class="wrap">
+    <div class="kicker">Computer Graphics <span class="dot">/</span> Chapter 9 <span class="dot">/</span> Visual Notes</div>
+    <h1>TEX<span class="grad">TURES</span></h1>
+    <p class="sub">How we go from a dull, flat model to a surface that looks like wood, stone or fur — the full journey from <em class="k">raster images</em> to <em class="c">UV mapping</em>, filtering, mipmaps and the GPU's texture units.</p>
+    <div class="meta">
+      <div><b>Source</b> · COMP27112 lecture “Textures”</div>
+      <div><b>57</b> slide visuals</div>
+      <div><b>4</b> interactive labs</div>
+      <div><b>Quiz + past papers</b> included</div>
+    </div>
+    <div class="toc" id="toc"></div>
+  </div>
+  <div class="scrollcue">Scroll<span class="arrow"></span></div>
+</header>
+
+<main>
+
+<!-- ============ 1. WHY ============ -->
+<section class="chap" id="why" data-nav="Why">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">01 / THE PROBLEM</div>
+    <h2>Why textures?</h2>
+    <p class="lead">So far we've treated the appearance of a model as magic. We know how surfaces and lighting work — but what about the <strong>colour and detail</strong> of an object?</p></div>
+
+    <div class="reveal"><p>A model with no texture is dull. We can tell it's a cow because the geometry is good, but a default flat colour tells us nothing about the <em>material</em>. If we wanted a wooden floor we'd just get a whitish blob. What we really want is detail — a surface that looks like it's made of something.</p></div>
+
+    <div class="fig-grid two reveal">
+      <figure><img src="assets/slides/slide_002.jpg" alt="Untextured white cow model" loading="lazy"><figcaption><b>Before.</b> A well-modelled but untextured cow — geometry only, flat default colour.</figcaption></figure>
+      <figure><img src="assets/slides/slide_006.jpg" alt="Textured cow with a fur texture image" loading="lazy"><figcaption><b>After.</b> The same model with a raster <b>texture image</b> mapped onto it.</figcaption></figure>
+    </div>
+    <div class="reveal"><p class="tight">The whole question of this chapter: <strong>how do we go from the blank model to the textured one?</strong> The answer is <em class="k">textures</em>.</p></div>
+  </div>
+</section>
+
+<!-- ============ 2. TYPES ============ -->
+<section class="chap" id="types" data-nav="Types">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">02 / DEFINITIONS</div>
+    <h2>Three ways to define a texture</h2>
+    <p class="lead">“Texture” can mean several things. They split into three families.</p></div>
+
+    <div class="cards reveal">
+      <div class="card"><div class="ic">▢ RASTER IMAGES</div><h4>Image-based</h4><p>Ordinary images mapped onto a surface — 1D, 2D, or even multi-dimensional. The <strong>2D raster image</strong> is what graphics people usually mean by "texture", and it's the main focus here.</p></div>
+      <div class="card"><div class="ic">∿ PROCEDURAL</div><h4>Procedural</h4><p>Patterns generated by code — e.g. fractal functions in a fragment shader. No image file needed; the appearance is computed mathematically.</p></div>
+      <div class="card"><div class="ic">⛁ ADVANCED</div><h4>Advanced structures</h4><p>Richer data structures used mostly for <strong>offline rendering</strong> (animated films). Touched on at the end (see Ptex).</p></div>
+    </div>
+
+    <figure class="reveal"><img src="assets/slides/slide_008.jpg" alt="Texture types overview: raster 1D/2D/nD, procedural, advanced data structures" loading="lazy"><figcaption>The texture family tree — <b>raster images</b> (1D / 2D / nD), <b>procedural</b>, and <b>advanced data structures</b>.</figcaption></figure>
+
+    <div class="reveal"><h3>Procedural textures</h3>
+    <p>Procedural textures are powerful: a small piece of <strong>fragment-shader code</strong> using fractal functions can produce intricate patterns. The same code can morph from a lava look, to scorched earth, to grass-with-snow, simply by changing colours and parameters. Behind the rich pattern is just maths telling the fragment shader how to colour each pixel, then slapping the result onto geometry.</p></div>
+
+    <div class="fig-grid two reveal">
+      <figure><img src="assets/slides/slide_009.jpg" alt="Procedural lava texture next to its fragment shader code" loading="lazy"><figcaption>A fractal "lava" pattern — and the <b>fragment-shader code</b> that generates it.</figcaption></figure>
+      <figure><img src="assets/slides/slide_011.jpg" alt="Procedural texture compared with raster image texture" loading="lazy"><figcaption>Procedural (left) vs raster image (right). Both are valid "textures".</figcaption></figure>
+    </div>
+    <div class="note reveal"><span class="tag">Focus</span>From here on, "texture" means a <strong>2D raster image</strong> — the bread and butter of real-time graphics.</div>
+  </div>
+</section>
+
+<!-- ============ 3. TEXELS / MAPPING ============ -->
+<section class="chap" id="texels" data-nav="Texels">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">03 / THE MAPPING</div>
+    <h2>Texels &amp; the mapping problem</h2>
+    <p class="lead">The job: take a point on the object, find the matching point on the texture, and copy the colour across.</p></div>
+
+    <div class="reveal"><p>We zoom into the texture to find the corresponding pixel, then map a pixel on the teapot to a pixel on the texture. A pixel of a texture has its own name — a <em class="k">texel</em> (texture element). The name is self-explanatory.</p></div>
+
+    <figure class="reveal"><img src="assets/slides/slide_017.jpg" alt="Zoomed texture showing individual texels next to teapot" loading="lazy"><figcaption>Zooming in reveals individual <b>texels</b> — the pixels of the texture image.</figcaption></figure>
+
+    <div class="reveal"><p>Sounds simple — but the teapot is ultimately made of <strong>triangles</strong>. So really we map a triangle on the object to a triangle in the texture. This is exactly why we love rendering with triangles: a triangle is always <strong>flat</strong>, so flattening its coordinates into the texture's space is well-defined. To do this we need coordinates for the texture space — the notorious <em class="c">UV coordinates</em> you've met in any modelling tool.</p></div>
+
+    <div class="fig-grid two reveal">
+      <figure><img src="assets/slides/slide_019.jpg" alt="Texture space and model space triangle mapping" loading="lazy"><figcaption>Mapping a triangle between <b>texture space</b> and <b>model space</b>.</figcaption></figure>
+      <figure><img src="assets/slides/slide_020.jpg" alt="Pipeline diagram for sending a texture to the fragment shader" loading="lazy"><figcaption>Where do we send the texture? A reasonable place is the <b>fragment shader</b>.</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. PIPELINE / UV / barycentric ============ -->
+<section class="chap" id="pipeline" data-nav="UV + Pipeline">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">04 / IN THE PIPELINE</div>
+    <h2>UV coordinates through the pipeline</h2>
+    <p class="lead">The teapot is made of vertices. After the vertex shader everything is interpolated for rasterisation — so how does the texture coordinate survive the trip?</p></div>
+
+    <div class="reveal"><p>If we just dumped the texture into the fragment shader, defining the triangle's mapping there would be awkward. Instead we declare <em class="k">varying</em> texture coordinates in the <strong>vertex shader</strong>. These are the <em class="c">UV coordinates defined at each vertex</em>; they get <strong>interpolated through the pipeline</strong> so the fragment shader receives the correct per-fragment coordinate.</p></div>
+
+    <div class="reveal"><p>It's the same trick we already use for colour. Given a UV at each vertex of a triangle, we find the value at any interior point using <strong>barycentric coordinates</strong>:</p></div>
+
+    <figure class="reveal" style="max-width:520px"><img src="assets/slides/slide_026.jpg" alt="Barycentric interpolation formula c = alpha c0 + beta c1 + gamma c2" loading="lazy"><figcaption>Barycentric blend of the three vertex values: <b>c = α·c₀ + β·c₁ + γ·c₂</b>.</figcaption></figure>
+
+    <figure class="reveal"><img src="assets/slides/slide_024.jpg" alt="Full pipeline diagram with varying texture coordinates and barycentric inset" loading="lazy"><figcaption>Varying texture coordinates flow vertex shader → interpolation → fragment shader.</figcaption></figure>
+
+    <div class="note reveal"><span class="tag">Definition · UV</span><strong>UV coordinates</strong> are normalised 2D coordinates (0→1) stored <em>per vertex</em> that define how a texture image maps onto a 3D surface. They are interpolated across triangles and used in the fragment shader to look up the correct texel.</div>
+  </div>
+</section>
+
+<!-- ============ 5. UV UNWRAP / ST ============ -->
+<section class="chap" id="unwrap" data-nav="Unwrapping">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">05 / UNWRAPPING</div>
+    <h2>UV unwrapping &amp; normalised coordinates</h2>
+    <p class="lead">For a complex texture we must figure out how each surface point maps to the flat texture. That process is <em class="k">UV unwrapping</em>.</p></div>
+
+    <div class="fig-grid two reveal">
+      <figure><img src="assets/slides/slide_028.jpg" alt="UV unwrapping a cow model onto a flat texture" loading="lazy"><figcaption><b>UV unwrapping</b> — flattening the cow's surface onto the 2D texture.</figcaption></figure>
+      <figure><img src="assets/slides/slide_031.jpg" alt="Pixel UV coordinates versus normalised ST coordinates" loading="lazy"><figcaption>Pixel coords <b>u(px),v(px)</b> vs normalised <b>s,t</b> coords.</figcaption></figure>
+    </div>
+
+    <div class="reveal"><p>One problem: what if the model suddenly becomes huge? A point measured in <strong>pixels</strong> stays fixed because raster textures are <strong>resolution-dependent</strong>. The fix is a second set of <em class="c">normalised coordinates</em> — usually called <strong>s, t</strong> — that run 0→1 regardless of texture size. You supply a normalised texture and the GPU figures out the mapping to whatever resolution it needs.</p></div>
+
+    <figure class="reveal"><img src="assets/slides/slide_033.jpg" alt="Normalised ST coordinates required by WebGL" loading="lazy"><figcaption>WebGL requires a <b>normalised</b> texture — but the API usually handles this for you.</figcaption></figure>
+  </div>
+</section>
+
+<!-- ============ 6. SEAMS / PROJECTION ============ -->
+<section class="chap" id="seams" data-nav="Seams">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">06 / SEAMS &amp; PROJECTION</div>
+    <h2>Seams &amp; UV projection</h2>
+    <p class="lead">Achieving the mapping is, honestly, mostly <strong>manual labour</strong>. And it brings artefacts.</p></div>
+
+    <div class="reveal"><p>If a texture is too small for the surface, it <strong>repeats</strong>, and you see lines where the tiling meets. These repeat boundaries are called <em class="k">seams</em>. We usually create them by <strong>flattening</strong> the model onto simpler geometry (e.g. cylinders split into quads), applying the texture there, then wrapping it back. On a complex model like the cow, badly-placed seams show as visible patch artefacts — meaning the texture is ill-defined or the seams are wrong.</p></div>
+
+    <div class="fig-grid two reveal">
+      <figure><img src="assets/slides/slide_037.jpg" alt="Teapot with repeating cat texture and visible seams" loading="lazy"><figcaption>Too-small texture → it <b>repeats</b>; the join lines are <b>seams</b>.</figcaption></figure>
+      <figure><img src="assets/slides/slide_039.jpg" alt="Cow model showing visible seam patch artefacts" loading="lazy"><figcaption>Visible patch artefacts where the cow's seams are defined poorly.</figcaption></figure>
+    </div>
+
+    <div class="reveal"><h3>Projection &amp; implicit mappings</h3>
+    <p>Simple shapes have <strong>implicit</strong> mappings. A cuboid always gets a cross-shaped projection; a banana is essentially cylindrical. Complex characters have many seams, so there's a higher chance of things going wrong. You'll also often see one texture file packed with lots of information and <strong>reused</strong> across objects to conserve memory.</p></div>
+
+    <div class="lab reveal">
+      <h4>UV projection types</h4>
+      <p class="hint">Different geometries imply different default projections. Tap to see each one from the lecture.</p>
+      <div class="btnrow" id="projBtns">
+        <button class="on" data-img="assets/slides/slide_043.jpg" data-cap="Cuboid → a cross-shaped (cube-map style) projection.">Cube</button>
+        <button data-img="assets/slides/slide_044.jpg" data-cap="Banana → cylindrical projection wraps around the long axis.">Cylinder</button>
+        <button data-img="assets/slides/slide_042.jpg" data-cap="Spherical / blobby objects projected onto the teapot.">Spherical</button>
+        <button data-img="assets/slides/slide_045.jpg" data-cap="A full character has many seams &amp; implicit UV regions — lots can go wrong.">Character</button>
+      </div>
+      <figure style="margin:6px 0 0"><img id="projImg" src="assets/slides/slide_043.jpg" alt="UV projection example"><figcaption id="projCap"><b>Cuboid</b> → a cross-shaped (cube-map style) projection.</figcaption></figure>
+    </div>
+    <div class="note warn reveal"><span class="tag">Reality check</span>Even with machine-learning tools, UV mapping still needs heavy manual work — an artist fights the unwrap, flattens, re-adjusts UVs, repeats.</div>
+  </div>
+</section>
+
+<!-- ============ 7. RESOLUTION MISMATCH ============ -->
+<section class="chap" id="mismatch" data-nav="Mismatch">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">07 / THE CATCH</div>
+    <h2>Resolution mismatch</h2>
+    <p class="lead">If the texture resolution exactly matched the object on screen, life would be easy. It almost never does.</p></div>
+
+    <div class="reveal"><p>With 4K displays, a texture near the camera is often <strong>much smaller</strong> than the screen area it covers — you can't ship terabytes of texture per game. Other times the texture is <strong>much larger</strong> than the tiny region it occupies. Both cause artefacts, and each needs a different fix.</p></div>
+
+    <figure class="reveal"><img src="assets/slides/slide_048.jpg" alt="Resolution mismatch between texture and object" loading="lazy"><figcaption>The core problem: texture resolution rarely matches the on-screen object size.</figcaption></figure>
+
+    <div class="cards reveal">
+      <div class="card"><div class="ic">↑ MAGNIFICATION</div><h4>Texture &lt; Object</h4><p>Texture is stretched over a large area → blocky pixelation. Fixed by <strong>filtering / sampling</strong>.</p></div>
+      <div class="card"><div class="ic">↓ MINIFICATION</div><h4>Texture &gt; Object</h4><p>Many texels squeezed into few pixels → aliasing &amp; shimmering. Fixed by <strong>mipmapping</strong> (and anisotropic filtering).</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8. MAGNIFICATION / FILTERING ============ -->
+<section class="chap" id="filter" data-nav="Filtering">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">08 / TEXTURE &lt; OBJECT</div>
+    <h2>Texture filtering &amp; sampling</h2>
+    <p class="lead">When the texture is too small, the GPU stretches it and we get an annoying pixelated look. We want a smooth result instead.</p></div>
+
+    <figure class="reveal" style="max-width:560px"><img src="assets/slides/slide_050.jpg" alt="Pixelated cat texture stretched over a large teapot" loading="lazy"><figcaption>Texture resolution &lt; object resolution → stretched, blocky texels.</figcaption></figure>
+
+    <div class="note reveal"><span class="tag">Key idea</span>Images are made of pixels, and <strong>pixels are samples — not little squares</strong>. Hence "sampling". How we reconstruct a colour between texels defines the filtering method.</div>
+
+    <div class="reveal"><h3>The three filters</h3></div>
+    <div class="fig-grid three reveal">
+      <figure><img src="assets/slides/slide_055.jpg" alt="Nearest pixel sampling grid" loading="lazy"><figcaption><b>Nearest</b> · 1 fetch · blocky</figcaption></figure>
+      <figure><img src="assets/slides/slide_060.jpg" alt="Bilinear sampling 2x2 grid" loading="lazy"><figcaption><b>Bilinear</b> · 4 fetches · smooth</figcaption></figure>
+      <figure><img src="assets/slides/slide_067.jpg" alt="Bicubic sampling 4x4 grid" loading="lazy"><figcaption><b>Bicubic</b> · 16 fetches · smoothest</figcaption></figure>
+    </div>
+
+    <!-- INTERACTIVE: filter demo -->
+    <div class="lab reveal">
+      <h4>Lab 1 · Magnification filtering</h4>
+      <p class="hint">A tiny texture, magnified. Switch the reconstruction filter and drag the zoom. Nearest snaps to the closest texel (blocky); bilinear blends the 4 neighbours; bicubic blends a 4×4 neighbourhood for the smoothest result.</p>
+      <div class="btnrow" id="filtBtns">
+        <button class="on" data-m="nearest">Nearest</button>
+        <button data-m="bilinear">Bilinear</button>
+        <button data-m="bicubic">Bicubic</button>
+      </div>
+      <div class="slider"><span>ZOOM</span><input type="range" id="filtZoom" min="6" max="48" value="26"><span id="filtZoomV">26×</span></div>
+      <canvas id="filtCv" class="cv" width="760" height="300"></canvas>
+      <div class="cv-label">Source texture is <b>16×16 texels</b> · current filter: <b id="filtName">Nearest</b></div>
+    </div>
+
+    <!-- INTERACTIVE: bilinear visualiser -->
+    <div class="lab reveal">
+      <h4>Lab 2 · Bilinear interpolation, by hand</h4>
+      <p class="hint">Drag the sample point inside the 2×2 texel grid. We interpolate horizontally between the top pair and the bottom pair (weights <b>1−p</b> and <b>p</b>), then interpolate those two results vertically (weights <b>1−q</b>, <b>q</b>). This is exactly the lecture's <span class="mono">c<sub>pq</sub> = (1−p)c₀ + p·c₁</span> built up in two directions.</p>
+      <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:center" id="biliGrid">
+        <canvas id="biliCv" class="cv" width="420" height="420" style="cursor:crosshair"></canvas>
+        <div>
+          <div class="mono" style="font-size:13px;color:var(--mut);line-height:2">
+            p (horizontal) = <b id="biP" style="color:var(--amber-h)">0.50</b><br>
+            q (vertical)&nbsp;&nbsp; = <b id="biQ" style="color:var(--amber-h)">0.50</b><br>
+            <hr class="soft" style="margin:10px 0">
+            top&nbsp;&nbsp;&nbsp;= (1−p)c₀ + p·c₁<br>
+            bottom = (1−p)c₂ + p·c₃<br>
+            <b style="color:var(--cyan)">result = (1−q)·top + q·bottom</b>
+          </div>
+          <div style="margin-top:16px;display:flex;align-items:center;gap:14px">
+            <div style="font-family:var(--mono);font-size:12px;color:var(--mut)">SAMPLED COLOUR</div>
+            <div id="biSwatch" style="width:64px;height:64px;border-radius:10px;border:2px solid var(--line)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal"><h3>The cost of smoothness</h3>
+    <p>Smoother filters cost more texture fetches. Nearest is a single lookup (very fast). Bilinear needs <strong>4 fetches</strong> + 3 linear interpolations. Bicubic needs <strong>16 fetches</strong> + cubic polynomials — quite slow, though modern GPUs are tuned for it. The choice can even be aesthetic: a retro pixel-art game may <em>want</em> nearest.</p></div>
+
+    <div class="lab reveal">
+      <h4>Relative cost — texture fetches</h4>
+      <p class="hint">Per filtered sample.</p>
+      <div id="costBars" style="display:grid;gap:12px;font-family:var(--mono);font-size:13px"></div>
+    </div>
+
+    <div class="fig-grid two reveal">
+      <figure><img src="assets/slides/slide_070.jpg" alt="Bicubic versus bilinear filtering comparison on a teapot" loading="lazy"><figcaption>Bicubic (right) removes the jaggies around the eyes — but can look <b>too</b> smooth.</figcaption></figure>
+      <figure><img src="assets/slides/slide_075.jpg" alt="Traditional upscaling plus deep neural nets, NVIDIA" loading="lazy"><figcaption>You <b>cannot</b> upscale beyond the source without inventing detail — only neural nets / GANs can "hallucinate" it. <span style="color:var(--mut2)">(Source: NVIDIA)</span></figcaption></figure>
+    </div>
+    <div class="note warn reveal"><span class="tag">Hard limit</span>No purely deterministic algorithm can beat the original raster resolution. Filtering reconstructs between texels; it cannot add information that was never captured.</div>
+  </div>
+</section>
+
+<!-- ============ 9. MINIFICATION / ALIASING ============ -->
+<section class="chap" id="aliasing" data-nav="Aliasing">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">09 / TEXTURE &gt; OBJECT</div>
+    <h2>Minification &amp; aliasing</h2>
+    <p class="lead">Textures are usually small — surely the texture is never bigger than the object? It happens extremely often.</p></div>
+
+    <div class="reveal"><p>Take a 512×512 texture on an object that ends up <strong>10×10 pixels</strong> on screen — we'd represent ~100 screen pixels using 250,000+ texels. That's one of the most expensive things the GPU can do, and it's wildly unreasonable.</p></div>
+
+    <div class="fig-grid two reveal">
+      <figure><img src="assets/slides/slide_077.jpg" alt="512x512 texture on a small teapot" loading="lazy"><figcaption>A 512×512 texture mapped onto a shrinking object.</figcaption></figure>
+      <figure><img src="assets/slides/slide_080.jpg" alt="Object only ten by ten pixels on screen" loading="lazy"><figcaption>When the object is ~10×10 px, a huge texture is crammed into almost nothing.</figcaption></figure>
+    </div>
+
+    <div class="reveal"><p>Worse: when a high-res texture recedes into the distance, <strong>many texels map to a single screen pixel</strong>. Bilinear only samples the 4 texels around your UV, so the receding pixels — whose true footprint is a big, stretched, irregular shape — miss most of the texels that should contribute. You get nasty <em class="k">aliasing</em>, and it shimmers badly when moving (spatial-temporal aliasing).</p></div>
+
+    <!-- INTERACTIVE: aliasing checkerboard -->
+    <div class="lab reveal">
+      <h4>Lab 3 · The receding checkerboard</h4>
+      <p class="hint">A checkerboard floor in perspective. With naive point sampling, the distance dissolves into a writhing moiré pattern — that's aliasing. Toggle pre-filtering on and the far field correctly blurs toward grey (the average of black &amp; white), just like a real photo.</p>
+      <div class="btnrow" id="aliasBtns">
+        <button class="on" data-m="alias">Point sampling (aliased)</button>
+        <button data-m="mip">Pre-filtered (mipmap-like)</button>
+      </div>
+      <canvas id="aliasCv" class="cv" width="720" height="380"></canvas>
+      <div class="cv-label">Mode: <b id="aliasName">Point sampling — watch the shimmering moiré near the horizon</b></div>
+    </div>
+
+    <div class="fig-grid two reveal">
+      <figure><img src="assets/slides/slide_083.jpg" alt="Checkerboard floor receding with aliasing artefacts" loading="lazy"><figcaption>Undersampling artefacts grow as the surface stretches into the distance.</figcaption></figure>
+      <figure><img src="assets/slides/slide_084.jpg" alt="Real photo of a checkerboard floor by Nico Angeli" loading="lazy"><figcaption>A real photo blurs in the distance naturally — the behaviour we want to emulate. <span style="color:var(--mut2)">(Photo: Nico Angeli)</span></figcaption></figure>
+    </div>
+
+    <figure class="reveal"><img src="assets/slides/slide_090.jpg" alt="Pixel footprint becoming an irregular stretched shape in texture space" loading="lazy"><figcaption>A distant screen pixel's <b>footprint</b> in texture space isn't a square — it's a large, irregular shape covering many texels.</figcaption></figure>
+  </div>
+</section>
+
+<!-- ============ 10. MIPMAPPING ============ -->
+<section class="chap" id="mipmap" data-nav="Mipmapping">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">10 / THE FIX</div>
+    <h2>Mipmapping</h2>
+    <p class="lead">Probably the most popular texture-filtering method ever — virtually every GPU does it.</p></div>
+
+    <div class="reveal"><p>“MIP” is from the Latin <em>multum in parvo</em> — <strong>“much in little.”</strong> The idea: <strong>pre-filter</strong> (downsample) the texture into a pyramid of ever-smaller levels. As an object recedes, the GPU picks the level whose texel size best matches the projected screen area — no more cramming 250k texels into 100 pixels.</p></div>
+
+    <div class="fig-grid two reveal">
+      <figure><img src="assets/slides/slide_095.jpg" alt="Mipmap levels from 256x256 down to 2x2" loading="lazy"><figcaption>Pre-computed levels: Level 0 = 256², halving down to Level 7 = 2².</figcaption></figure>
+      <figure><img src="assets/slides/slide_096.jpg" alt="Mipmap pyramid visualisation with distance frustum" loading="lazy"><figcaption>The mipmap <b>pyramid</b> — pick the level by distance from the viewer.</figcaption></figure>
+    </div>
+
+    <!-- INTERACTIVE: mipmap explorer -->
+    <div class="lab reveal">
+      <h4>Lab 4 · Mipmap level selector</h4>
+      <p class="hint">Slide the camera away from the surface. The GPU swaps to a coarser pre-filtered level as distance grows. Turn on trilinear to blend smoothly between the two nearest levels instead of snapping.</p>
+      <div class="slider"><span>DISTANCE</span><input type="range" id="mipDist" min="0" max="700" value="0"><span id="mipLvlV">L0 · 256²</span></div>
+      <div class="btnrow" id="mipMode">
+        <button class="on" data-m="snap">Nearest level (snaps)</button>
+        <button data-m="tri">Trilinear (blends)</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:20px;align-items:start" id="mipWrap">
+        <canvas id="mipCv" class="cv" width="520" height="360"></canvas>
+        <canvas id="mipPyr" class="cv" width="300" height="360" style="background:transparent;border:none"></canvas>
+      </div>
+      <div class="cv-label" id="mipInfo">Showing <b>Level 0</b> (256×256) — full detail, no pre-filtering yet.</div>
+    </div>
+
+    <div class="reveal"><h3>Trilinear interpolation</h3>
+    <p>Abruptly swapping levels shows obvious banding. So we take the <strong>two nearest levels</strong>, bilinearly sample both, then linearly interpolate between them — bilinear ×2 + one more lerp = <em class="k">trilinear interpolation</em>. The mipmapped plane loses the wiggly moiré; on a black/white texture the far field averages to grey.</p></div>
+
+    <div class="fig-grid three reveal">
+      <figure><img src="assets/slides/slide_100.jpg" alt="Pre-filtering between two mipmap levels" loading="lazy"><figcaption>Pre-filtered levels feed the sampler.</figcaption></figure>
+      <figure><img src="assets/slides/slide_105.jpg" alt="Trilinear interpolation diagram" loading="lazy"><figcaption>Trilinear = bilinear on two levels + a lerp between them.</figcaption></figure>
+      <figure><img src="assets/slides/slide_107.jpg" alt="Bilinear versus trilinear mipmap comparison on floor" loading="lazy"><figcaption>Bilinear vs trilinear: the moiré is gone.</figcaption></figure>
+    </div>
+    <div class="note reveal"><span class="tag">Assertion–reason (exam favourite)</span><strong>Mipmaps improve rendering performance — true</strong>, because they reduce cache misses by using appropriately-sized texture versions <em>and</em> reduce aliasing. The reason correctly explains the statement.</div>
+  </div>
+</section>
+
+<!-- ============ 11. ANISOTROPIC ============ -->
+<section class="chap" id="aniso" data-nav="Anisotropic">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">11 / GOING FURTHER</div>
+    <h2>Anisotropic filtering</h2>
+    <p class="lead">Mipmaps treat all directions equally. But a pixel's footprint is often <strong>stretched</strong>, not square.</p></div>
+
+    <div class="reveal"><p>Wrap a mipmapped texture on a cube and the front face looks fine, but the <strong>top face</strong> — far away and seen at a grazing angle — degrades into a grey, blurry trapezoid. Its footprint is a long, narrow shape, so isotropic mipmapping picks a very coarse level to fit it, throwing away detail along the un-compressed axis.</p></div>
+
+    <div class="fig-grid two reveal">
+      <figure><img src="assets/slides/slide_110.jpg" alt="Cube with mipmapping showing artefacts on the top face" loading="lazy"><figcaption>The top face goes grey/blurry at extreme angles under mipmapping.</figcaption></figure>
+      <figure><img src="assets/slides/slide_111.jpg" alt="Narrow trapezoid footprint on the cube top face" loading="lazy"><figcaption>The footprint is a narrow trapezoid → a low-res level gets chosen.</figcaption></figure>
+    </div>
+
+    <div class="reveal"><p><em class="k">Anisotropic</em> means “not the same in all directions” (from Greek). The filter acknowledges the elongated footprint: it samples <strong>more along the compressed axis and less along the others</strong>. A ground plane at a grazing angle is squashed in depth but barely across width, so the filter behaves differently per direction. <em class="c">Isotropic</em> mipmapping reduces resolution equally in U and V — fine for a square footprint, wrong for a stretched one.</p></div>
+
+    <div class="fig-grid two reveal">
+      <figure><img src="assets/slides/slide_116.jpg" alt="Anisotropic versus mipmap filtering on a cube" loading="lazy"><figcaption>Mipmap (left) vs anisotropic (right) — the top face sharpens up.</figcaption></figure>
+      <figure><img src="assets/slides/slide_117.jpg" alt="Trilinear versus anisotropic on a stone floor" loading="lazy"><figcaption>Trilinear vs anisotropic on a receding stone floor.</figcaption></figure>
+    </div>
+    <figure class="reveal"><img src="assets/slides/slide_118.jpg" alt="Trilinear versus anisotropic on an aircraft carrier deck" loading="lazy"><figcaption>Anisotropic preserves the far plane far better — but at a price.</figcaption></figure>
+
+    <div class="note warn reveal"><span class="tag">Cost</span>Anisotropic is much pricier than mipmapping — in the worst case <strong>16× more texture fetches</strong> (the “Anisotropic ×16” setting). Turn it on and you may see frame drops. Use it sparingly.</div>
+  </div>
+</section>
+
+<!-- ============ 12. TEXTURE UNITS / CODE ============ -->
+<section class="chap" id="code" data-nav="Code">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">12 / HARDWARE &amp; API</div>
+    <h2>Texture units &amp; the code</h2>
+    <p class="lead">Where do all these interpolations actually run? Not in the fragment shader — that'd be far too expensive.</p></div>
+
+    <div class="reveal"><p>The fragment shader is a general-purpose unit running across every pixel; filtering needs heavy caching and indexing. So GPUs have dedicated <em class="k">texture units</em> — specialised hardware that is extremely fast at texture operations. Because of them we can render scenes with thousands of textures in real time. Software filtering in the fragment shader is possible but reserved for special cases.</p></div>
+
+    <figure class="reveal"><img src="assets/slides/slide_120.jpg" alt="Anisotropic filtering 16x cost in the pipeline" loading="lazy"><figcaption>The texture unit sits in the pipeline; anisotropic ×16 multiplies its fetches.</figcaption></figure>
+
+    <div class="reveal"><p>In WebGL the texture unit is explicit. You create a texture, pick a <strong>texture unit</strong> (e.g. <span class="mono">TEXTURE0</span>), upload the image, set the <strong>filtering</strong> (min/mag) and <strong>wrap</strong> (s/t) parameters, generate mipmaps, then bind it to a <span class="mono">sampler2D</span> uniform. The <span class="mono">varying</span> UV from the vertex shader does the lookup.</p></div>
+
+    <div class="codewrap reveal">
+      <div class="codetabs" id="codeTabs">
+        <button class="active" data-p="0">WebGL · setup</button>
+        <button data-p="1">Fragment shader</button>
+        <button data-p="2">three.js</button>
+      </div>
+      <div class="codepane active" data-p="0"><pre><span class="kw">const</span> gl = canvas.<span class="fn">getContext</span>(<span class="st">"webgl"</span>);
+<span class="kw">const</span> texture = gl.<span class="fn">createTexture</span>();
+
+gl.<span class="fn">activeTexture</span>(gl.TEXTURE0);          <span class="cm">// choose the texture unit</span>
+gl.<span class="fn">bindTexture</span>(gl.TEXTURE_2D, texture);
+
+gl.<span class="fn">texImage2D</span>(
+  gl.TEXTURE_2D, <span class="nm">0</span>, gl.RGBA,
+  <span class="nm">512</span>, <span class="nm">512</span>, <span class="nm">0</span>,
+  gl.RGBA, gl.UNSIGNED_BYTE, pixelData
+);
+
+<span class="cm">// minification: trilinear (bilinear + between mip levels)</span>
+gl.<span class="fn">texParameteri</span>(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+<span class="cm">// magnification: bilinear</span>
+gl.<span class="fn">texParameteri</span>(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+<span class="cm">// what to do at the seams — repeat in s and t</span>
+gl.<span class="fn">texParameteri</span>(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+gl.<span class="fn">texParameteri</span>(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+gl.<span class="fn">generateMipmap</span>(gl.TEXTURE_2D);
+
+gl.<span class="fn">useProgram</span>(shaderProgram);
+gl.<span class="fn">uniform1i</span>(gl.<span class="fn">getUniformLocation</span>(shaderProgram, <span class="st">"u_texture"</span>), <span class="nm">0</span>);</pre></div>
+      <div class="codepane" data-p="1"><pre><span class="kw">precision</span> mediump <span class="kw">float</span>;
+
+<span class="kw">uniform</span> sampler2D u_texture;   <span class="cm">// the bound texture unit</span>
+<span class="kw">varying</span> vec2 v_uv;            <span class="cm">// interpolated from the vertex shader</span>
+
+<span class="kw">void</span> <span class="fn">main</span>() {
+  gl_FragColor = <span class="fn">texture2D</span>(u_texture, v_uv);
+}</pre></div>
+      <div class="codepane" data-p="2"><pre><span class="cm">// three.js abstracts all of the above away</span>
+<span class="kw">const</span> texture = <span class="kw">new</span> THREE.<span class="fn">TextureLoader</span>().<span class="fn">load</span>(<span class="st">"checkerboard.png"</span>);
+
+texture.minFilter = THREE.LinearMipmapLinearFilter;
+texture.magFilter = THREE.LinearFilter;
+texture.wrapS = THREE.RepeatWrapping;
+texture.wrapT = THREE.RepeatWrapping;
+
+<span class="kw">const</span> material = <span class="kw">new</span> THREE.<span class="fn">MeshBasicMaterial</span>({ map: texture });
+<span class="kw">const</span> mesh = <span class="kw">new</span> THREE.<span class="fn">Mesh</span>(geometry, material);
+scene.<span class="fn">add</span>(mesh);</pre></div>
+    </div>
+    <div class="note reveal"><span class="tag">Translating the params</span><span class="mono">LINEAR_MIPMAP_LINEAR</span> = trilinear (bilinear within a level + linear between levels). <span class="mono">MAG_FILTER = LINEAR</span> = bilinear when magnifying. <span class="mono">WRAP_S/T = REPEAT</span> tiles the texture at the seams, using the normalised s,t coords.</div>
+  </div>
+</section>
+
+<!-- ============ 13. PTEX ============ -->
+<section class="chap" id="ptex" data-nav="Ptex">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">13 / ADVANCED</div>
+    <h2>Per-face textures (Ptex)</h2>
+    <p class="lead">A different approach from Disney Animation — eliminate UV unwrapping and seams entirely.</p></div>
+
+    <div class="reveal"><p><em class="k">Ptex</em> stores texture data <strong>per face</strong> rather than requiring a UV layout. That kills seam artefacts and is excellent for subdivision surfaces and high-end film. The trade-offs: much larger files, poor real-time performance, limited software support, and clumsier artist workflows (you can't paint as easily as on a flat 2D UV map).</p></div>
+
+    <figure class="reveal" style="max-width:640px"><img src="assets/slides/slide_134.jpg" alt="Per-face textures (Ptex) examples — lizards and boots" loading="lazy"><figcaption><b>Ptex</b> — per-face texture data, no UV unwrap. Used for hero assets at Pixar &amp; Disney.</figcaption></figure>
+
+    <div class="reveal"><p>In practice, traditional <strong>UV-based raster textures remain the industry standard</strong> — universally supported, memory-efficient, real-time-friendly, and intuitive to paint. Ptex is reserved for offline film work where render quality justifies the limitations. UV textures dominate everywhere else: games, real-time apps, VR.</p></div>
+
+    <figure class="reveal"><img src="assets/slides/slide_135.jpg" alt="Summary of texture types: image-based, procedural, advanced" loading="lazy"><figcaption>The full picture — image-based, procedural and advanced texturing side by side.</figcaption></figure>
+
+    <div class="note reveal"><span class="tag">Zoom out</span>The rendering pipeline keeps growing more complex — but we've been chipping away at it. Texturing slots neatly into the pipeline you already know: vertices carry UVs, the rasteriser interpolates them, the texture unit filters the lookup, the fragment shader writes the colour.</div>
+  </div>
+</section>
+
+<!-- ============ 14. QUIZ ============ -->
+<section class="chap" id="quiz" data-nav="Quiz">
+  <div class="wrap">
+    <div id="score">Score 0 / 0</div>
+    <div class="reveal"><div class="sec-num">14 / TEST YOURSELF</div>
+    <h2>Quiz</h2>
+    <p class="lead">Texture questions from the course visual quizzes (plus closely-related ones). Click an answer to check it.</p></div>
+    <div id="quizHost"></div>
+  </div>
+</section>
+
+<!-- ============ 15. PAST PAPERS ============ -->
+<section class="chap" id="exams" data-nav="Past papers">
+  <div class="wrap">
+    <div class="reveal"><div class="sec-num">15 / EXAM PRACTICE</div>
+    <h2>Past-paper questions</h2>
+    <p class="lead">Texturing recurs in COMP27112 exams — most often as <strong>bump mapping</strong>: making a surface look bumpy without changing its geometry. Expand each for a model answer keyed to this chapter.</p></div>
+
+    <details class="exam reveal">
+      <summary><span class="yr">2016</span><span class="qq">Q2(d) — Describe an image-based technique to make a mesh M appear to have an irregular, bumpy surface, applied during rendering.</span><span class="mk">4 marks</span></summary>
+      <div class="body">
+        <div class="q">"You would like M to appear to have an irregular, bumpy surface. Describe an image-based technique which could be applied during rendering to achieve this."</div>
+        <div class="ans"><span class="tag">Model answer</span>Use <strong>bump / normal mapping</strong>: an extra image-based texture supplies a per-texel perturbation of the surface normal. During shading, the interpolated normal is tilted by the values read from this map before the lighting equation (diffuse/specular) is evaluated per fragment. Because only the <em>normals</em> change — not the geometry — the lit surface gains the illusion of bumps and dents at no extra polygon cost. (A normal map stores the perturbed normals directly, typically appearing blue-purple because most normals point out of the surface along +z.)</div>
+      </div>
+    </details>
+
+    <details class="exam reveal">
+      <summary><span class="yr">2017</span><span class="qq">Q11 — Describe a method for making a surface look bumpy that does not change the actual geometry.</span><span class="mk">2 marks</span></summary>
+      <div class="body">
+        <div class="q">"Describe a method for making a surface look bumpy that does not involve changing the actual geometry of the surface."</div>
+        <div class="ans"><span class="tag">Model answer</span><strong>Bump mapping.</strong> Store a texture of normal perturbations; during fragment shading, perturb the surface normal per texel and feed the modified normal into the lighting calculation. The geometry stays a smooth low-poly mesh, but the per-pixel shading varies as if the surface were bumpy.</div>
+      </div>
+    </details>
+
+    <details class="exam reveal">
+      <summary><span class="yr">2021/22</span><span class="qq">Q — Bump mapping: meaning of b<sub>v</sub>N<sub>v</sub> and b<sub>u</sub>N<sub>u</sub>; run-time vs precomputed.</span><span class="mk">essay</span></summary>
+      <div class="body">
+        <div class="q">"The process of bump mapping is explained by the following diagram. What do the terms b<sub>v</sub>N<sub>v</sub>, b<sub>u</sub>N<sub>u</sub> mean? How do they contribute to creating a surface that looks bumpy? Is it better to compute these values at run time or in advance? Give examples where live and precomputed bump maps would be used."</div>
+        <div class="ans"><span class="tag">Model answer</span>The <strong>bump map</strong> is a height field b(u,v). Its partial derivatives <span class="mono">b<sub>u</sub></span> and <span class="mono">b<sub>v</sub></span> (rate of change of height along the u and v texture axes) scale the surface tangent vectors <span class="mono">N<sub>u</sub></span>, <span class="mono">N<sub>v</sub></span>; adding <span class="mono">b<sub>u</sub>N<sub>u</sub> + b<sub>v</sub>N<sub>v</sub></span> to the original normal <strong>tilts the normal</strong> to mimic the slope of the bumps. The lighting then responds to these perturbed normals, producing convincing highlights and shadows of a bumpy surface — without altering geometry. <strong>Precompute</strong> (bake) the perturbed normals into a normal map for static surfaces where the bump pattern is fixed (most game assets) — it's cheaper at run time. <strong>Compute live</strong> when bumps are dynamic or procedural (e.g. ripples on animated water, deforming surfaces) where baking can't capture the change.</div>
+      </div>
+    </details>
+
+    <details class="exam reveal">
+      <summary><span class="yr">2025</span><span class="qq">Q — How can a surface be made to appear bumpy without changing its geometry?</span><span class="mk">—</span></summary>
+      <div class="body">
+        <div class="q">"How can a surface be made to appear bumpy without changing geometry?"</div>
+        <div class="ans"><span class="tag">Model answer</span><strong>Bump / normal mapping</strong> — perturb the surface normal per fragment using values sampled from a texture, then light using the perturbed normal. Contrast with <strong>displacement mapping</strong>, which <em>does</em> move real vertex positions (and so needs a finely-tessellated mesh to show any effect — a coarse mesh has too few vertices to displace).</div>
+      </div>
+    </details>
+
+    <div class="note reveal"><span class="tag">Why these belong here</span>Bump mapping is an <strong>image-based texturing technique</strong> — the same UV-mapped raster texture machinery from this chapter, but the image stores normals/heights instead of colour. Filtering, mipmapping and wrap modes all still apply.</div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="big reveal">That's texturing.</div>
+    <p class="reveal" style="color:var(--mut);max-width:680px">Most of this isn't a conceptual mind-bender — it's about getting used to how GPUs talk. You now know the path: raster image → UV coordinates per vertex → barycentric interpolation → texture-unit lookup → filtering (nearest / bilinear / bicubic) → mipmapping &amp; anisotropic for distance → fragment colour.</p>
+    <div class="reveal" style="margin:22px 0">
+      <span class="pill a">raster textures</span><span class="pill c">UV &amp; s,t</span><span class="pill">texels</span><span class="pill">seams</span><span class="pill a">nearest / bilinear / bicubic</span><span class="pill c">mipmapping</span><span class="pill">trilinear</span><span class="pill a">anisotropic ×16</span><span class="pill">texture units</span><span class="pill c">Ptex</span><span class="pill">bump mapping</span>
+    </div>
+    <p class="reveal" style="font-size:13px;color:var(--mut2);font-family:var(--mono)">
+      Visual notes compiled from the COMP27112 "Textures" lecture (135 slides) · course visual quizzes · past papers 2016–2025.<br>
+      Slide imagery © University of Manchester / lecture author, reproduced here for study. Fonts: Syne · Hanken Grotesk · JetBrains Mono.
+    </p>
+  </div>
+</footer>
+
+<script>
+/* ---------- nav + progress + reveal ---------- */
+(function(){
+  const sections=[...document.querySelectorAll('section.chap')];
+  const nav=document.getElementById('navlinks');
+  sections.forEach(s=>{const a=document.createElement('a');a.href='#'+s.id;a.textContent=s.dataset.nav;a.dataset.t=s.id;nav.appendChild(a);});
+  const toc=document.getElementById('toc');
+  sections.forEach((s,i)=>{const a=document.createElement('a');a.href='#'+s.id;
+    a.innerHTML='<span>'+String(i+1).padStart(2,'0')+'</span>'+s.dataset.nav;toc.appendChild(a);});
+  const bar=document.getElementById('progress'),top=document.getElementById('topbar');
+  const navAs=[...nav.querySelectorAll('a')];
+  function onScroll(){
+    const h=document.documentElement;const sc=h.scrollTop;const max=h.scrollHeight-h.clientHeight;
+    bar.style.width=(sc/max*100)+'%';
+    top.classList.toggle('show',sc>window.innerHeight*0.7);
+    let cur=sections[0].id;
+    for(const s of sections){if(s.getBoundingClientRect().top<140)cur=s.id;}
+    navAs.forEach(a=>a.classList.toggle('active',a.dataset.t===cur));
+  }
+  document.addEventListener('scroll',onScroll,{passive:true});onScroll();
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:0.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+})();
+
+/* ---------- hero procedural canvas ---------- */
+(function(){
+  const cv=document.getElementById('heroCanvas');if(!cv)return;const ctx=cv.getContext('2d');
+  let W,H,t=0;function size(){W=cv.width=cv.offsetWidth;H=cv.height=cv.offsetHeight;}
+  size();addEventListener('resize',size);
+  const N=46; // coarse grid -> looks like big texels
+  function draw(){
+    t+=0.006;const cs=Math.ceil(W/N);
+    for(let y=0;y<=H/cs;y++)for(let x=0;x<=N;x++){
+      const n=Math.sin(x*0.35+t)*Math.cos(y*0.4-t*1.3)+Math.sin((x+y)*0.2+t*0.7);
+      const v=(n+2)/4;
+      const r=Math.floor(255*Math.min(1,0.15+v*0.95));
+      const g=Math.floor(120*v+20);
+      const b=Math.floor(60*(1-v)+ (Math.sin(t+x*0.3)*0.5+0.5)*90);
+      ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(x*cs,y*cs,cs+1,cs+1);
+    }
+    // dark vignette so text reads
+    const grd=ctx.createRadialGradient(W*0.3,H*0.5,80,W*0.3,H*0.5,Math.max(W,H));
+    grd.addColorStop(0,'rgba(12,13,17,0.35)');grd.addColorStop(1,'rgba(12,13,17,0.92)');
+    ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ---------- projection switcher ---------- */
+(function(){
+  const btns=document.querySelectorAll('#projBtns button');const img=document.getElementById('projImg');const cap=document.getElementById('projCap');
+  btns.forEach(b=>b.addEventListener('click',()=>{
+    btns.forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    img.src=b.dataset.img;cap.innerHTML='<b>'+b.textContent+'</b> → '+b.dataset.cap.replace(/^[^→]*→\s*/,'');
+    if(b.dataset.cap.indexOf('→')<0)cap.innerHTML=b.dataset.cap;
+  }));
+})();
+
+/* ---------- code tabs ---------- */
+(function(){
+  const tabs=document.querySelectorAll('#codeTabs button');const panes=document.querySelectorAll('.codepane');
+  tabs.forEach(t=>t.addEventListener('click',()=>{
+    tabs.forEach(x=>x.classList.remove('active'));t.classList.add('active');
+    panes.forEach(p=>p.classList.toggle('active',p.dataset.p===t.dataset.p));
+  }));
+})();
+
+/* ---------- build a tiny 16x16 source texture ---------- */
+function makeTex(){
+  const s=16,off=document.createElement('canvas');off.width=s;off.height=s;const c=off.getContext('2d');
+  // a small "scene": sky gradient, sun, hills, bird
+  for(let y=0;y<s;y++){const v=y/s;const r=60+v*60,g=120+v*70,b=200-v*60;
+    for(let x=0;x<s;x++){c.fillStyle=`rgb(${r|0},${g|0},${b|0})`;c.fillRect(x,y,1,1);}}
+  // sun
+  c.fillStyle='#ffd25e';c.beginPath();c.arc(4,4,2.4,0,7);c.fill();
+  // hills
+  c.fillStyle='#3aa05a';c.fillRect(0,11,s,5);
+  c.fillStyle='#2c7e47';for(let x=0;x<s;x++){const hh=11-Math.round(1.6*Math.sin(x*0.9));c.fillRect(x,hh,1,s-hh);}
+  // tree
+  c.fillStyle='#5a3b1e';c.fillRect(11,8,1,4);c.fillStyle='#2c7e47';c.fillRect(10,6,3,3);
+  return off;
+}
+const TEX=makeTex();
+
+/* ---------- Lab 1: magnification filter demo ---------- */
+(function(){
+  const cv=document.getElementById('filtCv');if(!cv)return;const ctx=cv.getContext('2d');
+  let mode='nearest',zoom=26;
+  const btns=document.querySelectorAll('#filtBtns button');const zin=document.getElementById('filtZoom');
+  const zv=document.getElementById('filtZoomV');const nm=document.getElementById('filtName');
+  function render(){
+    const W=cv.width,H=cv.height;ctx.clearRect(0,0,W,H);
+    const src=16;const dispW=Math.min(H, src*zoom);
+    // left: actual tiny texture (nearest, small)
+    ctx.imageSmoothingEnabled=false;
+    const small=H*0.28;
+    ctx.drawImage(TEX,16,H/2-small/2,small,small);
+    ctx.fillStyle='#9b988f';ctx.font='12px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('16×16 source',16+small/2,H/2+small/2+18);
+    // right: magnified with chosen filter
+    const mx=W-dispW-30,my=H/2-dispW/2;
+    if(mode==='nearest'){ctx.imageSmoothingEnabled=false;}
+    else{ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality=(mode==='bicubic'?'high':'low');}
+    ctx.drawImage(TEX,mx,my,dispW,dispW);
+    ctx.strokeStyle='#2a2d38';ctx.strokeRect(mx,my,dispW,dispW);
+    ctx.fillStyle='#ff9a4d';ctx.textAlign='center';
+    ctx.fillText(mode+' · '+zoom+'×',mx+dispW/2,my+dispW+18);
+    // arrow
+    ctx.strokeStyle='#9b988f';ctx.lineWidth=2;ctx.beginPath();
+    const ax=16+small+12,ay=H/2;ctx.moveTo(ax,ay);ctx.lineTo(mx-12,ay);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(mx-12,ay);ctx.lineTo(mx-20,ay-5);ctx.lineTo(mx-20,ay+5);ctx.closePath();ctx.fillStyle='#9b988f';ctx.fill();
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>{btns.forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    mode=b.dataset.m;nm.textContent=b.textContent;render();}));
+  zin.addEventListener('input',()=>{zoom=+zin.value;zv.textContent=zoom+'×';render();});
+  render();
+})();
+
+/* ---------- Lab 2: bilinear visualiser ---------- */
+(function(){
+  const cv=document.getElementById('biliCv');if(!cv)return;const ctx=cv.getContext('2d');
+  const c0=[214,160,150],c1=[120,60,55],c2=[230,210,200],c3=[70,30,28]; // texel colours (warm fur palette)
+  let px=0.5,py=0.5,drag=false;
+  const W=cv.width,H=cv.height,m=40,gw=W-2*m,gh=H-2*m;
+  function lerp(a,b,t){return a.map((v,i)=>v+(b[i]-v)*t);}
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    // four texel quadrants
+    const hw=gw/2,hh=gh/2;
+    const quads=[[c0,m,m],[c1,m+hw,m],[c2,m,m+hh],[c3,m+hw,m+hh]];
+    quads.forEach(q=>{ctx.fillStyle=`rgb(${q[0].join(',')})`;ctx.fillRect(q[1],q[2],hw,hh);});
+    // texel centre dots + labels
+    const centres=[[m+hw/2,m+hh/2,'c₀'],[m+hw+hw/2,m+hh/2,'c₁'],[m+hw/2,m+hh+hh/2,'c₂'],[m+hw+hw/2,m+hh+hh/2,'c₃']];
+    ctx.font='13px JetBrains Mono';ctx.textAlign='center';
+    centres.forEach(c=>{ctx.fillStyle='rgba(0,0,0,.55)';ctx.beginPath();ctx.arc(c[0],c[1],4,0,7);ctx.fill();
+      ctx.fillStyle='#0c0d11';ctx.fillText(c[2],c[0],c[1]-10);ctx.fillStyle='#ecebe6';ctx.fillText(c[2],c[0]-0.6,c[1]-10.6);});
+    // grid border
+    ctx.strokeStyle='#2a2d38';ctx.strokeRect(m,m,gw,gh);
+    // sample point
+    const sx=m+px*gw,sy=m+py*gh;
+    // crosshair lines
+    ctx.strokeStyle='rgba(255,154,77,.5)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(m,sy);ctx.lineTo(m+gw,sy);ctx.moveTo(sx,m);ctx.lineTo(sx,m+gh);ctx.stroke();ctx.setLineDash([]);
+    // computed colour
+    const top=lerp(c0,c1,px),bot=lerp(c2,c3,px),res=lerp(top,bot,py).map(Math.round);
+    ctx.fillStyle=`rgb(${res.join(',')})`;ctx.beginPath();ctx.arc(sx,sy,11,0,7);ctx.fill();
+    ctx.strokeStyle='#ecebe6';ctx.lineWidth=2.5;ctx.stroke();
+    // update readouts
+    document.getElementById('biP').textContent=px.toFixed(2);
+    document.getElementById('biQ').textContent=py.toFixed(2);
+    document.getElementById('biSwatch').style.background=`rgb(${res.join(',')})`;
+  }
+  function setFromEvent(e){const r=cv.getBoundingClientRect();
+    const cx=( (e.touches?e.touches[0].clientX:e.clientX) - r.left)*(W/r.width);
+    const cy=( (e.touches?e.touches[0].clientY:e.clientY) - r.top)*(H/r.height);
+    px=Math.max(0,Math.min(1,(cx-m)/gw));py=Math.max(0,Math.min(1,(cy-m)/gh));render();}
+  cv.addEventListener('mousedown',e=>{drag=true;setFromEvent(e);});
+  addEventListener('mousemove',e=>{if(drag)setFromEvent(e);});
+  addEventListener('mouseup',()=>drag=false);
+  cv.addEventListener('touchstart',e=>{drag=true;setFromEvent(e);e.preventDefault();},{passive:false});
+  cv.addEventListener('touchmove',e=>{if(drag){setFromEvent(e);e.preventDefault();}},{passive:false});
+  addEventListener('touchend',()=>drag=false);
+  render();
+})();
+
+/* ---------- cost bars ---------- */
+(function(){
+  const host=document.getElementById('costBars');if(!host)return;
+  const data=[['Nearest',1,'#7ee787'],['Bilinear',4,'#37e0d2'],['Bicubic',16,'#ff9a4d'],['Anisotropic ×16',64,'#ff6b6b']];
+  data.forEach(d=>{
+    const row=document.createElement('div');row.style.display='grid';row.style.gridTemplateColumns='140px 1fr 60px';row.style.alignItems='center';row.style.gap='10px';
+    const w=Math.min(100,d[1]/64*100);
+    row.innerHTML=`<span style="color:var(--mut)">${d[0]}</span>
+      <span style="background:var(--line);border-radius:6px;height:16px;overflow:hidden;display:block">
+        <span style="display:block;height:100%;width:0;background:${d[2]};transition:width 1.1s cubic-bezier(.2,.7,.2,1)"></span></span>
+      <span style="color:${d[2]};text-align:right">${d[1]}×</span>`;
+    host.appendChild(row);
+    const fill=row.querySelector('span span span');
+    new IntersectionObserver((es,o)=>{es.forEach(e=>{if(e.isIntersecting){fill.style.width=w+'%';o.disconnect();}});}).observe(row);
+  });
+})();
+
+/* ---------- Lab 3: aliasing checkerboard ---------- */
+(function(){
+  const cv=document.getElementById('aliasCv');if(!cv)return;const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;let mode='alias',phase=0,raf;
+  const img=ctx.createImageData(W,H);
+  function render(){
+    const data=img.data;const horizon=H*0.30;
+    for(let y=0;y<H;y++){
+      for(let x=0;x<W;x++){
+        const i=(y*W+x)*4;
+        if(y<horizon){ // sky
+          const v=y/horizon;data[i]=18+v*20;data[i+1]=20+v*26;data[i+2]=30+v*40;data[i+3]=255;continue;
+        }
+        const dy=y-horizon;
+        const z=2.2/(dy);            // depth: large near horizon
+        const wx=(x-W/2)*z*0.020 + phase*0.6;
+        const wz=z*5.0 + phase;
+        let shade;
+        if(mode==='alias'){
+          const cell=((Math.floor(wx)+Math.floor(wz))&1);
+          shade=cell?225:30;
+        }else{
+          // footprint grows with z -> fade to grey average (mip-like)
+          const foot=z*1.6;                 // approx texels per pixel
+          const cell=((Math.floor(wx)+Math.floor(wz))&1)?225:30;
+          const blend=Math.min(1,Math.max(0,(foot-0.4)/2.2));
+          shade=cell*(1-blend)+128*blend;
+        }
+        // slight perspective darkening
+        const f=Math.min(1,dy/(H-horizon)+0.15);
+        data[i]=data[i+1]=data[i+2]=shade*(0.55+0.45*f);data[i+3]=255;
+      }
+    }
+    ctx.putImageData(img,0,0);
+  }
+  function loop(){phase+=0.06;render();raf=requestAnimationFrame(loop);}
+  const btns=document.querySelectorAll('#aliasBtns button');const nm=document.getElementById('aliasName');
+  btns.forEach(b=>b.addEventListener('click',()=>{btns.forEach(x=>x.classList.remove('on'));b.classList.add('on');mode=b.dataset.m;
+    nm.textContent=(mode==='alias'?'Point sampling — watch the shimmering moiré near the horizon':'Pre-filtered — the far field blurs to grey, no shimmer');}));
+  // only animate when visible
+  new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){if(!raf)loop();}else{cancelAnimationFrame(raf);raf=null;}});},{threshold:0.2}).observe(cv);
+  render();
+})();
+
+/* ---------- Lab 4: mipmap explorer ---------- */
+(function(){
+  const cv=document.getElementById('mipCv');const pyr=document.getElementById('mipPyr');if(!cv)return;
+  const ctx=cv.getContext('2d'),pctx=pyr.getContext('2d');
+  // build mip levels of a detailed checker+noise texture
+  const base=256,levels=[];
+  let b=document.createElement('canvas');b.width=base;b.height=base;let bc=b.getContext('2d');
+  const cellsz=base/16;
+  for(let y=0;y<16;y++)for(let x=0;x<16;x++){
+    const on=(x+y)&1;bc.fillStyle=on?'#d8cfc6':'#3a2f2a';bc.fillRect(x*cellsz,y*cellsz,cellsz,cellsz);
+    // add a little fur-ish noise for detail
+    if(on){bc.fillStyle='rgba(120,70,60,.25)';for(let k=0;k<10;k++)bc.fillRect(x*cellsz+Math.random()*cellsz,y*cellsz+Math.random()*cellsz,2,2);}
+  }
+  levels.push(b);
+  let cur=b,sz=base;
+  while(sz>1){const ns=sz/2;const nc=document.createElement('canvas');nc.width=ns;nc.height=ns;
+    const c=nc.getContext('2d');c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
+    c.drawImage(cur,0,0,ns,ns);levels.push(nc);cur=nc;sz=ns;}
+  // levels[0]=256 ... levels[8]=1
+  let dist=0,mmode='snap';
+  const din=document.getElementById('mipDist'),lv=document.getElementById('mipLvlV'),info=document.getElementById('mipInfo');
+  const modeBtns=document.querySelectorAll('#mipMode button');
+  function levelForDist(d){return Math.min(8, d/700*8);} // 0..8 fractional
+  function drawLevel(L){const res=base/Math.pow(2,L);return res;}
+  function render(){
+    const Lf=levelForDist(dist);const L0=Math.floor(Lf),L1=Math.min(8,L0+1),fr=Lf-L0;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    const dw=cv.height; // square draw region
+    const ox=(cv.width-dw)/2;
+    if(mmode==='snap'){
+      const L=Math.round(Lf);
+      ctx.drawImage(levels[L],ox,0,dw,dw);
+      info.innerHTML='Showing <b>Level '+L+'</b> ('+(base/Math.pow(2,L))+'²) — snapped to the nearest level.';
+      lv.textContent='L'+L+' · '+(base/Math.pow(2,L))+'²';
+      highlight([L]);
+    }else{
+      // trilinear: draw lower level then blend upper on top
+      ctx.globalAlpha=1;ctx.drawImage(levels[L0],ox,0,dw,dw);
+      ctx.globalAlpha=fr;ctx.drawImage(levels[L1],ox,0,dw,dw);ctx.globalAlpha=1;
+      info.innerHTML='<b>Trilinear</b>: blending Level '+L0+' ('+(base/Math.pow(2,L0))+'²) and Level '+L1+' ('+(base/Math.pow(2,L1))+'²) · weight '+fr.toFixed(2);
+      lv.textContent='L'+L0+'→'+L1+' · '+fr.toFixed(2);
+      highlight([L0,L1]);
+    }
+  }
+  function highlight(active){
+    pctx.clearRect(0,0,pyr.width,pyr.height);
+    let y=8;const x=10;
+    for(let L=0;L<=8;L++){
+      const res=base/Math.pow(2,L);const h=Math.max(8,90/Math.pow(1.5,L));const w=h;
+      pctx.imageSmoothingEnabled=true;pctx.drawImage(levels[L],x,y,w,w);
+      pctx.strokeStyle=active.includes(L)?'#ff9a4d':'#2a2d38';pctx.lineWidth=active.includes(L)?2.5:1;
+      pctx.strokeRect(x,y,w,w);
+      pctx.fillStyle=active.includes(L)?'#ffc081':'#6f6d66';pctx.font='11px JetBrains Mono';pctx.textAlign='left';
+      pctx.fillText('L'+L+' · '+res+'²',x+w+8,y+w/2+4);
+      y+=w+6;
+    }
+  }
+  din.addEventListener('input',()=>{dist=+din.value;render();});
+  modeBtns.forEach(b=>b.addEventListener('click',()=>{modeBtns.forEach(x=>x.classList.remove('on'));b.classList.add('on');mmode=b.dataset.m;render();}));
+  render();
+})();
+
+/* ---------- quiz ---------- */
+(function(){
+  const Q=[
+    {q:"What are UV coordinates?",
+     o:["The screen-space pixel coordinates of each vertex after projection",
+        "The world-space x and y coordinates used to position a texture in the scene",
+        "Normalised 2D coordinates (0 to 1) per vertex defining how a texture image maps onto a 3D surface",
+        "A compressed format for storing texture resolution metadata"],a:2,
+     fb:"UV coordinates are normalised per-vertex coordinates, interpolated across triangles, used in the fragment shader to look up the correct texel."},
+    {q:"What is a texel?",
+     o:["A vertex of a texture mesh","A pixel of the texture image","A normalised UV coordinate","A mipmap level"],a:1,
+     fb:"Texel = texture element = a pixel of the texture image. The name mirrors 'pixel'."},
+    {q:"Difference between nearest-neighbour and bilinear texture filtering?",
+     o:["Nearest snaps to the closest texel (blocky); bilinear blends the four surrounding texels (smoother)",
+        "Nearest is for magnification only; bilinear for minification only",
+        "Bilinear requires a mipmap; nearest does not",
+        "Nearest is done in the fragment shader; bilinear in hardware"],a:0,
+     fb:"Nearest = 1 fetch, blocky. Bilinear samples the 4 nearest texels and interpolates → smoother. Both work for magnification and minification."},
+    {q:"How many texture fetches does bilinear filtering need?",
+     o:["1","4","9","16"],a:1,
+     fb:"Bilinear = 4 fetches (a 2×2 neighbourhood) + 3 linear interpolations. Nearest = 1, bicubic = 16."},
+    {q:"What problem does mipmapping solve?",
+     o:["Textures appearing pixelated when the camera is too close",
+        "Aliasing & shimmering when a high-resolution texture is viewed at a distance",
+        "UV seams causing visible stitching",
+        "GPU memory running out when textures are too large"],a:1,
+     fb:"Mipmapping fixes the undersampling/aliasing that occurs when a big texture covers only a few screen pixels — it picks a pre-filtered smaller level."},
+    {q:"'MIP' in mipmap comes from multum in parvo, meaning…",
+     o:["many in parallel","much in little","mapped in pixels","minified instantly"],a:1,
+     fb:"Latin 'multum in parvo' — much in little. The pyramid packs many pre-filtered sizes into the structure."},
+    {q:"What is trilinear interpolation?",
+     o:["Bilinear filtering applied three times in the fragment shader",
+        "Bilinear sampling on two mipmap levels, then a linear interpolation between them",
+        "Sampling three texels in a triangle",
+        "Interpolating across the three barycentric coordinates"],a:1,
+     fb:"Trilinear = bilinear on the two nearest mip levels + one more lerp between them, avoiding abrupt level swaps."},
+    {q:"Why is anisotropic filtering more expensive than mipmapping?",
+     o:["It runs a neural network per pixel",
+        "It needs up to 16× more texture fetches to sample along the elongated footprint",
+        "It stores the texture uncompressed",
+        "It disables the texture unit"],a:1,
+     fb:"Anisotropic samples more along the compressed axis of a stretched footprint — worst case 16× the fetches ('Anisotropic ×16'), which can cause frame drops."},
+    {q:"Isotropic vs anisotropic filtering — what's the key difference?",
+     o:["Isotropic reduces resolution equally in U and V; anisotropic adapts to a stretched (non-square) footprint",
+        "Isotropic is for colour, anisotropic for normals",
+        "Isotropic is newer and always better",
+        "They are the same thing"],a:0,
+     fb:"Isotropic (mipmapping) treats all directions equally — fine for a square footprint, wrong for a grazing-angle stretched one. Anisotropic samples differently per direction."},
+    {q:"Can a deterministic filter upscale a texture beyond its original resolution with real detail?",
+     o:["Yes, bicubic adds detail","Yes, with enough fetches","No — you'd have to invent (hallucinate) detail, e.g. with neural nets/GANs","Only with mipmapping"],a:2,
+     fb:"Filtering reconstructs between texels but can't add information that was never captured. Beating the source needs generative methods that hallucinate detail."},
+    {q:"Where are texture filtering & interpolation actually performed?",
+     o:["In the vertex shader","In dedicated texture units (specialised hardware)","On the CPU","In the fragment shader, always"],a:1,
+     fb:"Texture units are specialised hardware, far faster than doing it in the general-purpose fragment shader — which is why thousands of textures render in real time."},
+    {q:"What does TEXTURE_WRAP_S = REPEAT control?",
+     o:["The mipmap level","How the texture tiles at the seams along the s (normalised U) axis","The magnification filter","The number of texture units"],a:1,
+     fb:"WRAP_S/T decide what happens past the [0,1] s,t range — REPEAT tiles the texture, producing the seams we saw earlier."},
+    {q:"Ptex (per-face textures) main advantage?",
+     o:["Smaller files than UV textures","Eliminates UV unwrapping and seam artefacts by storing data per face","Faster real-time performance","Easier for artists to paint"],a:1,
+     fb:"Ptex stores texture data per face — no UV layout, no seams. Cost: larger files, poor real-time performance, limited support; used for film hero assets."},
+    {q:"Assertion–reason: 'Mipmaps improve rendering performance' because 'they reduce cache misses with appropriately-sized textures and reduce aliasing.'",
+     o:["Both true, and the reason explains the statement","Statement true, reason false","Statement false, reason true","Both false"],a:0,
+     fb:"Both are true and the reason genuinely explains the performance gain — the classic exam assertion–reason answer."},
+  ];
+  const host=document.getElementById('quizHost');const scoreEl=document.getElementById('score');
+  let answered=0,correct=0;
+  Q.forEach((item,qi)=>{
+    const box=document.createElement('div');box.className='quiz reveal';
+    box.innerHTML='<div class="qn">QUESTION '+(qi+1)+' / '+Q.length+'</div><div class="qtext">'+item.q+'</div>';
+    const opts=document.createElement('div');
+    item.o.forEach((t,oi)=>{
+      const btn=document.createElement('button');btn.className='opt';btn.innerHTML=t+'<span class="mk"></span>';
+      btn.addEventListener('click',()=>{
+        if(box.dataset.done)return;box.dataset.done=1;answered++;
+        const correctBtn=opts.children[item.a];
+        if(oi===item.a){btn.classList.add('correct');btn.querySelector('.mk').textContent='✓';correct++;}
+        else{btn.classList.add('wrong');btn.querySelector('.mk').textContent='✗';
+          correctBtn.classList.add('correct');correctBtn.querySelector('.mk').textContent='✓';}
+        fb.classList.add('show');
+        scoreEl.textContent='Score '+correct+' / '+answered;
+      });
+      opts.appendChild(btn);
+    });
+    box.appendChild(opts);
+    const fb=document.createElement('div');fb.className='fb';fb.textContent=item.fb;box.appendChild(fb);
+    host.appendChild(box);
+  });
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:0.1});
+  host.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+})();
+</script>
+</body>
+</html>
