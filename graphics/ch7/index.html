@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch.7 — Triangles on the GPU &amp; Blending · Visual Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Space+Mono:wght@400;700&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0f12;
+  --bg2:#14181d;
+  --panel:#171c22;
+  --panel2:#1d242c;
+  --ink:#eef2f5;
+  --muted:#94a3ad;
+  --line:#2a333d;
+  --cow:#f0a23b;          /* foreground / cow accent */
+  --grass:#5fd06a;        /* background / grass accent */
+  --pink:#f48fb6;         /* sample dots */
+  --blue:#4ea3f0;
+  --violet:#b07be8;
+  --edgeO:#f0852f;
+  --edgeG:#52c463;
+  --edgeB:#3d9be8;
+  --max:1180px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:'Sora',system-ui,sans-serif;line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(900px 600px at 82% -8%, rgba(240,162,59,.10), transparent 60%),
+    radial-gradient(800px 600px at 5% 12%, rgba(95,208,106,.08), transparent 55%),
+    radial-gradient(700px 700px at 50% 120%, rgba(78,163,240,.07), transparent 60%);
+}
+.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+.wrap{position:relative;z-index:1;max-width:var(--max);margin:0 auto;padding:0 22px}
+
+/* ---------- progress + nav ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--grass),var(--cow));box-shadow:0 0 12px rgba(240,162,59,.6)}
+nav{position:fixed;top:0;left:0;right:0;z-index:50;
+  backdrop-filter:blur(14px);background:rgba(13,15,18,.72);border-bottom:1px solid var(--line)}
+nav .row{max-width:var(--max);margin:0 auto;padding:11px 22px;display:flex;align-items:center;gap:18px}
+.brand{font-family:'Fraunces',serif;font-weight:900;font-size:1.02rem;letter-spacing:.2px;white-space:nowrap}
+.brand b{color:var(--cow)}
+.navlinks{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+.navlinks a{color:var(--muted);text-decoration:none;font-size:.78rem;padding:6px 10px;border-radius:8px;transition:.2s;font-weight:500}
+.navlinks a:hover{color:var(--ink);background:var(--panel2)}
+.menu-btn{display:none;margin-left:auto;background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+  padding:8px 12px;border-radius:8px;font-size:.85rem;cursor:pointer}
+@media(max-width:880px){
+  .navlinks{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;
+    background:rgba(13,15,18,.97);padding:12px 22px;border-bottom:1px solid var(--line)}
+  .navlinks.open{display:flex}
+  .menu-btn{display:block}
+}
+
+/* ---------- hero ---------- */
+header.hero{min-height:90vh;display:flex;flex-direction:column;justify-content:center;
+  padding:120px 0 60px;position:relative}
+.kicker{font-family:'Space Mono',monospace;color:var(--cow);font-size:.82rem;letter-spacing:3px;
+  text-transform:uppercase;margin-bottom:18px}
+h1.title{font-family:'Fraunces',serif;font-weight:900;line-height:.96;margin:0;
+  font-size:clamp(2.7rem,8vw,6rem);letter-spacing:-1.5px}
+h1.title .gpu{color:var(--cow);font-style:italic}
+h1.title .blend{background:linear-gradient(90deg,var(--grass),var(--blue),var(--violet));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.lede{max-width:660px;color:var(--muted);font-size:1.12rem;margin:26px 0 0}
+.herometa{display:flex;gap:26px;flex-wrap:wrap;margin-top:34px;font-size:.84rem;color:var(--muted)}
+.herometa b{color:var(--ink);font-weight:600}
+.scrolltip{margin-top:48px;font-family:'Space Mono',monospace;font-size:.74rem;color:var(--muted);
+  letter-spacing:2px;display:flex;align-items:center;gap:10px}
+.scrolltip .dot{width:8px;height:8px;border-radius:50%;background:var(--cow);animation:bob 1.4s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0);opacity:1}50%{transform:translateY(6px);opacity:.4}}
+
+/* floating mini triangle in hero */
+.heroart{position:absolute;right:2%;top:50%;transform:translateY(-50%);width:min(340px,38vw);opacity:.9;
+  filter:drop-shadow(0 20px 40px rgba(0,0,0,.5))}
+@media(max-width:760px){.heroart{display:none}}
+
+/* ---------- sections ---------- */
+section{padding:74px 0;position:relative}
+.sec-num{font-family:'Space Mono',monospace;color:var(--cow);font-size:.78rem;letter-spacing:2px}
+h2{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(1.8rem,4.4vw,3rem);
+  margin:.3rem 0 .2rem;letter-spacing:-.5px;line-height:1.05}
+h3{font-family:'Fraunces',serif;font-weight:600;font-size:1.4rem;margin:34px 0 10px}
+p{margin:14px 0;color:#d4dce2}
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px;margin:22px 0}
+.card.glow{box-shadow:0 0 0 1px rgba(240,162,59,.18),0 24px 60px -30px rgba(240,162,59,.4)}
+.tag{display:inline-block;font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:1.5px;text-transform:uppercase;
+  padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin:0 6px 6px 0}
+.tag.cow{color:var(--cow);border-color:rgba(240,162,59,.4)}
+.tag.grass{color:var(--grass);border-color:rgba(95,208,106,.4)}
+.tag.blue{color:var(--blue);border-color:rgba(78,163,240,.4)}
+
+figure{margin:24px 0}
+figure img{width:100%;border-radius:14px;border:1px solid var(--line);display:block;background:#000}
+figcaption{font-size:.82rem;color:var(--muted);margin-top:10px;font-family:'Space Mono',monospace;letter-spacing:.4px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.grid2.tight{gap:16px}
+@media(max-width:780px){.grid2{grid-template-columns:1fr}}
+
+.callout{border-left:3px solid var(--cow);background:linear-gradient(90deg,rgba(240,162,59,.08),transparent);
+  padding:14px 18px;border-radius:0 12px 12px 0;margin:18px 0}
+.callout.g{border-color:var(--grass);background:linear-gradient(90deg,rgba(95,208,106,.08),transparent)}
+.callout.b{border-color:var(--blue);background:linear-gradient(90deg,rgba(78,163,240,.08),transparent)}
+.callout .lab{font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--cow);display:block;margin-bottom:4px}
+.callout.g .lab{color:var(--grass)} .callout.b .lab{color:var(--blue)}
+
+.formula{font-family:'Space Mono',monospace;background:var(--bg2);border:1px solid var(--line);
+  border-radius:12px;padding:16px 18px;margin:16px 0;font-size:1.02rem;overflow-x:auto;color:#f3f6f8}
+.formula .o{color:var(--cow)} .formula .g{color:var(--grass)} .formula .b{color:var(--blue)} .formula .m{color:var(--muted)}
+
+ul.clean{list-style:none;padding:0;margin:14px 0}
+ul.clean li{padding:8px 0 8px 28px;position:relative;color:#d4dce2;border-bottom:1px solid rgba(42,51,61,.5)}
+ul.clean li:last-child{border-bottom:0}
+ul.clean li::before{content:"▸";position:absolute;left:4px;color:var(--cow)}
+
+/* interactive widget shell */
+.lab-shell{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+  border-radius:18px;padding:22px;margin:24px 0}
+.lab-title{font-family:'Space Mono',monospace;font-size:.74rem;letter-spacing:2px;text-transform:uppercase;
+  color:var(--cow);display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.lab-title::before{content:"●";color:var(--grass);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+canvas{display:block;width:100%;border-radius:12px;background:#101418;border:1px solid var(--line);touch-action:none}
+.controls{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:16px}
+.controls label{font-size:.8rem;color:var(--muted);display:flex;flex-direction:column;gap:6px;min-width:150px;flex:1}
+.controls .val{color:var(--cow);font-family:'Space Mono',monospace}
+input[type=range]{-webkit-appearance:none;appearance:none;height:5px;border-radius:99px;background:var(--line);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;
+  background:var(--cow);cursor:pointer;box-shadow:0 0 10px rgba(240,162,59,.6)}
+input[type=range]::-moz-range-thumb{width:17px;height:17px;border:0;border-radius:50%;background:var(--cow);cursor:pointer}
+button.btn{background:var(--cow);color:#1a1205;border:0;padding:10px 18px;border-radius:10px;font-family:'Sora';
+  font-weight:600;cursor:pointer;font-size:.86rem;transition:.2s}
+button.btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+button.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.readout{font-family:'Space Mono',monospace;font-size:.82rem;color:var(--muted);margin-top:12px;white-space:pre-wrap}
+.readout b{color:var(--grass)}
+
+/* pipeline mini steps */
+.pipe{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0;align-items:stretch}
+.pipe .step{flex:1;min-width:120px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+  padding:14px;font-size:.82rem;position:relative;transition:.3s}
+.pipe .step:hover{border-color:var(--cow);transform:translateY(-3px)}
+.pipe .step .n{font-family:'Space Mono',monospace;color:var(--cow);font-size:.7rem}
+.pipe .step.vs{border-top:3px solid var(--grass)}
+.pipe .step.rs{border-top:3px solid var(--edgeO)}
+.pipe .step.fs{border-top:3px solid var(--violet)}
+.pipe .step.rop{border-top:3px solid var(--blue)}
+
+/* quiz */
+.quiz{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin:18px 0}
+.quiz .q{font-weight:600;margin-bottom:14px;font-size:1.02rem}
+.quiz .q .qn{font-family:'Space Mono',monospace;color:var(--cow);margin-right:8px}
+.opt{display:block;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--line);color:var(--ink);
+  padding:12px 15px;border-radius:10px;margin:8px 0;cursor:pointer;font-family:'Sora';font-size:.92rem;transition:.18s}
+.opt:hover{border-color:var(--muted)}
+.opt.correct{border-color:var(--grass);background:rgba(95,208,106,.14);color:#cdeccf}
+.opt.wrong{border-color:#e0667a;background:rgba(224,102,122,.12);color:#f0c2ca}
+.opt .mark{float:right;font-family:'Space Mono',monospace}
+.feedback{font-size:.86rem;color:var(--muted);margin-top:10px;padding:10px 14px;border-radius:10px;
+  background:var(--bg2);border:1px dashed var(--line);display:none}
+.feedback.show{display:block}
+.feedback b{color:var(--grass)}
+
+/* past paper */
+.paper{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin:14px 0;overflow:hidden}
+.paper summary{cursor:pointer;padding:16px 20px;font-weight:600;list-style:none;display:flex;align-items:center;gap:12px}
+.paper summary::-webkit-details-marker{display:none}
+.paper summary .yr{font-family:'Space Mono',monospace;font-size:.72rem;color:#1a1205;background:var(--cow);padding:3px 8px;border-radius:6px}
+.paper summary .mk{margin-left:auto;font-family:'Space Mono',monospace;font-size:.74rem;color:var(--muted)}
+.paper summary .arrow{transition:.3s;color:var(--cow)}
+.paper[open] summary .arrow{transform:rotate(90deg)}
+.paper .body{padding:0 20px 20px;border-top:1px solid var(--line)}
+.paper .body p{color:#d4dce2}
+.paper .ans{margin-top:12px;border-left:3px solid var(--grass);padding:10px 16px;background:rgba(95,208,106,.06);border-radius:0 10px 10px 0}
+.paper .ans .lab{font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:2px;color:var(--grass);text-transform:uppercase}
+
+footer{padding:60px 0 80px;border-top:1px solid var(--line);margin-top:40px;color:var(--muted);font-size:.85rem}
+footer b{color:var(--ink)}
+.tldr{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:20px 0}
+.tldr .t{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.tldr .t h4{margin:0 0 6px;font-family:'Fraunces',serif;font-size:1.05rem;color:var(--cow)}
+.tldr .t p{margin:0;font-size:.86rem;color:var(--muted)}
+mark{background:rgba(240,162,59,.22);color:#ffe6c0;padding:0 4px;border-radius:4px}
+.eq{font-style:italic;font-family:'Fraunces',serif}
+hr.soft{border:0;border-top:1px solid var(--line);margin:40px 0}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div id="progress"></div>
+
+<nav>
+  <div class="row">
+    <span class="brand">COMP27112 · <b>Ch.7</b></span>
+    <button class="menu-btn" id="menuBtn">Menu ▾</button>
+    <div class="navlinks" id="navlinks">
+      <a href="#pipeline">Pipeline</a>
+      <a href="#raster">Rasterisation</a>
+      <a href="#bresenham">Bresenham</a>
+      <a href="#sweep">Sweep line</a>
+      <a href="#bary">Barycentric</a>
+      <a href="#interp">Interpolation</a>
+      <a href="#alpha">Alpha blending</a>
+      <a href="#modes">Blend modes</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#exam">Past papers</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">Introduction to Visual Computing · Lecture 7</div>
+    <h1 class="title">Triangles on the <span class="gpu">GPU</span><br>&amp; <span class="blend">Blending</span></h1>
+    <p class="lede">Every shape — however it was modelled — is tessellated into triangles before it reaches your screen. This chapter follows a single triangle through rasterisation, learns how the GPU decides which pixels it covers, and finishes by blending transparent surfaces together.</p>
+    <div class="herometa">
+      <span><b>Rasterisation</b> · scan conversion</span>
+      <span><b>Bresenham</b> · 1965</span>
+      <span><b>Barycentric</b> coordinates</span>
+      <span><b>Alpha</b> compositing</span>
+    </div>
+    <div class="scrolltip"><span class="dot"></span> SCROLL TO BEGIN</div>
+  </div>
+  <svg class="heroart" viewBox="0 0 200 200">
+    <defs>
+      <linearGradient id="hg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#3d9be8"/><stop offset=".5" stop-color="#52c463"/><stop offset="1" stop-color="#f0852f"/>
+      </linearGradient>
+    </defs>
+    <polygon points="100,18 178,170 22,150" fill="url(#hg)" opacity=".85">
+      <animateTransform attributeName="transform" type="rotate" from="0 100 110" to="360 100 110" dur="40s" repeatCount="indefinite"/>
+    </polygon>
+    <circle cx="100" cy="18" r="7" fill="#fff"/><circle cx="178" cy="170" r="7" fill="#fff"/><circle cx="22" cy="150" r="7" fill="#fff"/>
+  </svg>
+</header>
+
+<main>
+
+<!-- 1. PIPELINE -->
+<section id="pipeline"><div class="wrap reveal">
+  <div class="sec-num">01 / WHERE WE ARE</div>
+  <h2>The rendering pipeline, recap</h2>
+  <p>We already have a model made of polygons. Those polygons are a flat data structure that the <b>vertex shader</b> processes to figure out where they sit on the display. What we glossed over before was the bit in the middle — <mark>what does the rasteriser actually do</mark> when it hands variables from the vertex shader to the fragment shader? Rasterisation maps geometry to pixel values; this chapter is how it gets there.</p>
+
+  <div class="pipe">
+    <div class="step"><span class="n">INPUT</span><br>3D vertices<br><small style="color:var(--muted)">points = [0,0,0, 1,0,0, 0,1,0]</small></div>
+    <div class="step vs"><span class="n">STAGE 1</span><br><b>Vertex shader</b><br><small style="color:var(--muted)">sends out gl_Position</small></div>
+    <div class="step rs"><span class="n">STAGE 2</span><br><b>Rasterisation</b><br><small style="color:var(--muted)">which pixels are covered?</small></div>
+    <div class="step fs"><span class="n">STAGE 3</span><br><b>Fragment shader</b><br><small style="color:var(--muted)">sends out gl_FragColor</small></div>
+  </div>
+
+  <figure>
+    <img src="assets/img/pipeline.jpg" alt="Rendering pipeline: 3D vertices to vertex shader to rasterisation to fragment shader, rendering a 3D cow to the screen">
+    <figcaption>FIG · The high-level pipeline. A model of polygons (the cow) is projected onto the screen, rasterised, then coloured by the fragment shader.</figcaption>
+  </figure>
+
+  <div class="callout b"><span class="lab">Naming note</span>
+  Rasterisation was historically called <b>scan conversion</b>. Old texts (and these slides) use "scan convert" — it means the same thing.</div>
+</div></section>
+
+<!-- 2. RASTERISATION -->
+<section id="raster"><div class="wrap reveal">
+  <div class="sec-num">02 / THE PROBLEM</div>
+  <h2>Rasterising a triangle</h2>
+  <p>Take the cow and rasterise it. This happens <em>before</em> colouring, so think wireframe for now. A real photo isn't 10×10 pixels — it's more like 500×500 — so zoom in until the grid looks coarse enough to reason about. Eventually you reach a single triangle: three vertices, three edges.</p>
+
+  <div class="grid2 tight">
+    <figure><img src="assets/img/raster_grid.jpg" alt="Cow silhouette overlaid on a coarse pixel grid"><figcaption>Cow over a coarse grid</figcaption></figure>
+    <figure><img src="assets/img/raster_fine_grid.jpg" alt="Cow over a fine pixel grid with pink sample dots"><figcaption>Finer grid — pixels are <em>samples</em></figcaption></figure>
+  </div>
+
+  <div class="callout"><span class="lab">Keep this in mind</span>
+  Those grid squares are not the pixels. The <b>pixel is a sample at the centre of each square</b>. It takes on one colour that the LED eventually displays. (If that's fuzzy, revisit the Week 1 sampling videos.)</div>
+
+  <p>The triangle isn't shaded yet — treat it as empty. What we need to know is: <mark>which pixels does this triangle cover?</mark> Then we can tell the fragment shader what to do with the pixels that represent our polygon.</p>
+
+  <figure>
+    <img src="assets/img/scan_conversion.jpg" alt="Triangle outline with the pixel samples it touches highlighted">
+    <figcaption>FIG · Scan conversion — deciding which sample points the triangle covers.</figcaption>
+  </figure>
+</div></section>
+
+<!-- 3. BRESENHAM -->
+<section id="bresenham"><div class="wrap reveal">
+  <div class="sec-num">03 / LINES FIRST</div>
+  <h2>Bresenham's line algorithm <span style="color:var(--muted);font-size:.5em">(1965)</span></h2>
+  <p>Simplify to a single edge. We have a 2D grid, so we can use Cartesian coordinates. One of the first solutions, by Bresenham in 1965, is delightfully simple. The line equation is <span class="eq">y = mx + b</span>, where <span class="eq">m</span> is the slope and <span class="eq">b</span> the y-intercept. The slope comes straight from the vertices:</p>
+
+  <div class="formula"><span class="m">m = (y₂ − y₁) / (x₂ − x₁)</span>
+
+for x from x₀ to x₁:
+    y = m * x + b      <span class="m"># ⚠ floating-point multiply</span>
+    plot(x, round(y))</div>
+
+  <p>x and y are <b>integers</b> — they represent pixels. As we step horizontally, x changes by one pixel and we round y to the nearest pixel that matches the gradient. The catch: that <span class="eq">m * x</span> is usually a floating-point multiply (and computing <span class="eq">m</span> can be a float division). Bresenham can be optimised with integer-only tricks, but the headline is that it's <mark>simple arithmetic that runs fast on both CPU and GPU</mark> — perfect if you only want wireframes.</p>
+
+  <div class="lab-shell">
+    <div class="lab-title">Interactive · Bresenham line stepper</div>
+    <canvas id="bresCanvas" height="360"></canvas>
+    <div class="controls">
+      <button class="btn" id="bresStep">Step ▸</button>
+      <button class="btn ghost" id="bresAuto">Auto-run</button>
+      <button class="btn ghost" id="bresReset">Reset</button>
+      <label>Slope (drag endpoint by dragging on the grid)
+        <span class="val" id="bresInfo">—</span></label>
+    </div>
+    <div class="readout" id="bresReadout">Press <b>Step</b> to march x across the line. Each step computes y = m·x + b and lights the nearest pixel.</div>
+  </div>
+
+  <figure>
+    <img src="assets/img/bresenham_line.jpg" alt="Bresenham line over a pixel grid with the y=mx+b equation">
+    <figcaption>FIG · The orange line and its equation, exactly as drawn in lecture.</figcaption>
+  </figure>
+
+  <div class="callout"><span class="lab">Limitation</span>
+  Bresenham draws the <b>edges</b> beautifully, but in this form there's no way to know what's happening <em>inside</em> the triangle. For that we need more.</div>
+</div></section>
+
+<!-- 4. SWEEP LINE -->
+<section id="sweep"><div class="wrap reveal">
+  <div class="sec-num">04 / FILLING THE INSIDE</div>
+  <h2>The sweep-line algorithm</h2>
+  <p>Named after the scanline behaviour of an old cathode-ray TV: start at the top vertex and <b>sweep down one horizontal line at a time</b>, finding which pixels lie between the triangle's edges on each line.</p>
+
+  <ul class="clean">
+    <li>Compute the edge slopes using Bresenham's algorithm.</li>
+    <li>Find where each horizontal scanline <b>intercepts</b> the edges.</li>
+    <li>Because we know the gradient, we can predict where the next scanline's spans (<span class="eq">px</span> and <span class="eq">qx</span>) begin — an optimisation between scanlines.</li>
+    <li>Fill in the pixels between the two edge intercepts.</li>
+  </ul>
+
+  <div class="lab-shell">
+    <div class="lab-title">Interactive · Sweep the scanline down</div>
+    <canvas id="sweepCanvas" height="380"></canvas>
+    <div class="controls">
+      <label>Scanline y <span class="val" id="sweepY">—</span>
+        <input type="range" id="sweepSlider" min="0" max="100" value="100"></label>
+      <button class="btn" id="sweepFill">Auto-sweep ▾</button>
+    </div>
+    <div class="readout" id="sweepReadout">Drag the slider — the orange scanline finds its two edge intercepts (left = px, right = qx) and fills the span between them.</div>
+  </div>
+
+  <figure>
+    <img src="assets/img/sweepline.jpg" alt="Sweep line algorithm: scanlines crossing a triangle with px and qx spans labelled">
+    <figcaption>FIG · Two scanlines with their px / qx spans, as in lecture.</figcaption>
+  </figure>
+
+  <div class="callout b"><span class="lab">Why GPUs moved on</span>
+  Sweep-line needs a <b>list of vertices kept until the sweep finishes</b>, so it's hard to parallelise. A wide triangle spans hundreds of pixels while a thin one finishes instantly and then stalls, waiting. Modern GPUs use dedicated hardware units running a different technique → <b>barycentric coordinates</b>.</div>
+</div></section>
+
+<!-- 5. BARYCENTRIC -->
+<section id="bary"><div class="wrap reveal">
+  <div class="sec-num">05 / THE MODERN WAY</div>
+  <h2>Barycentric coordinates</h2>
+  <p>What if a single arithmetic formula could tell us about any point <span class="eq">p</span> — no slopes, no line-mapping? Any point is a weighted blend of the three vertices A, B, C:</p>
+
+  <div class="formula"><span class="o">p</span> = <span class="o">α</span>A + <span class="g">β</span>B + <span class="b">γ</span>C
+<span class="o">α</span> + <span class="g">β</span> + <span class="b">γ</span> = 1        <span class="m"># the weights sum to 1</span>
+0 ≤ α,β,γ ≤ 1            <span class="m"># each between 0 and 1</span></div>
+
+  <p>Think of α, β, γ as <b>weights pulling the point toward each vertex</b>. Set α=0, β=0, γ=1 and p sits exactly on C. Set β=γ=0.5 and p lands at the midpoint of BC. If a weight approaches 1, p is dragged toward that vertex. And crucially — <mark>if any weight is negative or the sum exceeds 1, the point is outside the triangle</mark>. So the same formula does inside/outside testing for free.</p>
+
+  <div class="grid2 tight">
+    <figure><img src="assets/img/bary_intro.jpg" alt="Triangle ABC with interior point p and the barycentric formula"><figcaption>p = αA + βB + γC</figcaption></figure>
+    <figure><img src="assets/img/bary_half.jpg" alt="Barycentric weights alpha=0, beta=0.5, gamma=0.5 placing p on edge midpoint"><figcaption>α=0, β=0.5, γ=0.5 → midpoint of BC</figcaption></figure>
+  </div>
+
+  <h3>How do we actually compute the weights?</h3>
+  <p>Points inside the triangle map to <b>area</b>. The area of a triangle is <span class="eq">½ · base · height</span> (the perpendicular height <span class="eq">h</span> from a vertex to the opposite edge). Drop a point P onto the height segment of A:</p>
+
+  <div class="formula">Area<span class="m">ABC</span> = ½ · h<span class="o">A</span> · ‖BC‖
+Area<span class="m">PBC</span> = ½ · h<span class="o">P</span> · ‖BC‖</div>
+
+  <p>If P sits on BC, triangle PBC collapses → its area is 0 → and that's exactly where <b>α = 0</b>. If P = A, the two areas are equal → <b>α = 1</b>. For an arbitrary point, α is the <mark>ratio of the heights</mark>, which (same base ‖BC‖) is just the ratio of the areas:</p>
+
+  <div class="formula"><span class="o">α</span> = h<span class="o">P</span> / h<span class="o">A</span> = Area<span class="m">PBC</span> / Area<span class="m">ABC</span></div>
+
+  <figure>
+    <img src="assets/img/bary_area_ratio.jpg" alt="alpha equals the ratio of area PBC to area ABC">
+    <figcaption>FIG · α as the ratio of the small triangle's area to the whole.</figcaption>
+  </figure>
+
+  <p>Split the triangle with P into three sub-triangles of area a₀, a₁, a₂. They sum to the full area A. Divide through by A and each ratio is one of the weights — and they sum to 1, exactly the property we required:</p>
+
+  <div class="formula"><span class="o">α</span> = a₀/A    <span class="g">β</span> = a₁/A    <span class="b">γ</span> = a₂/A     →    α+β+γ = 1 ✓</div>
+
+  <figure>
+    <img src="assets/img/bary_subareas.jpg" alt="Point p splitting triangle ABC into three sub-areas a0 a1 a2">
+    <figcaption>FIG · The three sub-areas a₀, a₁, a₂ that define the weights.</figcaption>
+  </figure>
+
+  <div class="callout g"><span class="lab">Why GPUs love this</span>
+  Every pixel can be tested independently from its barycentric coordinates — <b>massively parallelisable</b>. This is what the rasterisation step does on modern GPUs after tessellation: for each pixel, are its weights all in [0,1]? If so, it belongs to the triangle.</div>
+
+  <!-- the star widget -->
+  <div class="lab-shell">
+    <div class="lab-title">Interactive · Barycentric explorer</div>
+    <canvas id="baryCanvas" height="420"></canvas>
+    <div class="controls">
+      <button class="btn ghost" id="baryToggle">Mode: weights ↔ rasterise</button>
+      <label>Drag the white point inside (or outside) the triangle.</label>
+    </div>
+    <div class="readout" id="baryReadout">α, β, γ update live. Drag past an edge to see a weight go negative — that's the inside/outside test.</div>
+  </div>
+</div></section>
+
+<!-- 6. INTERPOLATION -->
+<section id="interp"><div class="wrap reveal">
+  <div class="sec-num">06 / VARYING VARIABLES</div>
+  <h2>Interpolating between vertices</h2>
+  <p>Barycentric weights don't just test coverage — they let us <b>interpolate</b>. Every <em>varying</em> attribute the vertex shader passes to the fragment shader (colour, normals, texture coordinates…) is blended across the triangle using the pixel's barycentric weights.</p>
+
+  <figure>
+    <img src="assets/img/varying_shaders.jpg" alt="Vertex shader sends gl_Position, varying passes data through rasterisation to fragment shader sending gl_FragColor">
+    <figcaption>FIG · A <em>varying</em> travels from vertex shader → rasteriser → fragment shader.</figcaption>
+  </figure>
+
+  <p>Picture a colour defined at each vertex (c₀, c₁, c₂). During rasterisation the colour at any interior pixel is the barycentric blend of the three — closer to the blue vertex, the bluer it gets, because that weight dominates there.</p>
+
+  <div class="grid2 tight">
+    <figure><img src="assets/img/bary_colour_tri.jpg" alt="Triangle with red, green, blue vertices smoothly interpolated across the face"><figcaption>Colours interpolated by barycentric weight</figcaption></figure>
+    <figure><img src="assets/img/bary_colour_p.jpg" alt="Sample point p near the green-blue region taking an interpolated colour"><figcaption>p near c₁ → greener</figcaption></figure>
+  </div>
+
+  <div class="lab-shell">
+    <div class="lab-title">Interactive · Colour interpolation</div>
+    <canvas id="interpCanvas" height="380"></canvas>
+    <div class="readout" id="interpReadout">Move the pointer over the triangle — the swatch shows the interpolated colour = α·c₀ + β·c₁ + γ·c₂.</div>
+  </div>
+</div></section>
+
+<!-- 7. ALPHA -->
+<section id="alpha"><div class="wrap reveal">
+  <div class="sec-num">07 / TRANSPARENCY</div>
+  <h2>Alpha blending</h2>
+  <p>We can now draw triangles and colour them. But what if the cow stands in front of a flat 2D background image — and what if the cow is <b>transparent</b>? What colour do we draw where they overlap? The answer is <mark>alpha blending</mark>.</p>
+
+  <p>Remember RGB pixels? There's a fourth channel I didn't mention: the <b>alpha (A) channel</b> — the pixel's <em>opacity</em>. It tells us how transparent each pixel is, in both the foreground and the background.</p>
+
+  <div class="grid2 tight">
+    <figure><img src="assets/img/alpha_rgba_grid.jpg" alt="Grid of RGBA pixels beside a translucent cow on grass"><figcaption>Every pixel now carries R, G, B <b>and A</b></figcaption></figure>
+    <figure><img src="assets/img/alpha_cb_cc.jpg" alt="Background grass image labelled c_b and foreground cow labelled c_c"><figcaption>c<sub>b</sub> = background colour · c<sub>c</sub> = cow colour</figcaption></figure>
+  </div>
+
+  <p>Naïvely <em>adding</em> the two colours makes the cow glow radioactively. Naïvely <em>multiplying the background by zero</em> deletes it. The right tool is <b>interpolation</b> on alpha:</p>
+
+  <div class="formula"><span class="m">c = </span><span class="o">α<sub>c</sub></span><span class="o">c<sub>c</sub></span> + (1 − <span class="o">α<sub>c</sub></span>)<span class="g">c<sub>b</sub></span></div>
+
+  <ul class="clean">
+    <li><b>α<sub>c</sub> = 0</b> → cow fully transparent, only background shows.</li>
+    <li><b>α<sub>c</sub> = 0.5</b> → 50% cow + 50% background where they overlap.</li>
+    <li><b>α<sub>c</sub> = 1</b> → cow fully opaque, hides the background.</li>
+  </ul>
+
+  <div class="lab-shell">
+    <div class="lab-title">Interactive · Alpha compositing (the cow on the grass)</div>
+    <canvas id="alphaCanvas" height="300"></canvas>
+    <div class="controls">
+      <label>Foreground opacity α<sub>c</sub> <span class="val" id="alphaVal">0.50</span>
+        <input type="range" id="alphaSlider" min="0" max="1" step="0.01" value="0.5"></label>
+    </div>
+    <div class="readout" id="alphaReadout">Drag α. The overlap pixel = α·(cow) + (1−α)·(grass).</div>
+  </div>
+
+  <h3>When the background is <em>also</em> transparent</h3>
+  <p>If the background has its own alpha α<sub>b</sub>, we form a composite alpha and divide by it to keep the scene's overall intensity constant (and the alpha clamped, not blown out):</p>
+
+  <div class="formula"><span class="m">α = </span><span class="o">α<sub>c</sub></span> + (1 − <span class="o">α<sub>c</sub></span>)<span class="g">α<sub>b</sub></span>
+
+<span class="m">c = </span>[ <span class="o">α<sub>c</sub></span><span class="o">c<sub>c</sub></span> + (1 − <span class="o">α<sub>c</sub></span>)<span class="g">α<sub>b</sub></span><span class="g">c<sub>b</sub></span> ] / α</div>
+
+  <figure>
+    <img src="assets/img/alpha_composite_full.jpg" alt="Full alpha compositing formula with cb alpha_b and cc alpha_c">
+    <figcaption>FIG · The full compositing formula — α<sub>c</sub> = % opacity of the cow, α<sub>b</sub> = % opacity of the background.</figcaption>
+  </figure>
+
+  <div class="callout"><span class="lab">Hardware</span>
+  The GPU has a dedicated unit for this. After rasterisation the pixel colours are known; if blending is enabled, the <b>Render Output Units (ROP)</b> evaluate the blend and write the result to <b>framebuffer memory</b> for display.</div>
+
+  <figure>
+    <img src="assets/img/alpha_pipeline_rop.jpg" alt="Pipeline ending in Render Output Units and Framebuffer Memory">
+    <figcaption>FIG · ROP + framebuffer memory close the pipeline.</figcaption>
+  </figure>
+</div></section>
+
+<!-- 8. BLEND MODES -->
+<section id="modes"><div class="wrap reveal">
+  <div class="sec-num">08 / OTHER MODES</div>
+  <h2>Additive &amp; subtractive blending</h2>
+  <p>Alpha blending is the traditional mode, but the ROP can be told to compute others. Two common alternatives:</p>
+
+  <h3>Additive blending</h3>
+  <div class="formula"><span class="m">c = clamp(</span> <span class="o">α<sub>c</sub></span><span class="o">c<sub>c</sub></span> + <span class="g">c<sub>b</sub></span> <span class="m">)</span></div>
+  <p>We only care about the foreground's alpha. Black parts of the cow (RGB = 0) contribute nothing, so the background shows through. Bright parts push channels above 1 — but RGBA is <b>clamped to [0,1]</b>, so they <mark>saturate</mark> and stop getting brighter (you can't go beyond white <span class="eq">(1,1,1)</span> on the additive colour diagram).</p>
+
+  <div class="lab-shell">
+    <div class="lab-title">Interactive · Additive vs Subtractive</div>
+    <canvas id="blendCanvas" height="160"></canvas>
+    <div class="controls">
+      <label>Foreground opacity α <span class="val" id="blendVal">0.60</span>
+        <input type="range" id="blendSlider" min="0" max="1" step="0.01" value="0.6"></label>
+      <button class="btn" id="blendMode">Mode: Additive</button>
+    </div>
+    <div class="readout" id="blendReadout">Watch the channels clamp at the bright end (additive) or invert toward a negative-photo look (subtractive).</div>
+  </div>
+
+  <h3>Subtractive blending</h3>
+  <div class="formula"><span class="m">c = | </span><span class="o">α<sub>c</sub></span><span class="o">c<sub>c</sub></span> − <span class="g">c<sub>b</sub></span> <span class="m">|</span></div>
+  <p>Subtract the values and take the absolute value. It generally <b>darkens</b> the image — white parts become transparent, darker colours dominate. It's how you get that cool <mark>negative-photo effect</mark>.</p>
+
+  <div class="grid2 tight">
+    <figure><img src="assets/img/additive_clamp.jpg" alt="Additive blending with clamp and the RGB additive colour wheel"><figcaption>Additive — bright channels saturate at white</figcaption></figure>
+    <figure><img src="assets/img/subtractive.jpg" alt="Subtractive blending producing a negative-photo effect on a portrait"><figcaption>Subtractive — the negative look</figcaption></figure>
+  </div>
+
+  <div class="callout b"><span class="lab">The cliff-hanger</span>
+  Every mode needs to know which surface is <b>foreground</b> and which is <b>background</b>. But orthographic projection <em>collapsed the z-coordinate entirely</em> — so how does the GPU decide what's in front? That's the <b>Z-buffer / hidden-surface</b> problem, and it's the next chapter on projection.</p>
+  </div>
+
+  <figure>
+    <img src="assets/img/ortho_projection.jpg" alt="Orthographic projection matrix that zeroes the z row">
+    <figcaption>FIG · Orthographic projection — note the zeroed z-row that drops depth.</figcaption>
+  </figure>
+</div></section>
+
+<!-- TL;DR -->
+<section><div class="wrap reveal">
+  <div class="sec-num">RECAP</div>
+  <h2>The one-screen summary</h2>
+  <div class="tldr">
+    <div class="t"><h4>Rasterise</h4><p>aka scan conversion — decide which pixel <em>samples</em> a triangle covers.</p></div>
+    <div class="t"><h4>Bresenham</h4><p>Fast integer-ish line drawing (1965). Edges only, no interior.</p></div>
+    <div class="t"><h4>Sweep line</h4><p>Fill spans scanline-by-scanline. Correct but hard to parallelise.</p></div>
+    <div class="t"><h4>Barycentric</h4><p>p = αA+βB+γC, weights sum to 1. Coverage + interpolation, per-pixel parallel.</p></div>
+    <div class="t"><h4>Varyings</h4><p>Per-vertex data interpolated to fragments using barycentric weights.</p></div>
+    <div class="t"><h4>Alpha blend</h4><p>c = α<sub>c</sub>c<sub>c</sub> + (1−α<sub>c</sub>)c<sub>b</sub>. Composite when both are transparent.</p></div>
+    <div class="t"><h4>Additive</h4><p>c = clamp(α<sub>c</sub>c<sub>c</sub> + c<sub>b</sub>). Bright channels saturate at white.</p></div>
+    <div class="t"><h4>Subtractive</h4><p>c = |α<sub>c</sub>c<sub>c</sub> − c<sub>b</sub>|. Negative-photo darkening.</p></div>
+  </div>
+</div></section>
+
+<!-- QUIZ -->
+<section id="quiz"><div class="wrap reveal">
+  <div class="sec-num">09 / CHECK YOURSELF</div>
+  <h2>Quiz</h2>
+  <p style="color:var(--muted)">Drawn from the course's Computer Graphics question banks. Click an answer to check it.</p>
+  <div id="quizMount"></div>
+  <div class="card" style="text-align:center">
+    <div style="font-family:'Space Mono',monospace;color:var(--muted);font-size:.8rem;letter-spacing:1px">YOUR SCORE</div>
+    <div id="quizScore" style="font-family:'Fraunces',serif;font-size:2.6rem;color:var(--cow);font-weight:900">0 / 0</div>
+  </div>
+</div></section>
+
+<!-- PAST PAPERS -->
+<section id="exam"><div class="wrap reveal">
+  <div class="sec-num">10 / EXAM PREP</div>
+  <h2>Past-paper questions (Section B)</h2>
+  <p style="color:var(--muted)">Real COMP27112 exam questions that touch this chapter — rasterisation order, tessellation, triangle normals, and normal/colour interpolation. Click to reveal a model answer.</p>
+
+  <details class="paper">
+    <summary><span class="arrow">▸</span><span class="yr">2017 · Q6</span> Scan-conversion &amp; depth ordering <span class="mk">3 marks</span></summary>
+    <div class="body">
+      <p>Figure 1 shows part of a screen with a grey triangle ABC and a red triangle DEF. ABC is scan-converted first; DEF is scan-converted second and is <b>closer to the camera</b>. Referring to two pixels P and Q, explain how scan conversion ensures ABC and DEF are displayed correctly.</p>
+      <div class="ans"><span class="lab">Model answer</span>
+      <p style="margin:8px 0 0">As each triangle is scan-converted, every covered pixel gets a <b>depth (z) value</b>. The <b>Z-buffer</b> stores the closest z seen so far per pixel. For a pixel covered only by one triangle (say P, only ABC), it simply takes ABC's colour. For a pixel covered by both (Q), DEF's fragment is compared against the stored depth: because DEF is nearer, its z passes the depth test and it <b>overwrites</b> ABC's colour and depth. Drawing order doesn't matter — the per-pixel depth comparison guarantees the nearer surface wins, solving the hidden-surface problem.</p></div>
+    </div>
+  </details>
+
+  <details class="paper">
+    <summary><span class="arrow">▸</span><span class="yr">2017 · Q8</span> Computing a triangle's normal <span class="mk">2 marks</span></summary>
+    <div class="body">
+      <p>Given a triangle ABC, explain how to compute the triangle's normal vector.</p>
+      <div class="ans"><span class="lab">Model answer</span>
+      <p style="margin:8px 0 0">Form two edge vectors from a shared vertex, e.g. <b>e₁ = B − A</b> and <b>e₂ = C − A</b>. Take their <b>cross product</b> <b>N = e₁ × e₂</b>, which is perpendicular to the triangle's plane. <b>Normalise</b> it (divide by its magnitude) to get a unit normal. The winding order (CW vs CCW) determines which way the normal points.</p></div>
+    </div>
+  </details>
+
+  <details class="paper">
+    <summary><span class="arrow">▸</span><span class="yr">2018 · Q5</span> Tessellation <span class="mk">2 marks</span></summary>
+    <div class="body">
+      <p>Describe what is meant by tessellation, and when it is necessary.</p>
+      <div class="ans"><span class="lab">Model answer</span>
+      <p style="margin:8px 0 0">Tessellation is <b>splitting a polygon into a set of simpler (convex) polygons — in practice, triangles</b>. It's necessary because the GPU pipeline rasterises triangles: any complex, concave, or non-planar polygon must be broken into triangles first, since a triangle is always planar, convex, and has a well-defined normal, making rasterisation unambiguous.</p></div>
+    </div>
+  </details>
+
+  <details class="paper">
+    <summary><span class="arrow">▸</span><span class="yr">2018 · Q6</span> Display-space hidden-surface removal <span class="mk">3 marks</span></summary>
+    <div class="body">
+      <p>Describe a hidden surface removal technique that operates in display-space.</p>
+      <div class="ans"><span class="lab">Model answer</span>
+      <p style="margin:8px 0 0">The <b>Z-buffer (depth-buffer)</b> algorithm. Alongside the colour framebuffer keep a depth buffer initialised to the far value. As each triangle is rasterised, interpolate the z of every covered fragment. If a fragment's z is <b>nearer</b> than the stored depth, write its colour and update the depth; otherwise discard it. It works per-pixel in display/screen space, is order-independent, and resolves arbitrary intersecting geometry.</p></div>
+    </div>
+  </details>
+
+  <details class="paper">
+    <summary><span class="arrow">▸</span><span class="yr">2019 · Q24</span> Normal / colour interpolation across a triangle <span class="mk">4 marks</span></summary>
+    <div class="body">
+      <p>Figure 3 shows a triangle T0 in a mesh. Explain how normal-vector interpolation would render T0, and how the colours of pixels a–h between points P and Q would be computed.</p>
+      <div class="ans"><span class="lab">Model answer</span>
+      <p style="margin:8px 0 0">Each vertex of T0 has its own normal (averaged from adjacent faces for smooth shading). During rasterisation, each interior pixel's <b>barycentric coordinates</b> (α, β, γ) are computed and used to <b>interpolate the normal</b> from the three vertex normals: N<sub>p</sub> = αN₀ + βN₁ + γN₂ (re-normalised). The fragment shader then evaluates the lighting equation per pixel using N<sub>p</sub> (Phong shading). For the row of pixels a–h between P and Q, the weights vary smoothly across the span, so each pixel gets its own interpolated normal → its own shaded colour, giving a smooth gradient rather than a flat facet.</p></div>
+    </div>
+  </details>
+
+  <details class="paper">
+    <summary><span class="arrow">▸</span><span class="yr">2019 · Q21</span> Rendering a polygon with a hole <span class="mk">3 marks</span></summary>
+    <div class="body">
+      <p>Polygon ABCD contains a hole EFG. What process enables ABCD to be correctly rendered by OpenGL, and what is its effect?</p>
+      <div class="ans"><span class="lab">Model answer</span>
+      <p style="margin:8px 0 0"><b>Tessellation.</b> OpenGL can only render simple convex triangles, so a polygon with a hole must be decomposed. The outer boundary ABCD and inner hole EFG are <b>triangulated</b> into a set of triangles that together fill the region between the outer edge and the hole (leaving EFG empty). The result is a fan/strip of triangles covering the solid material only, which the rasteriser can then handle correctly.</p></div>
+    </div>
+  </details>
+</div></section>
+
+</main>
+
+<footer><div class="wrap">
+  <p><b>Chapter 7 — Triangles on the GPU &amp; Blending.</b> Visual study notes compiled from the lecture presentation, transcript, the course Computer-Graphics quiz bank, and COMP27112 past papers (2017–2019).</p>
+  <p style="color:var(--muted)">All slide imagery is taken from the course presentation by David Petrescu and lives in <code>/assets/img/</code>. Interactive widgets are hand-built canvas demos — no external libraries. Built for self-study.</p>
+</div></footer>
+
+<script>
+/* ---------- nav + progress ---------- */
+const prog=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement;prog.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';});
+document.getElementById('menuBtn').onclick=()=>document.getElementById('navlinks').classList.toggle('open');
+document.querySelectorAll('.navlinks a').forEach(a=>a.onclick=()=>document.getElementById('navlinks').classList.remove('open'));
+
+/* reveal on scroll */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* helper: hi-dpi canvas */
+function setup(canvas,h){
+  const dpr=Math.min(2,devicePixelRatio||1);
+  const w=canvas.clientWidth;canvas.height=h;
+  canvas.width=w*dpr;canvas.style.height=h+'px';canvas.height=h*dpr;
+  const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+  return {ctx,w,h};
+}
+
+/* ============ BRESENHAM ============ */
+(function(){
+  const cv=document.getElementById('bresCanvas');
+  const info=document.getElementById('bresInfo'),rd=document.getElementById('bresReadout');
+  let G=10, step=0, timer=null;
+  let A={x:1,y:2}, B={x:8,y:7}, dragging=null;
+  function px(c,gx,gy){ // grid->canvas
+    const pad=24, cw=c.w-pad*2, ch=c.h-pad*2, cell=Math.min(cw,ch)/G;
+    return {X:pad+gx*cell+cell/2, Y:c.h-pad-gy*cell-cell/2, cell, pad};
+  }
+  function draw(){
+    const c=setup(cv,360),ctx=c.ctx;
+    ctx.clearRect(0,0,c.w,c.h);
+    // grid dots
+    for(let x=0;x<G;x++)for(let y=0;y<G;y++){const p=px(c,x,y);
+      ctx.fillStyle='rgba(244,143,182,.45)';ctx.beginPath();ctx.arc(p.X,p.Y,2.2,0,7);ctx.fill();}
+    // computed pixels up to step
+    const dx=B.x-A.x, m=(B.y-A.y)/(dx||1), b=A.y-m*A.x;
+    info.textContent='m = '+m.toFixed(2);
+    for(let i=0;i<=step && i<=dx;i++){
+      const x=A.x+i, y=Math.round(m*x+b);
+      const p=px(c,x,y);
+      ctx.fillStyle='#f0852f';ctx.shadowColor='#f0852f';ctx.shadowBlur=12;
+      ctx.fillRect(p.X-p.cell/2+1,p.Y-p.cell/2+1,p.cell-2,p.cell-2);ctx.shadowBlur=0;
+    }
+    // ideal line
+    const pa=px(c,A.x,A.y),pb=px(c,B.x,B.y);
+    ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(pa.X,pa.Y);ctx.lineTo(pb.X,pb.Y);ctx.stroke();
+    // endpoints
+    [A,B].forEach(P=>{const p=px(c,P.x,P.y);ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(p.X,p.Y,6,0,7);ctx.fill();
+      ctx.strokeStyle='#f0852f';ctx.lineWidth=2;ctx.stroke();});
+  }
+  function next(){const dx=B.x-A.x; if(step<dx)step++; else {clearInterval(timer);timer=null;} 
+    const done=Math.min(step,B.x-A.x); rd.innerHTML='Step '+done+' / '+(B.x-A.x)+' — lighting <b>plot(x, round(m·x+b))</b> at each integer x.'; draw();}
+  document.getElementById('bresStep').onclick=next;
+  document.getElementById('bresReset').onclick=()=>{step=0;clearInterval(timer);timer=null;rd.innerHTML='Reset. Press <b>Step</b> to march across.';draw();};
+  document.getElementById('bresAuto').onclick=()=>{if(timer){clearInterval(timer);timer=null;return;}step=0;timer=setInterval(next,260);};
+  // dragging endpoints
+  function pos(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}
+  function pick(mx,my){const c={w:cv.clientWidth,h:360};for(const k of['A','B']){const P=k==='A'?A:B;const p=px(c,P.x,P.y);if(Math.hypot(mx-p.X,my-p.Y)<16)return k;}return null;}
+  function toGrid(mx,my){const c={w:cv.clientWidth,h:360};const pad=24,cw=c.w-pad*2,ch=c.h-pad*2,cell=Math.min(cw,ch)/G;
+    let gx=Math.round((mx-pad-cell/2)/cell),gy=Math.round((c.h-pad-cell/2-my)/cell);
+    return{x:Math.max(0,Math.min(G-1,gx)),y:Math.max(0,Math.min(G-1,gy))};}
+  cv.addEventListener('pointerdown',e=>{const m=pos(e);dragging=pick(m.x,m.y);});
+  cv.addEventListener('pointermove',e=>{if(!dragging)return;const m=pos(e);const g=toGrid(m.x,m.y);
+    if(dragging==='A'){if(g.x<B.x){A=g;}}else{if(g.x>A.x){B=g;}}step=0;draw();});
+  addEventListener('pointerup',()=>dragging=null);
+  addEventListener('resize',draw);draw();
+})();
+
+/* ============ SWEEP LINE ============ */
+(function(){
+  const cv=document.getElementById('sweepCanvas');
+  const sl=document.getElementById('sweepSlider'),ylab=document.getElementById('sweepY'),rd=document.getElementById('sweepReadout');
+  // triangle in canvas-normalised coords (0..1)
+  const V=[{x:.55,y:.12},{x:.18,y:.62},{x:.7,y:.82}];
+  let autoT=null;
+  function draw(t){ // t in 0..1, top->bottom
+    const c=setup(cv,380),ctx=c.ctx;ctx.clearRect(0,0,c.w,c.h);
+    const pad=22, W=c.w-pad*2, H=c.h-pad*2;
+    const P=V.map(v=>({X:pad+v.x*W,Y:pad+v.y*H}));
+    // background sample dots
+    const G=14;for(let i=0;i<G;i++)for(let j=0;j<G;j++){ctx.fillStyle='rgba(244,143,182,.3)';
+      ctx.beginPath();ctx.arc(pad+(i+.5)/G*W,pad+(j+.5)/G*H,1.6,0,7);ctx.fill();}
+    // current scan y
+    const minY=Math.min(...P.map(p=>p.Y)),maxY=Math.max(...P.map(p=>p.Y));
+    const sy=minY+t*(maxY-minY);
+    // fill spans from top to sy
+    const cell=H/22;
+    for(let yy=minY;yy<=sy;yy+=cell){
+      const xs=edgeX(P,yy);
+      if(xs.length===2){
+        ctx.fillStyle='rgba(240,162,59,.30)';
+        ctx.fillRect(Math.min(...xs),yy-cell/2,Math.abs(xs[1]-xs[0]),cell);
+      }
+    }
+    // triangle outline
+    ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(P[0].X,P[0].Y);ctx.lineTo(P[1].X,P[1].Y);ctx.lineTo(P[2].X,P[2].Y);ctx.closePath();ctx.stroke();
+    // vertices
+    P.forEach(p=>{ctx.fillStyle='#f0a23b';ctx.beginPath();ctx.arc(p.X,p.Y,6,0,7);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();});
+    // active scanline + intercepts
+    const xs=edgeX(P,sy);
+    ctx.strokeStyle='#f0852f';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(pad,sy);ctx.lineTo(c.w-pad,sy);ctx.stroke();
+    if(xs.length===2){xs.sort((a,b)=>a-b);
+      ['px','qx'].forEach((lab,i)=>{ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(xs[i],sy,5,0,7);ctx.fill();
+        ctx.fillStyle='#f0852f';ctx.font='12px "Space Mono"';ctx.fillText(lab,xs[i]-8,sy-9);});
+      rd.innerHTML='Scanline at y='+(t*100|0)+'%. Intercepts: <b>px</b>='+Math.round(xs[0])+'px, <b>qx</b>='+Math.round(xs[1])+'px → fill the span between them.';
+    }
+    ylab.textContent=(t*100|0)+'%';
+  }
+  function edgeX(P,y){ // intersection x of horizontal line y with triangle edges
+    const out=[];const E=[[0,1],[1,2],[2,0]];
+    E.forEach(([a,b])=>{const p=P[a],q=P[b];
+      if((p.Y<=y&&q.Y>=y)||(q.Y<=y&&p.Y>=y)){if(p.Y!==q.Y){out.push(p.X+(q.X-p.X)*(y-p.Y)/(q.Y-p.Y));}}});
+    return out;
+  }
+  sl.oninput=()=>{if(autoT){cancelAnimationFrame(autoT);autoT=null;}draw(1-sl.value/100);};
+  document.getElementById('sweepFill').onclick=()=>{
+    if(autoT){cancelAnimationFrame(autoT);autoT=null;return;}
+    let s=0;const tick=()=>{s+=0.012;if(s>1){s=1;autoT=null;}sl.value=100-(s*100);draw(s);if(autoT!==null)autoT=requestAnimationFrame(tick);};
+    autoT=requestAnimationFrame(tick);
+  };
+  addEventListener('resize',()=>draw(1-sl.value/100));
+  draw(0);
+})();
+
+/* ============ BARYCENTRIC EXPLORER ============ */
+(function(){
+  const cv=document.getElementById('baryCanvas');const rd=document.getElementById('baryReadout');
+  let mode=0; // 0 weights, 1 rasterise
+  const V=[{x:.5,y:.1},{x:.12,y:.85},{x:.85,y:.7}];
+  let p={x:.48,y:.5},drag=false;
+  function bary(P,A,B,C){
+    const d=(B.Y-C.Y)*(A.X-C.X)+(C.X-B.X)*(A.Y-C.Y);
+    const a=((B.Y-C.Y)*(P.X-C.X)+(C.X-B.X)*(P.Y-C.Y))/d;
+    const b=((C.Y-A.Y)*(P.X-C.X)+(A.X-C.X)*(P.Y-C.Y))/d;
+    return [a,b,1-a-b];
+  }
+  function draw(){
+    const c=setup(cv,420),ctx=c.ctx;ctx.clearRect(0,0,c.w,c.h);
+    const pad=24,W=c.w-pad*2,H=c.h-pad*2;
+    const P=V.map(v=>({X:pad+v.x*W,Y:pad+v.y*H}));
+    const pp={X:pad+p.x*W,Y:pad+p.y*H};
+    const w=bary(pp,P[0],P[1],P[2]);
+    const inside=w.every(v=>v>=-0.001&&v<=1.001);
+    const cols=[[78,163,240],[82,196,99],[240,133,47]]; // c0 c1 c2
+
+    if(mode===1){ // rasterise: dot grid coloured by membership
+      const G=26;
+      for(let i=0;i<G;i++)for(let j=0;j<G;j++){
+        const X=pad+(i+.5)/G*W,Y=pad+(j+.5)/G*H;
+        const ww=bary({X,Y},P[0],P[1],P[2]);
+        const ins=ww.every(v=>v>=0&&v<=1);
+        if(ins){const r=ww[0]*cols[0][0]+ww[1]*cols[1][0]+ww[2]*cols[2][0];
+          const g=ww[0]*cols[0][1]+ww[1]*cols[1][1]+ww[2]*cols[2][1];
+          const b=ww[0]*cols[0][2]+ww[1]*cols[1][2]+ww[2]*cols[2][2];
+          ctx.fillStyle='rgb('+(r|0)+','+(g|0)+','+(b|0)+')';ctx.beginPath();ctx.arc(X,Y,4.2,0,7);ctx.fill();
+        }else{ctx.fillStyle='rgba(244,143,182,.22)';ctx.beginPath();ctx.arc(X,Y,1.8,0,7);ctx.fill();}
+      }
+    }else{
+      // sub-triangles a0 a1 a2 from p
+      const fills=['rgba(78,163,240,.28)','rgba(82,196,99,.28)','rgba(240,133,47,.28)'];
+      const tri=[[1,2],[2,0],[0,1]]; // opposite-to-vertex edges
+      tri.forEach((e,i)=>{ctx.fillStyle=fills[i];ctx.beginPath();
+        ctx.moveTo(pp.X,pp.Y);ctx.lineTo(P[e[0]].X,P[e[0]].Y);ctx.lineTo(P[e[1]].X,P[e[1]].Y);ctx.closePath();ctx.fill();
+        ctx.strokeStyle='rgba(255,255,255,.18)';ctx.lineWidth=1;ctx.stroke();});
+    }
+    // triangle outline + verts
+    ctx.strokeStyle=inside?'rgba(255,255,255,.85)':'rgba(224,102,122,.85)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(P[0].X,P[0].Y);ctx.lineTo(P[1].X,P[1].Y);ctx.lineTo(P[2].X,P[2].Y);ctx.closePath();ctx.stroke();
+    const labels=['A · c₀','B · c₁','C · c₂'];
+    P.forEach((q,i)=>{ctx.fillStyle='rgb('+cols[i].join(',')+')';ctx.beginPath();ctx.arc(q.X,q.Y,8,0,7);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle='#fff';ctx.font='600 13px Sora';ctx.fillText(labels[i],q.X+12,q.Y+4);});
+    // point p
+    ctx.fillStyle='#fff';ctx.shadowColor='#000';ctx.shadowBlur=6;ctx.beginPath();ctx.arc(pp.X,pp.Y,7,0,7);ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle='#0d0f12';ctx.font='700 11px "Space Mono"';ctx.fillText('p',pp.X-3,pp.Y+4);
+
+    rd.innerHTML='<b>α</b>='+w[0].toFixed(2)+'  (toward A)   <b>β</b>='+w[1].toFixed(2)+'  (toward B)   <b>γ</b>='+w[2].toFixed(2)+'  (toward C)   →   sum='+(w[0]+w[1]+w[2]).toFixed(2)
+      +(inside?'   ·   <span style="color:var(--grass)">INSIDE ✓</span>':'   ·   <span style="color:#e0667a">OUTSIDE ✗ (a weight is negative)</span>');
+  }
+  document.getElementById('baryToggle').onclick=function(){mode=1-mode;this.textContent='Mode: '+(mode?'rasterise ↔ weights':'weights ↔ rasterise');draw();};
+  function pos(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}
+  function set(e){const m=pos(e);const pad=24,W=cv.clientWidth-pad*2,H=420-pad*2;
+    p={x:Math.max(-.1,Math.min(1.1,(m.x-pad)/W)),y:Math.max(-.1,Math.min(1.1,(m.y-pad)/H))};draw();}
+  cv.addEventListener('pointerdown',e=>{drag=true;set(e);});
+  cv.addEventListener('pointermove',e=>{if(drag){e.preventDefault();set(e);}});
+  addEventListener('pointerup',()=>drag=false);
+  addEventListener('resize',draw);draw();
+})();
+
+/* ============ COLOUR INTERPOLATION ============ */
+(function(){
+  const cv=document.getElementById('interpCanvas');const rd=document.getElementById('interpReadout');
+  const V=[{x:.5,y:.12,c:[60,110,235]},{x:.14,y:.82,c:[70,200,90]},{x:.86,y:.78,c:[235,70,60]}];
+  let p={x:.5,y:.5};
+  function bary(P,A,B,C){const d=(B.Y-C.Y)*(A.X-C.X)+(C.X-B.X)*(A.Y-C.Y);
+    const a=((B.Y-C.Y)*(P.X-C.X)+(C.X-B.X)*(P.Y-C.Y))/d;const b=((C.Y-A.Y)*(P.X-C.X)+(A.X-C.X)*(P.Y-C.Y))/d;return[a,b,1-a-b];}
+  function draw(){
+    const c=setup(cv,380),ctx=c.ctx;ctx.clearRect(0,0,c.w,c.h);
+    const pad=24,W=c.w-pad*2,H=c.h-pad*2;
+    const P=V.map(v=>({X:pad+v.x*W,Y:pad+v.y*H}));
+    // filled interpolated triangle (scanline fill, cheap)
+    const G=3; // step px
+    const minX=Math.min(...P.map(q=>q.X)),maxX=Math.max(...P.map(q=>q.X));
+    const minY=Math.min(...P.map(q=>q.Y)),maxY=Math.max(...P.map(q=>q.Y));
+    const img=ctx.createImageData(c.w,c.h);
+    for(let Y=minY;Y<maxY;Y++)for(let X=minX;X<maxX;X++){
+      const w=bary({X,Y},P[0],P[1],P[2]);
+      if(w[0]>=0&&w[1]>=0&&w[2]>=0){
+        const r=w[0]*V[0].c[0]+w[1]*V[1].c[0]+w[2]*V[2].c[0];
+        const g=w[0]*V[0].c[1]+w[1]*V[1].c[1]+w[2]*V[2].c[1];
+        const b=w[0]*V[0].c[2]+w[1]*V[1].c[2]+w[2]*V[2].c[2];
+        const idx=((Y*c.w)+X)*4;img.data[idx]=r;img.data[idx+1]=g;img.data[idx+2]=b;img.data[idx+3]=255;
+      }
+    }
+    ctx.putImageData(img,0,0);
+    ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(P[0].X,P[0].Y);ctx.lineTo(P[1].X,P[1].Y);ctx.lineTo(P[2].X,P[2].Y);ctx.closePath();ctx.stroke();
+    // pointer
+    const pp={X:pad+p.x*W,Y:pad+p.y*H};const w=bary(pp,P[0],P[1],P[2]);
+    if(w.every(v=>v>=0&&v<=1)){
+      const r=(w[0]*V[0].c[0]+w[1]*V[1].c[0]+w[2]*V[2].c[0])|0;
+      const g=(w[0]*V[0].c[1]+w[1]*V[1].c[1]+w[2]*V[2].c[1])|0;
+      const b=(w[0]*V[0].c[2]+w[1]*V[1].c[2]+w[2]*V[2].c[2])|0;
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(pp.X,pp.Y,9,0,7);ctx.fill();
+      ctx.fillStyle='rgb('+r+','+g+','+b+')';ctx.beginPath();ctx.arc(pp.X,pp.Y,6,0,7);ctx.fill();
+      rd.innerHTML='Interpolated colour <b>rgb('+r+','+g+','+b+')</b> = '+w[0].toFixed(2)+'·c₀ + '+w[1].toFixed(2)+'·c₁ + '+w[2].toFixed(2)+'·c₂';
+    } else { rd.innerHTML='Move the pointer <em>inside</em> the triangle to sample the interpolated colour.'; }
+  }
+  function pos(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}
+  function set(e){const m=pos(e);const pad=24,W=cv.clientWidth-pad*2,H=380-pad*2;p={x:(m.x-pad)/W,y:(m.y-pad)/H};draw();}
+  cv.addEventListener('pointermove',e=>{set(e);});
+  cv.addEventListener('pointerdown',e=>set(e));
+  addEventListener('resize',draw);draw();
+})();
+
+/* ============ ALPHA COMPOSITING (procedural cow on grass) ============ */
+(function(){
+  const cv=document.getElementById('alphaCanvas');const sl=document.getElementById('alphaSlider');
+  const val=document.getElementById('alphaVal'),rd=document.getElementById('alphaReadout');
+  function grass(ctx,w,h){const g=ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,'#7ec8ef');g.addColorStop(.42,'#bfe3f5');g.addColorStop(.45,'#3f7d2e');g.addColorStop(1,'#6fae3a');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    // grass streaks
+    ctx.strokeStyle='rgba(40,90,30,.4)';ctx.lineWidth=1;
+    for(let i=0;i<160;i++){const x=Math.random()*w,y=h*.45+Math.random()*h*.55;
+      ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(Math.random()-.5)*8,y-8-Math.random()*14);ctx.stroke();}
+  }
+  function cow(ctx,cx,cy,s,a){ // crude cow silhouette with patches
+    ctx.save();ctx.globalAlpha=a;ctx.translate(cx,cy);ctx.scale(s,s);
+    // body
+    ctx.fillStyle='#f3f3ef';
+    rr(ctx,-60,-22,120,46,22);ctx.fill();
+    // head
+    rr(ctx,-86,-14,40,30,12);ctx.fill();
+    // legs
+    ctx.fillRect(-46,18,9,26);ctx.fillRect(-20,18,9,26);ctx.fillRect(18,18,9,26);ctx.fillRect(40,18,9,26);
+    // ears/horn
+    ctx.beginPath();ctx.moveTo(-80,-14);ctx.lineTo(-88,-26);ctx.lineTo(-74,-18);ctx.fill();
+    // black patches
+    ctx.fillStyle='#15171a';
+    ctx.beginPath();ctx.ellipse(10,-6,20,15,.2,0,7);ctx.fill();
+    ctx.beginPath();ctx.ellipse(-30,0,12,10,0,0,7);ctx.fill();
+    ctx.beginPath();ctx.ellipse(40,-8,10,8,0,0,7);ctx.fill();
+    ctx.beginPath();ctx.ellipse(-78,-2,12,9,0,0,7);ctx.fill(); // head
+    // hooves
+    ctx.fillRect(-46,40,9,5);ctx.fillRect(-20,40,9,5);ctx.fillRect(18,40,9,5);ctx.fillRect(40,40,9,5);
+    ctx.restore();
+  }
+  function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+  function draw(){
+    const c=setup(cv,300),ctx=c.ctx;ctx.clearRect(0,0,c.w,c.h);
+    grass(ctx,c.w,c.h);
+    const a=parseFloat(sl.value);
+    cow(ctx,c.w*.5,c.h*.52,Math.min(1.5,c.w/520),a);
+    val.textContent=a.toFixed(2);
+    let msg;
+    if(a<0.05)msg='α<sub>c</sub>=0 → cow fully transparent, only the grass (c<sub>b</sub>) shows.';
+    else if(a>0.95)msg='α<sub>c</sub>=1 → cow fully opaque, it hides the grass behind it.';
+    else msg='Overlap pixel = <b>'+a.toFixed(2)+'·c<sub>c</sub></b> + <b>'+(1-a).toFixed(2)+'·c<sub>b</sub></b>.';
+    rd.innerHTML=msg;
+  }
+  sl.oninput=draw;addEventListener('resize',draw);draw();
+})();
+
+/* ============ ADDITIVE / SUBTRACTIVE channel demo ============ */
+(function(){
+  const cv=document.getElementById('blendCanvas');const sl=document.getElementById('blendSlider');
+  const val=document.getElementById('blendVal'),rd=document.getElementById('blendReadout'),btn=document.getElementById('blendMode');
+  let additive=true;
+  // foreground colour (bright warm) and background (cool)
+  const cc=[1.0,0.7,0.3], cb=[0.2,0.6,0.5];
+  function draw(){
+    const c=setup(cv,160),ctx=c.ctx;ctx.clearRect(0,0,c.w,c.h);
+    const a=parseFloat(sl.value);val.textContent=a.toFixed(2);
+    const names=['R','G','B'];const bw=(c.w-80)/3;
+    let res=[0,0,0];
+    for(let i=0;i<3;i++){
+      let v;
+      if(additive)v=Math.min(1,a*cc[i]+cb[i]);
+      else v=Math.abs(a*cc[i]-cb[i]);
+      res[i]=v;
+      const x=40+i*bw+bw*.12, w=bw*.76, maxh=92, h=v*maxh;
+      // bar track
+      ctx.fillStyle='#222a31';rr2(ctx,x,28,w,maxh,6);ctx.fill();
+      // value bar
+      const col=['#ff5a5a','#5fe06a','#5aa8ff'][i];
+      ctx.fillStyle=col;rr2(ctx,x,28+maxh-h,w,h,6);ctx.fill();
+      // clamp marker
+      if(additive && a*cc[i]+cb[i]>1){ctx.strokeStyle='#fff';ctx.setLineDash([4,3]);ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(x-3,28);ctx.lineTo(x+w+3,28);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle='#fff';ctx.font='9px "Space Mono"';ctx.fillText('clamp',x+w-26,24);}
+      ctx.fillStyle='#9aa6ae';ctx.font='12px "Space Mono"';ctx.fillText(names[i],x+w/2-4,138);
+      ctx.fillStyle='#fff';ctx.font='11px "Space Mono"';ctx.fillText(v.toFixed(2),x+w/2-12,22+maxh+0);
+    }
+    // result swatch
+    ctx.fillStyle='rgb('+(res[0]*255|0)+','+(res[1]*255|0)+','+(res[2]*255|0)+')';
+    rr2(ctx,c.w-34,28,22,92,6);ctx.fill();ctx.strokeStyle='#3a444d';ctx.stroke();
+    rd.innerHTML=(additive
+      ? 'Additive: c = clamp(α·c<sub>c</sub> + c<sub>b</sub>). Bright channels hit 1 and <b>saturate</b>.'
+      : 'Subtractive: c = |α·c<sub>c</sub> − c<sub>b</sub>|. Tends to <b>darken</b> → negative-photo look.');
+  }
+  function rr2(ctx,x,y,w,h,r){r=Math.min(r,h/2,w/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+  btn.onclick=()=>{additive=!additive;btn.textContent='Mode: '+(additive?'Additive':'Subtractive');draw();};
+  sl.oninput=draw;addEventListener('resize',draw);draw();
+})();
+
+/* ============ QUIZ ============ */
+(function(){
+  const Q=[
+    {q:"What is rasterisation?",
+     o:["The process of converting vector geometry into a raster (pixel) image",
+        "Tracing rays from a light source through a scene",
+        "Compressing an image using lossy algorithms",
+        "Converting a raster image to vector paths"],a:0,
+     f:"Rasterisation (a.k.a. scan conversion) turns vector/geometric data into a pixel representation."},
+    {q:"Why is the triangle the preferred primitive in real-time 3D graphics?",
+     o:["It uses the least memory of any polygon",
+        "It is the only shape that can represent curved surfaces",
+        "GPUs can only process three vertices at a time",
+        "It is always planar and convex with a well-defined normal, making rasterisation unambiguous"],a:3,
+     f:"Three points always define a unique plane — guaranteed planar, convex, and with a clear normal."},
+    {q:"How is a triangle's surface normal calculated from its vertices?",
+     o:["Cross product of two edge vectors, then normalise",
+        "Dot product of the two longest edges",
+        "Average the three vertex positions",
+        "Divide the area by the longest edge"],a:0,
+     f:"The cross product of two edge vectors is perpendicular to the plane; normalising gives the unit normal."},
+    {q:"What are barycentric coordinates used for during rasterisation?",
+     o:["Projecting vertices from 3D world space to 2D screen",
+        "Compressing mesh data before upload",
+        "Testing which pixels fall inside a triangle and interpolating vertex attributes",
+        "Calculating the surface normal"],a:2,
+     f:"They express any interior point as a weighted sum of the corners — coverage test + smooth interpolation."},
+    {q:"In standard alpha blending, the final pixel colour is:",
+     o:["Foreground + background, clamped to 1",
+        "c = α·c_foreground + (1 − α)·c_background",
+        "Foreground replaces background whenever α > 0.5",
+        "c = c_foreground × c_background"],a:1,
+     f:"α=0 fully transparent, α=1 fully opaque, in between gives a proportional blend."},
+    {q:"What is tessellation?",
+     o:["Combining simple polygons into a complex one",
+        "Splitting a polygon into a set of separate convex polygons",
+        "Combining an odd number of triangles into one",
+        "Splitting a polygon into concave polygons"],a:1,
+     f:"It simplifies the structure of the original polygon into convex pieces (triangles)."},
+    {q:"What is the purpose of the Z-buffer?",
+     o:["To make pixel colours as bright as possible",
+        "To improve rendering efficiency of large triangles",
+        "To solve the \"hidden surface\" problem",
+        "To improve image resolution"],a:2,
+     f:"Pixels with a greater Z are hidden by pixels with a smaller (nearer) one."},
+    {q:"Why does additive blending saturate at the bright end?",
+     o:["The GPU runs out of memory",
+        "RGBA channels are clamped to [0,1], so sums above 1 stay at 1",
+        "Alpha forces the value down",
+        "The fragment shader skips bright pixels"],a:1,
+     f:"You can't go brighter than white (1,1,1); clamping holds bright channels at 1."}
+  ];
+  const mount=document.getElementById('quizMount');let answered=0,correct=0;
+  Q.forEach((item,qi)=>{
+    const box=document.createElement('div');box.className='quiz';
+    const order=item.o.map((t,i)=>({t,i}));
+    box.innerHTML='<div class="q"><span class="qn">Q'+(qi+1)+'</span>'+item.q+'</div>';
+    const fb=document.createElement('div');fb.className='feedback';
+    order.forEach(opt=>{
+      const b=document.createElement('button');b.className='opt';b.textContent=opt.t;
+      b.onclick=()=>{
+        if(box.dataset.done)return;box.dataset.done=1;answered++;
+        Array.from(box.querySelectorAll('.opt')).forEach(x=>x.disabled=true);
+        if(opt.i===item.a){b.classList.add('correct');b.innerHTML+='<span class="mark">✓</span>';correct++;
+          fb.innerHTML='<b>Correct.</b> '+item.f;}
+        else{b.classList.add('wrong');b.innerHTML+='<span class="mark">✗</span>';
+          const right=box.querySelectorAll('.opt')[order.findIndex(o=>o.i===item.a)];
+          right.classList.add('correct');right.innerHTML+='<span class="mark">✓</span>';
+          fb.innerHTML='<b>Not quite.</b> '+item.f;}
+        fb.classList.add('show');
+        document.getElementById('quizScore').textContent=correct+' / '+answered;
+      };
+      box.appendChild(b);
+    });
+    box.appendChild(fb);mount.appendChild(box);
+  });
+})();
+</script>
+</body>
+</html>
