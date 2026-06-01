@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch.8 — Viewing (Done Correctly) &amp; the Z-Buffer · COMP27112</title>
+<meta name="description" content="Interactive visual notes: correct viewing/projection and the Z-buffer for COMP27112 Introduction to Visual Computing.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="progress"></div>
+<nav class="toc">
+  <span class="brand"><span class="dot"></span> COMP27112 · <b>Ch.8</b></span>
+  <div class="links" id="toclinks">
+    <a href="#problem">Problem</a>
+    <a href="#volume">View volume</a>
+    <a href="#canonical">Canonical</a>
+    <a href="#ortho">Ortho matrix</a>
+    <a href="#zbuffer">Z-buffer</a>
+    <a href="#blending">Early-Z</a>
+    <a href="#zfight">Z-fighting</a>
+    <a href="#perspective">Perspective</a>
+    <a href="#division">Persp. division</a>
+    <a href="#mvp">Final MVP</a>
+    <a href="#quiz">Quiz</a>
+    <a href="#exam">Exam</a>
+  </div>
+</nav>
+
+<main>
+
+<!-- ===================== HERO ===================== -->
+<header class="hero">
+  <span class="tri g"></span><span class="tri c"></span>
+  <div class="eyebrow">Introduction to Visual Computing · Chapter 8</div>
+  <h1>Viewing, done<br>correctly &amp; the Z-buffer</h1>
+  <p class="sub lead">How we stop projection from destroying depth, build a standardised view volume, decide which surface wins each pixel, and finally make the world look like it has <em>perspective</em>.</p>
+  <div class="meta">
+    <span class="chip"><b>◆</b> Canonical view volume</span>
+    <span class="chip"><b>◆</b> Orthographic projection matrix</span>
+    <span class="chip"><b>◆</b> Z-buffer &amp; hidden surfaces</span>
+    <span class="chip"><b>◆</b> Z-fighting</span>
+    <span class="chip"><b>◆</b> Perspective division</span>
+  </div>
+  <div class="scroll-hint">scroll<span></span></div>
+</header>
+
+<!-- ===================== PROBLEM ===================== -->
+<section id="problem">
+  <div class="section-tag" data-reveal>Where we left off</div>
+  <h2 data-reveal>Projection ate our depth</h2>
+  <p class="lead" data-reveal>In the previous topic we projected the scene into the image plane and discovered two painful problems. We cannot blend realistically without knowing which objects are in front, and the projection we used <strong>collapsed every Z coordinate onto the plane z = 0</strong>.</p>
+
+  <figure data-reveal>
+    <img src="assets/01_orthographic_problem.jpg" alt="Orthographic projection collapsing the scene onto z=0">
+    <figcaption>Slide · the original <b>orthographic projection</b> squashes the whole scene flat — Suzanne and the cheese end up on one plane.</figcaption>
+  </figure>
+
+  <p data-reveal>Two consequences make this useless for 3D graphics:</p>
+  <ul data-reveal>
+    <li><strong>All depth information is lost.</strong> Once Z is flattened we can never recover which surface was nearer.</li>
+    <li><strong>The matrix has no inverse.</strong> A projection that collapses a dimension is not reversible — we can't transform back to original coordinates, which a graphics system needs.</li>
+    <li><strong>Nothing is bounded.</strong> Even objects <em>behind</em> the camera get collapsed and projected, so we render a cluster of everything.</li>
+  </ul>
+
+  <figure data-reveal>
+    <img src="assets/03_model_behind_camera.jpg" alt="A model placed behind the camera still gets collapsed and projected">
+    <figcaption>Slide · with no bounds, a model <b>behind</b> the camera is collapsed onto the plane and projected too. We only want what's in front.</figcaption>
+  </figure>
+
+  <div class="callout o" data-reveal>
+    <span class="t">This chapter solves all of it</span>
+    <p>Define a bounded, standardised viewing volume → build a projection matrix that <strong>preserves Z and is invertible</strong> → use that Z in the <strong>Z-buffer</strong> to resolve hidden surfaces → upgrade to <strong>perspective</strong> so the world looks real.</p>
+  </div>
+</section>
+
+<!-- ===================== VIEW VOLUME ===================== -->
+<section id="volume">
+  <div class="section-tag" data-reveal>Bounding what we can see</div>
+  <h2 data-reveal>The viewing volume</h2>
+  <p data-reveal>Remember the camera analogy: the camera looks at a <strong>volume of visible space</strong>. The camera transform (the <span class="kw">DC⁻¹</span> step) moved that whole volume along with the scene. Whatever lands inside the volume is what gets projected.</p>
+
+  <figure data-reveal>
+    <img src="assets/02_camera_analogy.jpg" alt="Camera looking at a volume of visible space">
+    <figcaption>Slide · the camera analogy — the visible volume is transformed together with the scene.</figcaption>
+  </figure>
+
+  <p data-reveal>To stop projecting the entire universe, we give the volume <strong>bounds</strong>: <span class="kw">left</span>, <span class="kw">right</span>, <span class="kw">top</span>, <span class="kw">bottom</span>, and a <span class="kw">far (F)</span> plane.</p>
+
+  <figure data-reveal>
+    <img src="assets/04_view_bounds.jpg" alt="Defining left right top bottom and far bounds of the volume">
+    <figcaption>Slide · the six faces bound the visible volume. Note it doesn't <b>have</b> to be a perfect cube.</figcaption>
+  </figure>
+
+  <h3 data-reveal><span class="num">→</span>Why we still need a near plane</h3>
+  <p data-reveal>We project onto z = 0, so surely a near plane is redundant? Not quite — we still see things <em>in front</em> of us. If the camera sits at the centre of a character's head, geometry that pokes through the camera produces nasty rendering artifacts.</p>
+
+  <figure data-reveal>
+    <img src="assets/05_no_near_plane_artifact.jpg" alt="First-person rendering artifact without a near plane">
+    <figcaption>Slide · without a <b>near plane</b>, geometry inside the camera renders as a fish-eye mess.</figcaption>
+  </figure>
+
+  <figure data-reveal>
+    <img src="assets/06_near_plane.jpg" alt="A near plane placed a very small distance from the camera">
+    <figcaption>Slide · the near plane sits a very small distance <b>n</b> from the camera and closes off the front of the volume.</figcaption>
+  </figure>
+
+  <div class="callout" data-reveal>
+    <span class="t">Exam-ready</span>
+    <p>The <strong>near plane</strong> stops geometry inside/behind the camera projecting incorrectly. The <strong>far plane</strong> bounds the depth range so the Z-buffer's limited precision isn't wasted on space we never see.</p>
+  </div>
+</section>
+
+<!-- ===================== CANONICAL ===================== -->
+<section id="canonical">
+  <div class="section-tag" data-reveal>One volume to rule them all</div>
+  <h2 data-reveal>The canonical view volume</h2>
+  <p data-reveal>Displays have endless configurations — resolutions, cables, fields of view. It's impractical to feed all those parameters into the pipeline every frame. Instead we map everything into a single <strong>standardised cube</strong>: the <span class="kw">canonical view volume</span>.</p>
+
+  <figure data-reveal>
+    <img src="assets/07_canonical_view_volume.jpg" alt="The canonical view volume from -1 to 1">
+    <figcaption>Slide · in <b>WebGL / three.js</b> the canonical volume runs from <b>−1 to 1</b> on every axis (Z is often re-mapped to 0..1 in other APIs).</figcaption>
+  </figure>
+
+  <ul data-reveal>
+    <li>The arbitrary view volume → the canonical cube → finally the screen.</li>
+    <li>The starting volume <strong>need not be a cuboid</strong>; faces can be rectangular (or, soon, a frustum).</li>
+    <li>Once in canonical coordinates the values are immediately ready for projection and clipping, with <strong>no per-display parameters</strong> needed.</li>
+  </ul>
+
+  <div class="widget" data-reveal data-widget="canonical">
+    <div class="whead"><span class="badge">Interactive</span><h4>Normalise an arbitrary volume → the −1…1 cube</h4></div>
+    <canvas height="340"></canvas>
+    <div class="controls">
+      <button class="btn active" data-mode="arb">Arbitrary volume</button>
+      <button class="btn" data-mode="canon">Normalise ▶</button>
+    </div>
+    <div class="readout" data-out>Press <b>Normalise</b> to scale &amp; translate the volume into the standard cube spanning −1 to 1.</div>
+  </div>
+</section>
+
+<!-- ===================== ORTHO MATRIX ===================== -->
+<section id="ortho">
+  <div class="section-tag" data-reveal>The messy part</div>
+  <h2 data-reveal>The orthographic projection matrix</h2>
+  <p data-reveal>We replace the useless flattening matrix with one that maps the bounded volume into the canonical cube. It looks daunting, but it's only two ideas — a <span class="kw">translation</span> (4th column) and a <span class="kw">scale</span> (diagonal).</p>
+
+  <figure data-reveal>
+    <img src="assets/08_ortho_projection_matrix.jpg" alt="The orthographic projection matrix mapping to the canonical view volume">
+    <figcaption>Slide · translation in column 4 recentres the volume; the diagonal scales each axis to width 2 (from −1 to 1).</figcaption>
+  </figure>
+
+  <div class="grid2">
+    <div class="card" data-reveal>
+      <h3 style="margin-top:0"><span class="num">①</span>Scale</h3>
+      <p>The width of the cube is 2 (−1 → 1). The volume's width is <span class="kw o">right − left</span>. So x is scaled by:</p>
+      <div class="eq"><span class="frac"><span class="n">2</span><span class="d">right − left</span></span></div>
+      <p style="margin:0">…and identically for y (top − bottom) and z (far − near).</p>
+    </div>
+    <div class="card" data-reveal>
+      <h3 style="margin-top:0"><span class="num">②</span>Translation</h3>
+      <p>The 4th column shifts the volume's centre to the origin so the scaled values sit symmetrically inside −1…1.</p>
+    </div>
+  </div>
+
+  <h3 data-reveal><span class="num">✓</span>Sanity check: does <span class="kw">x = left</span> map to −1?</h3>
+  <p data-reveal>Plug the left-most x value into the row and simplify — out pops <strong>−1</strong>, exactly the left bound of the canonical cube. Do the same with <span class="kw">x = right</span> and you get <strong>+1</strong>. That's the whole philosophy.</p>
+
+  <figure data-reveal>
+    <img src="assets/09_x_maps_to_minus1.jpg" alt="Deriving that x=left maps to -1 in the canonical volume">
+    <figcaption>Slide · substituting <b>x = l</b> collapses to <b>x<sub>NDC</sub> = −1</b>. The bounds line up perfectly.</figcaption>
+  </figure>
+
+  <div class="callout c" data-reveal>
+    <span class="t">The payoff</span>
+    <p>Drop this matrix into the vertex shader in place of the old projection. It's <strong>standardised</strong> (no display params), ready for projection, and — crucially — <strong>the Z axis is preserved</strong>. We finally know our depth values at the end of the pipeline.</p>
+  </div>
+
+  <figure data-reveal>
+    <img src="assets/10_standardised_z_preserved.jpg" alt="Standardised and Z preserved">
+    <figcaption>Slide · ✔ standardised &nbsp; ✔ Z-axis preserved.</figcaption>
+  </figure>
+</section>
+
+<!-- ===================== Z-BUFFER ===================== -->
+<section id="zbuffer">
+  <div class="section-tag" data-reveal>Hidden surfaces</div>
+  <h2 data-reveal>The Z-buffer</h2>
+  <p class="lead" data-reveal>The Z-buffer is the most popular rasterisation algorithm in existence — efficient, simple, and almost always in hardware. Its job: solve the <strong>hidden-surface problem</strong> — make sure nearer surfaces hide farther ones.</p>
+
+  <figure data-reveal>
+    <img src="assets/11_zbuffer_pipeline.jpg" alt="Where the Z-buffer sits in the rendering pipeline">
+    <figcaption>Slide · two triangles carry Z values into the pipeline. Where do we store and compare them? → the Z-buffer.</figcaption>
+  </figure>
+
+  <h3 data-reveal><span class="num">→</span>Where it sits in the pipeline</h3>
+  <div class="pipe" data-reveal>
+    <div class="stage s1"><span class="ic">V</span><span class="tx"><b>Vertex shader</b> — transforms vertices (model · view · projection)</span></div>
+    <div class="arrow">▼</div>
+    <div class="stage s2"><span class="ic">R</span><span class="tx"><b>Rasterisation</b> — geometry becomes fragments (candidate pixels)</span></div>
+    <div class="arrow">▼</div>
+    <div class="stage s1"><span class="ic">F</span><span class="tx"><b>Fragment shader</b> — colours / opacity computed per fragment</span></div>
+    <div class="arrow">▼</div>
+    <div class="stage s3"><span class="ic">Z</span><span class="tx"><b>Z-buffer test</b> (in the Render Output Units) — closer fragment kept, farther one discarded</span></div>
+    <div class="arrow">▼</div>
+    <div class="stage s1"><span class="ic">B</span><span class="tx"><b>Framebuffer</b> — visible fragment stored for display</span></div>
+  </div>
+
+  <figure data-reveal>
+    <img src="assets/12_zbuffer_framebuffer.jpg" alt="Visible fragment goes to framebuffer, hidden one discarded">
+    <figcaption>Slide · move the green triangle in front and everything behind it gets <b>culled</b>.</figcaption>
+  </figure>
+
+  <h3 data-reveal><span class="num">→</span>The algorithm</h3>
+  <p data-reveal>After screen-space culling, for every fragment of every triangle: compare its Z against the value already stored. The buffer starts at <strong>maximum depth</strong>, so the first real fragment always wins; later fragments only win if they're <strong>nearer</strong>.</p>
+
+  <pre data-reveal><span class="c1"># Pixel in fragment shader</span>
+<span class="kw2">initialise</span> z_buffer[all]  = MAX_DEPTH
+<span class="kw2">initialise</span> framebuffer[all] = background
+
+<span class="kw2">for</span> each rasterised fragment (x, y, z, colour):
+    <span class="kw2">if</span> z &lt; z_buffer[x, y]:        <span class="c1"># nearer than what's stored</span>
+        z_buffer[x, y]   = z       <span class="hl"># keep this depth</span>
+        framebuffer[x, y] = colour  <span class="hl"># keep this colour</span>
+    <span class="kw2">else</span>:
+        <span class="kw2">discard</span> fragment            <span class="c1"># something is already in front</span></pre>
+
+  <figure data-reveal>
+    <img src="assets/14_zbuffer_algorithm.jpg" alt="Z-buffer algorithm slide">
+    <figcaption>Slide · the lecturer's pseudocode — init to MAXDEPTH, keep the nearer fragment.</figcaption>
+  </figure>
+
+  <div class="widget" data-reveal data-widget="ztest">
+    <div class="whead"><span class="badge">Interactive</span><h4>Per-pixel depth test — drag the depths, watch who wins</h4></div>
+    <canvas height="300"></canvas>
+    <div class="controls">
+      <div class="ctrl"><label>Green triangle depth <b data-l="zg">0.40</b></label><input type="range" min="0" max="1" step="0.01" value="0.4" data-z="g"></div>
+      <div class="ctrl"><label class="c">Cyan triangle depth <b data-l="zc" style="color:var(--cyan)">0.60</b></label><input class="c" type="range" min="0" max="1" step="0.01" value="0.6" data-z="c"></div>
+      <button class="btn" data-toggle="depth">Show depth buffer</button>
+    </div>
+    <div class="readout" data-out>In the overlap region, the fragment with the <b>smaller</b> depth is written; the other is discarded. Slide a triangle nearer (smaller value) to bring it forward.</div>
+  </div>
+</section>
+
+<!-- ===================== EARLY Z / BLENDING ===================== -->
+<section id="blending">
+  <div class="section-tag" data-reveal>A subtle ordering question</div>
+  <h2 data-reveal>Why test depth <em>after</em> the fragment shader?</h2>
+  <p data-reveal>It seems wasteful — we run the (expensive) fragment shader, then maybe throw the fragment away. Why not test depth <strong>first</strong> and skip dead fragments? Because of <strong>transparency</strong>.</p>
+
+  <figure data-reveal>
+    <img src="assets/13_blending_early_z.jpg" alt="Transparency and blending interacting with early z testing">
+    <figcaption>Slide · alpha blending happens <b>after</b> the fragment shader: c = α<sub>s</sub>c<sub>s</sub> + (1−α<sub>s</sub>)c<sub>d</sub>.</figcaption>
+  </figure>
+
+  <p data-reveal>If the fragment shader lowers the front triangle's opacity, we expect to see through it. But blending runs <em>after</em> shading. If we had tested depth <strong>before</strong> the shader, the Z-buffer would already have culled everything behind the "front" triangle — not knowing it was about to become transparent. We'd see the wrong image.</p>
+
+  <div class="callout r" data-reveal>
+    <span class="t">The rule</span>
+    <p>Default Z-testing happens <strong>after</strong> the fragment shader, so the depth test can respect what shading/blending decided — even though it costs some wasted work.</p>
+  </div>
+
+  <div class="callout c" data-reveal>
+    <span class="t">Early-Z optimisation</span>
+    <p>When we <em>know</em> we're drawing <strong>opaque</strong> surfaces, we can do an <strong>early-Z test</strong> before the shader to skip useless fragments. Modern GPUs have dedicated hardware for it — a depth optimisation we'll reuse later in the unit.</p>
+  </div>
+</section>
+
+<!-- ===================== Z-FIGHTING ===================== -->
+<section id="zfight">
+  <div class="section-tag" data-reveal>When precision runs out</div>
+  <h2 data-reveal>Z-fighting</h2>
+  <p data-reveal>If two surfaces end up at almost the same depth after projection, floating-point precision can't reliably decide which is in front. Different pixels "win" on different frames → flickering <strong>Z-fighting</strong> artifacts.</p>
+
+  <figure data-reveal>
+    <img src="assets/15_z_fighting.jpg" alt="Z-fighting artifacts and cloth clipping">
+    <figcaption>Slide · classic Z-fighting (left) and why cloth — thin planes with dense vertices — clips so badly in games (right).</figcaption>
+  </figure>
+
+  <p data-reveal>This is especially common for <strong>thin surfaces</strong> like planes. It's a big reason cloth is hard to render: it's essentially planes with many vertices and complex physics, so depth-testing the fragments is both error-prone and expensive.</p>
+
+  <h3 data-reveal><span class="num">→</span>The root cause: linear Z</h3>
+  <p data-reveal>If near = 1 and far = 100 are mapped to the canonical volume <strong>linearly</strong>, then a step in depth far from the camera spans the same Z-range as a step right in front of you. But we mostly care about precision <em>near</em> the camera. Linear distribution wastes precision exactly where we don't need it.</p>
+
+  <figure data-reveal>
+    <img src="assets/16_linear_z_distribution.jpg" alt="Linear z distribution between near and far planes">
+    <figcaption>Slide · near=1, far=100 mapped linearly — equal world-depth steps give equal NDC steps. We want the opposite.</figcaption>
+  </figure>
+
+  <div class="callout o" data-reveal>
+    <span class="t">Foreshadowing</span>
+    <p>Perspective projection (next) maps Z <strong>non-linearly</strong> — packing precision near the camera. That single change is also our best defence against Z-fighting.</p>
+  </div>
+</section>
+
+<!-- ===================== PERSPECTIVE NEED ===================== -->
+<section id="perspective">
+  <div class="section-tag" data-reveal>It looks too flat</div>
+  <h2 data-reveal>We need perspective</h2>
+  <p data-reveal>Render the scene now and something is off — it looks flat, lines stay parallel, distant objects don't shrink. It resembles an old isometric strategy game.</p>
+
+  <figure data-reveal>
+    <img src="assets/19_perspective_target.jpg" alt="The perspective look we are aiming for">
+    <figcaption>Slide · the <b>target</b> — what we actually want: depth, with distant geometry shrinking toward a vanishing point.</figcaption>
+  </figure>
+
+  <div class="grid2">
+    <figure data-reveal style="margin:0">
+      <img src="assets/17_starcraft_flat.jpg" alt="StarCraft flat orthographic look">
+      <figcaption>Slide · <b>StarCraft</b> — building size constant regardless of distance.</figcaption>
+    </figure>
+    <figure data-reveal style="margin:0">
+      <img src="assets/18_sims_aoe_flat.jpg" alt="The Sims and Age of Empires flat tiles">
+      <figcaption>Slide · <b>The Sims</b> / <b>Age of Empires</b> — floor tiles never converge.</figcaption>
+    </figure>
+  </div>
+  <p data-reveal>Often a deliberate style, but historically it was a <em>necessity</em>: orthographic projection made texture mapping easy before GPUs could do per-pixel perspective. What we actually want is convergence in the distance.</p>
+
+  <figure data-reveal>
+    <img src="assets/20_railroad_converging.jpg" alt="Railroad-like planks converging in the distance">
+    <figcaption>Slide · real life — parallel lines (railroad tracks, planks) <b>appear to converge</b> at a vanishing point.</figcaption>
+  </figure>
+
+  <div class="widget" data-reveal data-widget="orthopersp">
+    <div class="whead"><span class="badge">Interactive</span><h4>Orthographic vs perspective — toggle the floor</h4></div>
+    <canvas height="300"></canvas>
+    <div class="controls">
+      <button class="btn active" data-proj="ortho">Orthographic</button>
+      <button class="btn" data-proj="persp">Perspective</button>
+    </div>
+    <div class="readout" data-out>Orthographic keeps tiles equal &amp; lines parallel. Switch to perspective and watch the rows compress and lines race to a vanishing point.</div>
+  </div>
+
+  <h3 data-reveal><span class="num">→</span>How artists &amp; eyes solved it</h3>
+  <p data-reveal>Perspective was a long struggle in art too — early cave paintings and many Asian scrolls keep things orthographic, while the Renaissance discovered converging lines.</p>
+
+  <figure data-reveal>
+    <img src="assets/21_art_history_perspective.jpg" alt="History of perspective in art">
+    <figcaption>Slide · the gradual discovery of perspective across cultures and centuries.</figcaption>
+  </figure>
+
+  <figure data-reveal>
+    <img src="assets/22_durer_perspective_machine.jpg" alt="Dürer's perspective machine">
+    <figcaption>Slide · Dürer's <b>perspective machine</b> — a grid + a fixed eye point maps 3D onto a flat screen. This is exactly what we do in graphics.</figcaption>
+  </figure>
+
+  <p data-reveal>Our eyes don't see a flat parallel world either — light converges through a small pupil onto the retina in a <strong>cone</strong> of vision, and the brain reads depth cues (size, colour, haze).</p>
+
+  <figure data-reveal>
+    <img src="assets/23_eye_cone_of_vision.jpg" alt="The eye's cone of vision">
+    <figcaption>Slide · the eye sees within a cone — the inspiration for our viewing frustum.</figcaption>
+  </figure>
+</section>
+
+<!-- ===================== PERSPECTIVE / DIVISION ===================== -->
+<section id="division">
+  <div class="section-tag" data-reveal>The frustum &amp; the maths</div>
+  <h2 data-reveal>Perspective projection</h2>
+  <p data-reveal>Screens aren't circular, so instead of a cone we use a <strong>truncated pyramid</strong> — the <span class="kw">viewing frustum</span>. We then map that frustum into the canonical cube; if we scale things correctly before the final orthographic step, we get perspective.</p>
+
+  <figure data-reveal>
+    <img src="assets/24_viewing_frustum.jpg" alt="The viewing frustum, a truncated pyramid">
+    <figcaption>Slide · the <b>viewing frustum</b> — our practical, rectangular version of the eye's cone.</figcaption>
+  </figure>
+
+  <figure data-reveal>
+    <img src="assets/25_perspective_to_canonical.jpg" alt="Perspective transform mapping frustum to canonical cube">
+    <figcaption>Slide · perspective transform squeezes the frustum into the cube, then orthographic projects to screen.</figcaption>
+  </figure>
+
+  <h3 data-reveal><span class="num">→</span>Similar triangles</h3>
+  <p data-reveal>Take a point <span class="kw">B</span> and draw a ray to the camera. A plane at distance <span class="kw">d</span> cuts that ray at <span class="kw c">P′</span> — the projected point. The two triangles formed are <strong>similar</strong>, so the ratios of their sides are equal:</p>
+
+  <div class="eq" data-reveal><span class="frac"><span class="n"><span class="em">y</span><sub>p</sub></span><span class="d">d</span></span> = <span class="frac"><span class="n"><span class="em">y</span></span><span class="d">z</span></span> &nbsp;⟹&nbsp; <span class="em">y</span><sub>p</sub> = <span class="frac"><span class="n"><span class="em">y</span></span><span class="d">z / d</span></span></div>
+
+  <p data-reveal>The same holds for x. So a distant point (large z) gets divided by a larger number → it shrinks. <strong>That</strong> is perspective.</p>
+
+  <figure data-reveal>
+    <img src="assets/26_similar_triangles.jpg" alt="Similar triangles derivation for perspective projection">
+    <figcaption>Slide · similar triangles give y<sub>p</sub> = y / (z/d). Distant points are scaled down.</figcaption>
+  </figure>
+
+  <h3 data-reveal><span class="num">→</span>But matrices can't divide…</h3>
+  <p data-reveal>We need to divide by a coordinate (z), and matrices only add and multiply. The trick is <strong>homogeneous coordinates</strong>. Put <span class="kw">1/d</span> in the bottom row and the value we need appears in the 4th coordinate <span class="kw">w</span>. A homogeneous vector equals the same vector scaled by any factor, so choosing <span class="kw">w = z/d</span> lets the hardware perform the division for us — <strong>perspective division</strong>.</p>
+
+  <div class="widget" data-reveal data-widget="division">
+    <div class="whead"><span class="badge">Interactive</span><h4>Perspective division — drag point P, watch P′ shrink toward the axis</h4></div>
+    <canvas height="320"></canvas>
+    <div class="controls">
+      <div class="ctrl"><label>Near plane n <b data-l="n">2.0</b></label><input type="range" min="1" max="4" step="0.1" value="2" data-p="n"></div>
+      <div class="readout" style="flex:1 1 100%" data-out>Drag the red point <b>P</b>. The projected point <b>P′</b> = where the ray O→P crosses the near plane. Push P deeper (larger z) and y<sub>p</sub> = n·y/z collapses toward the axis.</div>
+    </div>
+  </div>
+
+  <p data-reveal>One scare: in deriving this the Z axis vanished again. The fix is that the "d" we used is really the <strong>near plane n</strong>, and we also have a <strong>far plane f</strong>. Redo the algebra and we get:</p>
+
+  <div class="eq" data-reveal><span class="em">y</span><sub>p</sub> = n·<span class="frac"><span class="n"><span class="em">y</span></span><span class="d">z</span></span> &nbsp;&nbsp;&nbsp; <span class="em">x</span><sub>p</sub> = n·<span class="frac"><span class="n"><span class="em">x</span></span><span class="d">z</span></span></div>
+
+  <figure data-reveal>
+    <img src="assets/27_perspective_division.jpg" alt="Side view of perspective division derivation with near plane">
+    <figcaption>Slide · side view — the same similar-triangles argument, now with the near plane <b>n</b> as the projection distance, giving y<sub>p</sub> = n·y/z.</figcaption>
+  </figure>
+
+  <figure data-reveal>
+    <img src="assets/28_near_far_planes.jpg" alt="Using near and far planes instead of d">
+    <figcaption>Slide · using <b>n</b> and <b>f</b> instead of an abstract plane d.</figcaption>
+  </figure>
+
+  <h3 data-reveal><span class="num">→</span>What happens to Z?</h3>
+  <p data-reveal>We can't keep true Z through a perspective divide, but we can encode <strong>how Z varies between near and far</strong>. We scale x and y by n, set the matrix so Z survives in the right slot, and clamp Z using the terms <span class="kw">(n + f)</span> and <span class="kw">−n·f</span>. After the perspective divide, when z = f the result lands at the far bound; when z = n it lands at the near bound.</p>
+
+  <div class="callout c" data-reveal>
+    <span class="t">Best of both worlds</span>
+    <p>This clamped Z is <strong>non-linear</strong> — precision is concentrated near the camera, exactly what we wanted to <strong>prevent Z-fighting</strong>. The same trick that gives perspective also fixes our depth-precision problem.</p>
+  </div>
+
+  <figure data-reveal>
+    <img src="assets/29_nonlinear_z_clamp.jpg" alt="Non-linear z distribution between near and far">
+    <figcaption>Slide · the clamped Z curve — Δz<sub>p</sub> is finely resolved near the camera, coarse far away.</figcaption>
+  </figure>
+
+  <div class="widget" data-reveal data-widget="nonlinear">
+    <div class="whead"><span class="badge">Interactive</span><h4>Linear vs perspective depth — see precision pile up near the camera</h4></div>
+    <canvas height="300"></canvas>
+    <div class="controls">
+      <div class="ctrl"><label>Near n <b data-l="n">1.0</b></label><input type="range" min="0.2" max="5" step="0.1" value="1" data-q="n"></div>
+      <div class="ctrl"><label class="c">Far f <b data-l="f" style="color:var(--cyan)">20</b></label><input class="c" type="range" min="6" max="60" step="1" value="20" data-q="f"></div>
+      <button class="btn" data-toggle="linear">Compare linear</button>
+    </div>
+    <div class="readout" data-out>Each band is an equal step of world depth. With perspective Z, near bands are wide (high precision) and far bands bunch up — so distant surfaces are where Z-fighting still lurks.</div>
+  </div>
+</section>
+
+<!-- ===================== FINAL MVP ===================== -->
+<section id="mvp">
+  <div class="section-tag" data-reveal>Putting it together</div>
+  <h2 data-reveal>The full transform</h2>
+  <p data-reveal>Apply the <strong>perspective transform first</strong>, then the canonical (orthographic) transform — remember we read matrices right-to-left. Multiply them out and you get the single matrix you'll see in textbooks and tutorials. Don't panic when it looks scary.</p>
+
+  <div class="eq" data-reveal>p′ = <span class="em2">M<sub>ortho</sub></span> · <span class="em">M<sub>persp</sub></span> · p &nbsp;&nbsp; <span style="color:var(--ink-mute)">(right → left)</span></div>
+
+  <figure data-reveal>
+    <img src="assets/30_final_mvp_matrix.jpg" alt="Final combined perspective + orthographic projection matrix">
+    <figcaption>Slide · perspective then orthographic, combined — plug it into the vertex shader and the Model-View-Projection pipeline is complete.</figcaption>
+  </figure>
+
+  <div class="callout" data-reveal>
+    <span class="t">Chapter in one breath</span>
+    <p>Bound the volume (incl. <strong>near + far</strong>) → normalise to the <strong>canonical cube</strong> with an <strong>invertible, Z-preserving</strong> matrix → resolve hidden surfaces with the <strong>Z-buffer</strong> (after the fragment shader, so blending works) → swap to a <strong>frustum + perspective division</strong> for realism and a <strong>non-linear Z</strong> that also tames Z-fighting.</p>
+  </div>
+  <p class="tldr" data-reveal><b>Next up:</b> with depth solved and the projection correct, we can finally make things look pretty — shading, textures and other rendering methods.</p>
+</section>
+
+<!-- ===================== QUIZ ===================== -->
+<section id="quiz">
+  <div class="section-tag" data-reveal>Check yourself</div>
+  <h2 data-reveal>Quiz</h2>
+  <p data-reveal>Pulled from the unit's visual quizzes — the questions that touch this chapter. Tap an answer for instant feedback.</p>
+  <div class="quiz" id="quiz" data-reveal></div>
+  <div class="scorebar"><span>Score</span><div class="track"><div class="fill" id="scorefill"></div></div><b id="scoretxt">0 / 0</b></div>
+</section>
+
+<!-- ===================== EXAM ===================== -->
+<section id="exam" class="exam">
+  <div class="section-tag" data-reveal>Past papers</div>
+  <h2 data-reveal>Exam practice</h2>
+  <p data-reveal>Real COMP27112 past-paper questions that map onto this chapter, paraphrased into study prompts. Click to reveal a model answer outline. <em>(Z-buffer alone has been worth up to 9 marks.)</em></p>
+
+  <details class="item" data-reveal>
+    <summary><span class="yr hard">2023 &amp; 2025 · 9 marks</span> Describe the Z-buffer algorithm in detail. <span class="mk">▶</span><span class="chev">›</span></summary>
+    <div class="answer">
+      <span class="alab">Model answer outline</span>
+      <p><strong>Purpose:</strong> solves the hidden-surface problem in display space — nearer surfaces hide farther ones, per pixel.</p>
+      <p><strong>Setup:</strong> allocate a depth buffer the size of the framebuffer; initialise every entry to maximum depth and the framebuffer to the background colour.</p>
+      <p><strong>Per fragment</strong> (after rasterisation, after the fragment shader): for fragment at (x,y) with depth z, compare z with z_buffer[x,y]. If z is nearer, write the new depth and colour; otherwise discard the fragment.</p>
+      <p><strong>Why after the shader:</strong> so opacity/blending decisions are respected; an early-Z test is an opaque-only optimisation.</p>
+      <p><strong>Limitations:</strong> finite floating-point precision causes <em>Z-fighting</em> for coincident/thin surfaces; mitigated by a non-linear (perspective) Z distribution and a sensible near/far ratio.</p>
+    </div>
+  </details>
+
+  <details class="item" data-reveal>
+    <summary><span class="yr">2018 · 3 marks</span> Describe a hidden-surface-removal technique that operates in display space. <span class="mk">▶</span><span class="chev">›</span></summary>
+    <div class="answer">
+      <span class="alab">Model answer outline</span>
+      <p>Name the <strong>Z-buffer (depth buffer)</strong> — it works in display/screen space, per pixel. Describe init-to-max-depth, the per-fragment depth comparison, keep-if-nearer/else-discard, and that it runs in hardware in the render output stage. Contrast briefly with object-space methods (e.g. depth-sorting / painter's algorithm) which sort whole polygons rather than testing per pixel.</p>
+    </div>
+  </details>
+
+  <details class="item" data-reveal>
+    <summary><span class="yr">2017 · 3 marks</span> Two triangles (grey ABC scan-converted first, red DEF second &amp; nearer). For pixels P and Q, explain how scan conversion shows them correctly. <span class="mk">▶</span><span class="chev">›</span></summary>
+    <div class="answer">
+      <span class="alab">Model answer outline</span>
+      <p>The Z-buffer decides per pixel. When DEF is scan-converted, each fragment's depth is compared with the stored value from ABC. Where DEF is nearer (it is), its depth is smaller, so its colour <strong>overwrites</strong> ABC at those pixels. At a pixel covered only by ABC, ABC stays. So the ordering of drawing doesn't matter — the depth comparison guarantees the nearer surface wins at P and Q.</p>
+    </div>
+  </details>
+
+  <details class="item" data-reveal>
+    <summary><span class="yr">2017 · 2 marks</span> What is <em>projection normalisation</em> and why is it used? <span class="mk">▶</span><span class="chev">›</span></summary>
+    <div class="answer">
+      <span class="alab">Model answer outline</span>
+      <p>Mapping the arbitrary view volume (any frustum/box defined by left/right/top/bottom/near/far) into a <strong>standardised canonical view volume</strong> (the −1…1 cube). Used so clipping and rasterisation hardware can assume one fixed volume regardless of display resolution or field of view — no per-display parameters, and the result is ready for projection.</p>
+    </div>
+  </details>
+
+  <details class="item" data-reveal>
+    <summary><span class="yr">2017 · 1 mark</span> In perspective projection, what does this matrix represent? &nbsp;<span style="font-family:'JetBrains Mono',monospace;font-size:.8em">[1 0 0 0; 0 1 0 0; 0 0 1 0; 0 0 1/d 1]</span> <span class="mk">▶</span><span class="chev">›</span></summary>
+    <div class="answer">
+      <span class="alab">Model answer outline</span>
+      <p>It performs the <strong>perspective transform via homogeneous coordinates</strong>: the <strong>1/d</strong> in the bottom row places a depth term (z/d) into the <strong>w</strong> coordinate. The subsequent <strong>perspective division</strong> (dividing x,y,z by w) then scales distant points down — producing the foreshortening that makes parallel lines converge.</p>
+    </div>
+  </details>
+
+  <details class="item" data-reveal>
+    <summary><span class="yr">2025 · short</span> What is the effect of using a perspective matrix to transform points? <span class="mk">▶</span><span class="chev">›</span></summary>
+    <div class="answer">
+      <span class="alab">Model answer outline</span>
+      <p>It loads depth into w so that, after perspective division, x and y are divided by (a function of) z. Objects farther from the camera are scaled down and parallel lines converge to a vanishing point; depth is re-encoded <strong>non-linearly</strong> between the near and far planes, giving more precision close to the camera.</p>
+    </div>
+  </details>
+
+  <details class="item" data-reveal>
+    <summary><span class="yr">2018 · 1 mark</span> Give an application of <em>similar triangles</em> in computer graphics. <span class="mk">▶</span><span class="chev">›</span></summary>
+    <div class="answer">
+      <span class="alab">Model answer outline</span>
+      <p><strong>Perspective projection.</strong> The ray from a world point to the eye and the projection plane form similar triangles, giving y<sub>p</sub> = n·y/z (and x<sub>p</sub> = n·x/z) — the core relationship behind perspective foreshortening.</p>
+    </div>
+  </details>
+
+  <details class="item" data-reveal>
+    <summary><span class="yr">2017 · 1 mark</span> Why is a double buffer necessary in a rendering system? <span class="mk">▶</span><span class="chev">›</span></summary>
+    <div class="answer">
+      <span class="alab">Model answer outline</span>
+      <p>So the image is composed in a back buffer while the front buffer is displayed, then swapped. This prevents the viewer seeing a partially-drawn frame — eliminating flicker and tearing. (Related to, but distinct from, the depth buffer.)</p>
+    </div>
+  </details>
+</section>
+
+<footer>
+  <p><b>COMP27112 — Introduction to Visual Computing.</b> Chapter 8: Viewing (done correctly) &amp; the Z-buffer.</p>
+  <p>Visual notes built from the lecture transcript, the lecturer's slide deck, the unit's visual quizzes, and past examination papers. Figures are stills from the course slides, included for personal revision.</p>
+</footer>
+
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
