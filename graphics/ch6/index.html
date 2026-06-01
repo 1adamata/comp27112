@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ch.6 · Surfaces &amp; Triangles — COMP27112 Visual Notes</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="progress"></div>
+<nav id="dots"></nav>
+
+<!-- ============================ HERO ============================ -->
+<header id="hero" data-nav="Start">
+  <div class="hero-grid"></div>
+  <div class="wrap hero-inner">
+    <div class="course">COMP27112 · Visual Computing · D. Petrescu</div>
+    <div class="ch-num">Ch.<em>6</em></div>
+    <div class="ch-sub">Surfaces &amp; Triangles</div>
+    <p class="lede">In graphics we never model <em class="key">solid</em> objects — we model their thin
+      <em class="key">surfaces</em>. This chapter walks from the humble plane all the way to triangle
+      meshes, subdivision and 3D scanning: how we describe a shape, store it efficiently, and feed it to a GPU.</p>
+    <div class="chips" id="chip-row">
+      <span class="chip">Planes &amp; normals</span>
+      <span class="chip">Implicit vs explicit</span>
+      <span class="chip">Fractals · L-systems</span>
+      <span class="chip">NURBS &amp; Bézier</span>
+      <span class="chip">Polygons &amp; normals</span>
+      <span class="chip">Triangles · tessellation</span>
+      <span class="chip">Strips · fans · indexing</span>
+      <span class="chip">Subdivision</span>
+      <span class="chip">Scanning · NeRF · splats</span>
+    </div>
+    <div class="scroll-cue"><span class="dot"></span> Scroll · 6 interactive demos inside</div>
+  </div>
+</header>
+
+<!-- ============================ 0 · WHY SURFACES ============================ -->
+<section id="why" data-nav="Why surfaces">
+ <div class="wrap reveal">
+  <div class="sec-tag">00 · The big idea</div>
+  <h2>A model is a hollow shell</h2>
+  <p>Move a camera <em>inside</em> almost any 3D model — a teapot, a cow, a scanned sneaker — and you find
+     nothing there. You see the textures flip around, but the interior is empty. That is because graphics
+     represents the <strong>surface</strong> of an object, not its volume. Everything in this chapter is a
+     different way of answering one question: <em class="key">how do we describe a surface?</em></p>
+  <figure><div class="fig-frame"><img src="assets/model_character.jpg" alt="A detailed game character model from the lecture intro"></div>
+    <figcaption>Detailed characters, textures, scans — all just surfaces.</figcaption></figure>
+  <div class="fig-row">
+    <figure><div class="fig-frame"><img src="assets/scene_teapot.jpg" alt="Camera clipping into the Utah teapot in a Blender scene"></div>
+      <figcaption>Clip the camera into the Utah teapot — the inside is hollow.</figcaption></figure>
+    <figure><div class="fig-frame"><img src="assets/scan_sneaker.jpg" alt="A 3D scan of a real trainer / sneaker"></div>
+      <figcaption>Even scans of real objects (this trainer) are just shells.</figcaption></figure>
+  </div>
+  <p class="pull">“In graphics we are modelling surfaces — and that will be the topic of this video.”</p>
+ </div>
+</section>
+
+<!-- ============================ 1 · PLANES ============================ -->
+<section id="planes" data-nav="Planes">
+ <div class="wrap reveal">
+  <div class="sec-tag">01 · The simplest surface</div>
+  <h2>Planes</h2>
+  <p>Take a flat wooden floor. Give it a coordinate system with the origin in its middle. Any vector that
+     <em>lies in</em> an axis-aligned plane has its height component zero — so the plane is simply every point
+     where <em class="key">z = 0</em>.</p>
+  <div class="eq">
+    <span class="v">v</span> <span class="op">=</span>
+    <span class="matrix" style="grid-template-columns:1fr"><span>x</span><span>y</span><span>z</span></span>
+    <span class="op">,</span>&nbsp;&nbsp; f(<span class="v">v</span>) <span class="op">=</span> z <span class="op">=</span> 0
+  </div>
+  <figure><div class="fig-frame"><img src="assets/plane_equation.jpg" alt="A flat wooden floor plane with its xyz coordinate system, z=0"></div>
+    <figcaption>An axis-aligned plane: every in-plane point has z = 0.</figcaption></figure>
+  <p>The general plane is more interesting. Writing the dot of a coefficient vector with the position vector,
+     and adding an offset, gives the <strong>implicit</strong> equation of a plane:</p>
+  <div class="eq">
+    f(<span class="v">v</span>) <span class="op">=</span> ax <span class="op">+</span> by <span class="op">+</span> cz <span class="op">+</span> d
+    <span class="op">=</span> <span class="vv">n̂</span> <span class="op">·</span> <span class="v">v</span> <span class="op">+</span> d <span class="op">=</span> 0
+    <span class="tag-eq">implicit plane — n̂ is the unit normal, d is an offset</span>
+  </div>
+  <p>That little vector <strong>[a&nbsp;b&nbsp;c]</strong> is the <em class="key">normal</em> <span class="vv">n̂</span>:
+     a unit vector pointing in the plane's "up" direction, describing its <strong>orientation</strong>. When the
+     plane is horizontal the normal happens to align with z — but <strong>tilt the plane and z no longer points
+     along the normal</strong>. Because the dot product of two perpendicular vectors is zero, every vector lying
+     in the plane is automatically perpendicular to <span class="vv">n̂</span>. The scalar <strong>d</strong>
+     simply slides the plane back and forth along the normal; <em>d&nbsp;=&nbsp;0</em> when the plane passes
+     through the origin.</p>
+  <figure><div class="fig-frame"><img src="assets/plane_normal_tilt.jpg" alt="Tilted plane showing the normal n no longer aligned with the z axis"></div>
+    <figcaption>Tilt the plane → the normal n̂ separates from the z-axis. The plane is an implicit surface.</figcaption></figure>
+
+  <!-- INTERACTIVE 1 -->
+  <div class="lab-card" id="lab-plane">
+    <div class="lab-head">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 16l9-5 9 5-9 5-9-5z"/><path d="M12 11V3"/><path d="M12 3l-3 3M12 3l3 3"/></svg>
+      <h4>Demo · Tilt the plane</h4>
+      <span class="tip">drag the slider</span>
+    </div>
+    <div class="lab-body">
+      <canvas class="lab-canvas" id="cv-plane" height="320"></canvas>
+      <div class="controls">
+        <div class="slider-wrap"><label>Tilt θ</label><input type="range" id="plane-tilt" min="0" max="70" value="0"></div>
+        <div class="readout">θ = <b id="plane-deg">0°</b> &nbsp;·&nbsp; angle(n̂, z) = <b id="plane-ang">0°</b> &nbsp;·&nbsp; n̂·v in-plane = <b id="plane-dot">0</b></div>
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- ============================ 2 · IMPLICIT vs EXPLICIT ============================ -->
+<section id="impl-expl" data-nav="Implicit / explicit">
+ <div class="wrap reveal">
+  <div class="sec-tag">02 · Two ways to write a shape</div>
+  <h2>Implicit vs explicit</h2>
+  <p>The sphere is the classic example. Its <strong>implicit</strong> form is the familiar equation set to zero
+     — which, since <span class="vv">v·v</span> = x²+y²+z², compresses neatly:</p>
+  <div class="eq">
+    f(<span class="v">v</span>) <span class="op">=</span> x<sup>2</sup><span class="op">+</span>y<sup>2</sup><span class="op">+</span>z<sup>2</sup><span class="op">−</span>r<sup>2</sup>
+    <span class="op">=</span> <span class="v">v</span><span class="op">·</span><span class="v">v</span> <span class="op">−</span> r<sup>2</sup> <span class="op">=</span> 0
+    <span class="tag-eq">implicit sphere</span>
+  </div>
+  <p>The <strong>explicit</strong> (parametric) form instead tells you exactly where each point lands, sweeping
+     two angles like longitude and latitude:</p>
+  <div class="eq" style="font-size:19px; line-height:2.1;">
+    x <span class="op">=</span> x<sub>0</sub> + r&nbsp;sin θ&nbsp;cos φ &nbsp;&nbsp;
+    y <span class="op">=</span> y<sub>0</sub> + r&nbsp;sin θ&nbsp;cos φ &nbsp;&nbsp;
+    z <span class="op">=</span> z<sub>0</sub> + r&nbsp;cos θ
+    <span class="tag-eq">explicit / parametric sphere</span>
+  </div>
+  <div class="fig-row">
+    <figure><div class="fig-frame"><img src="assets/sphere_impl_expl.jpg" alt="Slide comparing implicit and explicit sphere representations"></div>
+      <figcaption>Same sphere, two descriptions: implicit (left) and explicit (right).</figcaption></figure>
+    <figure><div class="fig-frame"><img src="assets/sphere_suzanne_inside.jpg" alt="Suzanne monkey head inside a sphere, vector v drawn from centre"></div>
+      <figcaption>Plug a point into f(v): the sign tells you where it sits.</figcaption></figure>
+  </div>
+  <div class="note">
+    <span class="lab">Why keep the implicit form?</span>
+    <strong>Explicit</strong> is easy to render — you can directly compute every vertex location.
+    <strong>Implicit</strong> is harder to fill in (you only know the surface equation) but has a magical
+    property: an instant <em class="key">inside / outside test</em>. For any point's vector
+    <span class="vv">v</span>, the sign of <span class="vv">f(v)</span> says it all — and this is the basis of
+    algorithms such as <strong>ray tracing</strong>.
+  </div>
+
+  <!-- INTERACTIVE 2 -->
+  <div class="lab-card" id="lab-sphere">
+    <div class="lab-head">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>
+      <h4>Demo · Inside or outside?</h4>
+      <span class="tip">drag the point</span>
+    </div>
+    <div class="lab-body">
+      <canvas class="lab-canvas" id="cv-sphere" height="300"></canvas>
+      <div class="controls">
+        <div class="readout">f(<b>v</b>) = <b>v·v − r²</b> = <span class="sign" id="sph-val">0.00</span>
+          &nbsp;→&nbsp; <span class="sign" id="sph-state">on the surface</span></div>
+      </div>
+    </div>
+  </div>
+  <p>Even something as intricate as the Stanford bunny <em>can</em> be written as one implicit function — but
+     change anything about it and you'd need a team of mathematicians. Using implicit or explicit functions to
+     build shapes is called <strong>procedural modelling</strong>.</p>
+ </div>
+</section>
+
+<!-- ============================ 3 · FRACTALS ============================ -->
+<section id="fractals" data-nav="Fractals">
+ <div class="wrap reveal">
+  <div class="sec-tag">03 · Procedural modelling</div>
+  <h2>Fractals &amp; self-similarity</h2>
+  <p>Procedural modelling shines for <strong>natural</strong> things. A romanesco is essentially a
+     <em class="key">fractal</em>: zoom into one floret and it looks like the whole vegetable — the shape repeats
+     recursively at every scale. The same trick of <strong>controlled randomness</strong> builds entire mountain
+     ranges and has done since the earliest days of CG (the <em>Star Trek II</em> "Genesis" demo used fractal
+     terrain).</p>
+  <div class="fig-row">
+    <figure><div class="fig-frame"><img src="assets/romanesco.jpg" alt="Romanesco broccoli, a natural fractal"></div>
+      <figcaption>Romanesco — self-similar across scales.</figcaption></figure>
+    <figure><div class="fig-frame"><img src="assets/fractal_terrain.jpg" alt="Fractal-generated canyon terrain"></div>
+      <figcaption>Fractal terrain: complexity from a recursive rule.</figcaption></figure>
+  </div>
+ </div>
+</section>
+
+<!-- ============================ 4 · L-SYSTEMS ============================ -->
+<section id="lsystems" data-nav="L-systems">
+ <div class="wrap reveal">
+  <div class="sec-tag">04 · Rule-based growth</div>
+  <h2>L-systems</h2>
+  <p><strong>L-systems</strong> (Lindenmayer systems) are a procedural method where you define
+     <em class="key">recursive rewrite rules</em> that are applied every iteration — so they are a form of
+     fractal too. They are wonderful for foliage, but also for snowflakes and other self-similar models.</p>
+  <figure><div class="fig-frame"><img src="assets/lsystem.jpg" alt="L-system generating a tree and a fractal curve"></div>
+    <figcaption>An L-system tree and fractal curve from a handful of rewrite rules.</figcaption></figure>
+ </div>
+</section>
+
+<!-- ============================ 5 · NURBS / BEZIER ============================ -->
+<section id="nurbs" data-nav="NURBS · Bézier">
+ <div class="wrap reveal">
+  <div class="sec-tag">05 · Smooth controllable surfaces</div>
+  <h2>NURBS &amp; Bézier patches</h2>
+  <p>For smooth, designer-controlled surfaces we use <strong>Bézier patches</strong> (also called tensor-product
+     spline patches) and <strong>NURBS</strong> — Non-Uniform Rational B-Splines. The points floating
+     <em>outside</em> the surface are <em class="key">control points</em>: weights that pull the surface around.
+     Drag a control point and the surface follows. This gives excellent <strong>local control</strong> and is
+     popular in CAD and automotive modelling. Fun fact: the Utah teapot was originally built from Bézier patches.</p>
+  <div class="fig-row">
+    <figure><div class="fig-frame"><img src="assets/bezier_patch.jpg" alt="Bézier patch with a grid of control points"></div>
+      <figcaption>A Bézier patch and its grid of control points.</figcaption></figure>
+    <figure><div class="fig-frame"><img src="assets/nurbs_teapot.jpg" alt="NURBS surface properties dialog and teapot"></div>
+      <figcaption>NURBS surface parameters — segments &amp; weights.</figcaption></figure>
+  </div>
+  <div class="note warn">
+    <span class="lab">Watch the acronym</span>
+    NURBS stands for <strong>Non-Uniform Rational B-Splines</strong>. (The lecture audio slips and says
+    “non-directional uniform” — the slide and the literature use <em>Non-Uniform Rational</em>.)
+  </div>
+ </div>
+</section>
+
+<!-- ============================ 6 · POLYGONS ============================ -->
+<section id="polygons" data-nav="Polygons">
+ <div class="wrap reveal">
+  <div class="sec-tag">06 · What games actually want</div>
+  <h2>Polygons</h2>
+  <p>Bézier maths is lovely, but for games we want <strong>simple polygonal shapes</strong>: easy to render and
+     easy to control locally. So a bunny becomes a <em class="key">polygonal soup</em> — a loose pile of polygons.
+     A polygon is precisely:</p>
+  <ul class="clean">
+    <li>an <strong>ordered set of vertices</strong> (v<sub>1</sub> … v<sub>n</sub>),</li>
+    <li>a set of <strong>edges</strong> between each consecutive pair (e<sub>1</sub> … e<sub>n</sub>),</li>
+    <li>and a point <strong>P</strong> is <em>inside</em> the polygon if it is bounded by those edges.</li>
+  </ul>
+  <p>This already suits GPUs, which are built around vertices.</p>
+  <div class="fig-row">
+    <figure><div class="fig-frame"><img src="assets/bunny_soup.jpg" alt="Stanford bunny rendered as a polygonal soup"></div>
+      <figcaption>The bunny as “polygonal soup”.</figcaption></figure>
+    <figure><div class="fig-frame"><img src="assets/polygon_def.jpg" alt="Definition of a polygon: ordered vertices, edges, point P inside"></div>
+      <figcaption>Vertices + edges + an inside test = a polygon.</figcaption></figure>
+  </div>
+ </div>
+</section>
+
+<!-- ============================ 7 · NORMALS ============================ -->
+<section id="normals" data-nav="Normals &amp; culling">
+ <div class="wrap reveal">
+  <div class="sec-tag">07 · Orientation is everything</div>
+  <h2>Polygon normals</h2>
+  <p>Normals are the key to rendering correctly. To find the normal of an arbitrary polygon, define two edge
+     vectors, take their <strong>cross product</strong> (which is perpendicular to both), then
+     <strong>normalise</strong> so it becomes a unit vector:</p>
+  <div class="eq">
+    <span class="vv">N</span> <span class="op">=</span> <span class="vv">E</span><sub>1</sub> <span class="op">×</span> <span class="op">−</span><span class="vv">E</span><sub>2</sub>
+    &nbsp;&nbsp;&nbsp; <span class="vv">n̂</span> <span class="op">=</span> normalise(<span class="vv">E</span><sub>1</sub> <span class="op">×</span> <span class="op">−</span><span class="vv">E</span><sub>2</sub>)
+    <span class="tag-eq">cross product → perpendicular → unit normal</span>
+  </div>
+  <p>Why bother? <strong>Back-face culling</strong>: GPUs throw away polygons whose normal faces
+     <em>away</em> from the camera, for efficiency. Get the normal direction wrong and you see artefacts — the
+     <em>front</em> face gets culled instead of the back.</p>
+  <div class="fig-row">
+    <figure><div class="fig-frame"><img src="assets/polygon_normal.jpg" alt="Computing a polygon normal from edge vectors via cross product"></div>
+      <figcaption>N = E₁ × −E₂, then normalise.</figcaption></figure>
+    <figure><div class="fig-frame"><img src="assets/backface_car.jpg" alt="Back-face culling on a car model"></div>
+      <figcaption>Back-face culling discards away-facing polygons.</figcaption></figure>
+  </div>
+  <div class="note warn">
+    <span class="lab">The catch</span>
+    Computing a normal is only easy for a <strong>planar</strong> shape. A <strong>quad's four vertices need
+    not be coplanar</strong>, and polygons can be <strong>concave</strong> (an interior angle &gt; 180°). GPUs
+    love convex shapes — <em>“APIs don't like these!”</em>
+  </div>
+  <figure><div class="fig-frame"><img src="assets/concave_poly.jpg" alt="A concave polygon with an interior angle greater than 180 degrees"></div>
+    <figcaption>Concave polygon, angle &gt; 180° — trouble for the rasteriser.</figcaption></figure>
+
+  <!-- INTERACTIVE 3 -->
+  <div class="lab-card" id="lab-normal">
+    <div class="lab-head">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 18L11 7l7 11z"/><path d="M11 7V2"/><path d="M11 2l-2.5 2.5M11 2l2.5 2.5"/></svg>
+      <h4>Demo · Triangle normal &amp; winding</h4>
+      <span class="tip">press the buttons</span>
+    </div>
+    <div class="lab-body">
+      <canvas class="lab-canvas" id="cv-normal" height="300"></canvas>
+      <div class="controls">
+        <button class="btn" id="nm-compute">Compute N = E₁ × −E₂</button>
+        <button class="btn ghost" id="nm-flip">Flip winding order</button>
+        <div class="readout">winding: <b id="nm-wind">CCW</b> · normal points <b id="nm-dir">— press compute</b></div>
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- ============================ 8 · TRIANGLES ============================ -->
+<section id="triangles" data-nav="Triangles">
+ <div class="wrap reveal">
+  <div class="sec-tag">08 · The humble hero</div>
+  <h2>Why everything becomes a triangle</h2>
+  <p>The solution to non-planar quads and awkward concave polygons is the <strong>triangle</strong>. Three points
+     <em>always</em> define a single plane, so a triangle is <em class="key">planar by definition</em> — which
+     makes its normal (and almost everything else) trivial to compute. Look at the wireframe of any rendered scene
+     and you'll see it is mostly triangles, from a Kilburn office render to Manchester University's reconstruction
+     of a garage crime-scene for Greater Manchester Police.</p>
+  <p class="pull">We can model with quads, curves and splines — but everything is converted into triangles at the
+    end of the pipeline, because GPUs are hyper-optimised for them.</p>
+ </div>
+</section>
+
+<!-- ============================ 9 · TESSELLATION ============================ -->
+<section id="tessellation" data-nav="Tessellation">
+ <div class="wrap reveal">
+  <div class="sec-tag">09 · Splitting into triangles</div>
+  <h2>Tessellation</h2>
+  <p><strong>Tessellation</strong> takes complex shapes — convex <em>or</em> concave — and splits them into
+     triangles. There is a dedicated <em class="key">tessellation shader</em> in the programmable pipeline, and
+     <strong>everything eventually gets tessellated</strong>, including that Bézier-patch teapot.</p>
+  <div class="fig-row">
+    <figure><div class="fig-frame"><img src="assets/tessellation_quad.jpg" alt="A quad and a concave shape split into triangles"></div>
+      <figcaption>Any polygon → a set of triangles.</figcaption></figure>
+    <figure><div class="fig-frame"><img src="assets/tessellation_teapot.jpg" alt="The Utah teapot tessellated into triangles"></div>
+      <figcaption>Even the teapot is tessellated before rendering.</figcaption></figure>
+  </div>
+  <div class="note cyan">
+    <span class="lab">Exam definition</span>
+    Tessellation = <strong>splitting a polygon into a set of separate convex polygons (triangles)</strong>. It is
+    necessary because GPUs render triangle primitives, and because concave/non-planar polygons cannot be
+    rasterised reliably.
+  </div>
+ </div>
+</section>
+
+<!-- ============================ 10 · POLYGON SOUP PROBLEMS ============================ -->
+<section id="soup" data-nav="Polygon-soup problems">
+ <div class="wrap reveal">
+  <div class="sec-tag">10 · Why raw polygons are wasteful</div>
+  <h2>Problems with polygon soup</h2>
+  <p>A naïve list of triangles has three serious problems:</p>
+  <ul class="clean">
+    <li><strong>Huge waste of space</strong> — storing three vertices per triangle independently means
+        <em>3N</em> vertices for <em>N</em> triangles.</li>
+    <li><strong>Repeated vertices</strong> — any vertex is shared by 3–4 polygons, so it is stored again and
+        again.</li>
+    <li><strong>Complete loss of semantics</strong> — you know there's a vertex at (x, y, z), but is it part of a
+        cat, a sneaker, or nothing in particular? The structure is gone.</li>
+  </ul>
+  <figure><div class="fig-frame"><img src="assets/polygon_soup_cow.jpg" alt="Wireframe cow with 18000 vertices illustrating polygon soup problems"></div>
+    <figcaption>This cow alone is ~18,000 vertices — mostly duplicated.</figcaption></figure>
+ </div>
+</section>
+
+<!-- ============================ 11 · TRIANGLE STRIPS ============================ -->
+<section id="strips" data-nav="Triangle strips">
+ <div class="wrap reveal">
+  <div class="sec-tag">11 · Reusing the shared edge</div>
+  <h2>Triangle strips</h2>
+  <p>Add a triangle that shares an edge with the previous one, and the two vertices of that edge are already in
+     memory. Shuffle the array so vertices flow sequentially and you can tell the API: <em>“render this as a
+     triangle strip.”</em> Now you only need <strong>N + 2 vertices</strong> for N triangles — almost three times
+     fewer than polygon soup.</p>
+  <div class="eq"><span class="vv">N + 2</span> <span class="op">vertices</span><span class="tag-eq">for a strip of N triangles</span></div>
+  <p>The price is <strong>winding order</strong>: you read the vertices clockwise (0,1,2), then
+     counter-clockwise (1,2,3), then clockwise again, alternating. As long as the rule for storing and reading is
+     well defined this is fine — but you must be careful. Strips suit <strong>landscapes</strong> and long meshes;
+     consecutive strips have to be "glued", repeating a few vertices at the joins.</p>
+  <div class="fig-row">
+    <figure><div class="fig-frame"><img src="assets/tri_strip_3d.jpg" alt="A 3D triangle strip forming a landscape ribbon"></div>
+      <figcaption>A triangle strip — a continuous ribbon of triangles.</figcaption></figure>
+    <figure><div class="fig-frame"><img src="assets/tri_strips_two.jpg" alt="Two consecutive triangle strips that need gluing"></div>
+      <figcaption>Consecutive strips need gluing at the seam.</figcaption></figure>
+  </div>
+
+  <!-- INTERACTIVE 4 -->
+  <div class="lab-card" id="lab-strip">
+    <div class="lab-head">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17l5-10 5 10 5-10 3 6"/></svg>
+      <h4>Demo · Build a triangle strip</h4>
+      <span class="tip">add / reset</span>
+    </div>
+    <div class="lab-body">
+      <canvas class="lab-canvas" id="cv-strip" height="240"></canvas>
+      <div class="controls">
+        <button class="btn" id="st-add">Add a vertex</button>
+        <button class="btn ghost" id="st-reset">Reset</button>
+      </div>
+      <div class="metric-row">
+        <div class="metric"><div class="k">Vertices</div><div class="val" id="st-v">3</div></div>
+        <div class="metric"><div class="k">Triangles (N)</div><div class="val cyan" id="st-t">1</div></div>
+        <div class="metric"><div class="k">Soup would need</div><div class="val green" id="st-soup">3</div></div>
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- ============================ 12 · TRIANGLE FANS ============================ -->
+<section id="fans" data-nav="Triangle fans">
+ <div class="wrap reveal">
+  <div class="sec-tag">12 · Fanning from a root</div>
+  <h2>Triangle fans</h2>
+  <p>A <strong>triangle fan</strong> keeps one <em class="key">root vertex</em> and fans triangles out from it.
+     It also costs only <strong>N + 2</strong> vertices. Fans suit <strong>cone-like or circular</strong> meshes,
+     while strips suit landscapes and long meshes — both are about dividing a model into parts so the GPU can
+     render it efficiently.</p>
+  <figure><div class="fig-frame"><img src="assets/tri_fan.jpg" alt="A triangle fan radiating from a single root vertex"></div>
+    <figcaption>Every triangle shares the root vertex.</figcaption></figure>
+ </div>
+</section>
+
+<!-- ============================ 13 · MESH ============================ -->
+<section id="mesh" data-nav="Polygonal mesh">
+ <div class="wrap reveal">
+  <div class="sec-tag">13 · Structure restored</div>
+  <h2>The polygonal mesh</h2>
+  <p>Raw polygons are poor, but a <strong>mesh</strong> — a linked group of polygons and smaller meshes with
+     well-defined relationships — is excellent. A mesh is easy to tessellate, lets us cut spatial complexity and
+     vertex repetition, <strong>preserves topology</strong>, and most importantly gives us back
+     <em class="key">semantics</em>: a strip is recognisably part of the model, not random points in space.</p>
+  <figure><div class="fig-frame"><img src="assets/polygonal_mesh.jpg" alt="A polygonal mesh on a cow preserving topology and semantics"></div>
+    <figcaption>A structured mesh: topology + semantics preserved.</figcaption></figure>
+ </div>
+</section>
+
+<!-- ============================ 14 · INDEXED ============================ -->
+<section id="indexed" data-nav="Indexed polygons">
+ <div class="wrap reveal">
+  <div class="sec-tag">14 · Fast access</div>
+  <h2>Indexed polygons</h2>
+  <p>Modern GPUs aren't as bottlenecked by memory layout, but we still want <strong>fast access</strong>. The
+     trick: keep <em>one</em> array of vertices, then define elements with their <strong>indices</strong> — a
+     separate, cheap array of integers that point at the vertices. Relationships become easy to express and very
+     fast to traverse.</p>
+  <div class="fig-row">
+    <figure><div class="fig-frame"><img src="assets/indexed_poly.jpg" alt="Indexed polygons: a vertex array plus an element index array"></div>
+      <figcaption>Vertex array + an index (“elements”) array.</figcaption></figure>
+    <figure><div class="fig-frame"><img src="assets/draw_elements_code.jpg" alt="WebGL drawElements call and three.js setIndex BufferAttribute"></div>
+      <figcaption>OpenGL <code>drawElements</code> &amp; three.js <code>setIndex</code>.</figcaption></figure>
+  </div>
+  <p>OpenGL exposes this through <code>gl.drawElements(gl.TRIANGLES, …)</code> — swap the keyword for
+     <code>TRIANGLE_STRIP</code> or <code>TRIANGLE_FAN</code> as needed. three.js does the same by adding an
+     index attribute to the geometry that tells the shaders how to reach the vertices. Either way you first need a
+     data structure holding the relationships between elements.</p>
+ </div>
+</section>
+
+<!-- ============================ 15 · SUBDIVISION ============================ -->
+<section id="subdivision" data-nav="Subdivision">
+ <div class="wrap reveal">
+  <div class="sec-tag">15 · Acquiring geometry · I</div>
+  <h2>Subdivision surfaces</h2>
+  <p>One way to build models is to hand-map polygons to real things. Henri Gouraud famously modelled his wife —
+     <em>Mme&nbsp;Gouraud, 1978</em> — early work that revolutionised graphics. But hand-mapping is hugely
+     resource-intensive and still looks blocky if the polygons are too big.</p>
+  <figure><div class="fig-frame"><img src="assets/gouraud_face.jpg" alt="Mme Gouraud 1978, an early hand-built polygonal face model"></div>
+    <figcaption>Mme Gouraud, 1978 — landmark, but blocky.</figcaption></figure>
+  <p><strong>Subdivision</strong> turns a rough shape (say an icosahedron) into a smooth one (a sphere) almost for
+     free. The recipe: sample points along the edges, then <em class="key">average each vertex with its
+     neighbours</em>. Corner vertices drift slightly inward; edge midpoints stay put. Connect the new vertices and
+     a square becomes a rounded square; repeat and it converges to a circle.</p>
+  <div class="fig-row">
+    <figure><div class="fig-frame"><img src="assets/subdiv_icosa.jpg" alt="An icosahedron subdivided into a smooth sphere"></div>
+      <figcaption>Icosahedron → sphere by subdivision.</figcaption></figure>
+    <figure><div class="fig-frame"><img src="assets/catmull_clark.jpg" alt="Catmull-Clark subdivision of a cube into a sphere"></div>
+      <figcaption>Catmull–Clark in 3D (source: Nvidia).</figcaption></figure>
+  </div>
+  <p>In 3D we generally use <strong>Catmull–Clark</strong> subdivision. Remarkably, even quite different starting
+     polygons (like Blender's Suzanne) <strong>converge to similar smooth results</strong>. The catch: the polygon
+     count grows <em>rapidly</em> with each level, so you must budget your iterations.</p>
+  <figure><div class="fig-frame"><img src="assets/subdiv_suzanne.jpg" alt="Suzanne the monkey head at increasing subdivision levels"></div>
+    <figcaption>Suzanne smoothing across subdivision levels — note the polygon explosion.</figcaption></figure>
+
+  <!-- INTERACTIVE 5 -->
+  <div class="lab-card" id="lab-subdiv">
+    <div class="lab-head">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="5" width="14" height="14" rx="1"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 2"/></svg>
+      <h4>Demo · Subdivide a square into a circle</h4>
+      <span class="tip">press subdivide</span>
+    </div>
+    <div class="lab-body">
+      <canvas class="lab-canvas" id="cv-subdiv" height="300"></canvas>
+      <div class="controls">
+        <button class="btn" id="sd-step">Subdivide ↑</button>
+        <button class="btn ghost" id="sd-reset">Reset to square</button>
+      </div>
+      <div class="metric-row">
+        <div class="metric"><div class="k">Level</div><div class="val" id="sd-lvl">0</div></div>
+        <div class="metric"><div class="k">Vertices</div><div class="val cyan" id="sd-pts">4</div></div>
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- ============================ 16 · SCANNING / NERF / SPLAT ============================ -->
+<section id="scanning" data-nav="Scanning · NeRF · splats">
+ <div class="wrap reveal">
+  <div class="sec-tag">16 · Acquiring geometry · II</div>
+  <h2>Scanning, NeRFs &amp; Gaussian splatting</h2>
+  <p>The other way to get realistic geometry is to <strong>capture</strong> it.</p>
+  <h3>3D laser scanning</h3>
+  <p>Stanford used a huge laser scanner on Michelangelo's <em>David</em> in Florence. The output is a 3D
+     <em class="key">point cloud</em>; you then reconstruct geometry from it by figuring out how to map triangles
+     onto the points.</p>
+  <figure><div class="fig-frame"><img src="assets/laser_scan_david.jpg" alt="Stanford 3D laser scan of Michelangelo's David"></div>
+    <figcaption>Stanford's laser scan of the statue of David.</figcaption></figure>
+  <h3>Neural Radiance Fields (NeRFs)</h3>
+  <p>Google's <strong>NeRFs</strong> use volumetric methods to reconstruct geometry from photos taken at multiple
+     angles — sometimes even from a single still image. (You'll meet these properly in third-year advanced
+     graphics.)</p>
+  <figure><div class="fig-frame"><img src="assets/nerf.jpg" alt="Neural Radiance Fields reconstructing a scene from multiple photos"></div>
+    <figcaption>A NeRF reconstructs a scene from many viewpoints.</figcaption></figure>
+  <h3>Gaussian splatting</h3>
+  <p>The newest approach, <strong>Gaussian splatting</strong>, is <em>far</em> more efficient to train than a
+     NeRF and is optimised for rasterisation — so we don't build volumetric meshes at all. The trained model drops
+     into the scene effortlessly.</p>
+  <figure><div class="fig-frame"><img src="assets/gaussian_splat.jpg" alt="Gaussian splat versus point cloud of a train at a station"></div>
+    <figcaption>Gaussian splat (left) vs raw point cloud (right).</figcaption></figure>
+  <div class="note cyan">
+    <span class="lab">For the exam</span>
+    Know the <em>names</em> and roughly <em>what each does</em> — laser scan → point cloud → reconstruction;
+    NeRF → volumetric reconstruction from photos; Gaussian splatting → efficient, rasterisation-friendly capture.
+    You don't need the internal maths of NeRFs or splats.
+  </div>
+ </div>
+</section>
+
+<!-- ============================ QUIZ ============================ -->
+<section id="quiz" data-nav="Test yourself">
+ <div class="wrap reveal">
+  <div class="sec-tag">★ · Active recall</div>
+  <h2>Test yourself</h2>
+  <p>Questions drawn from the course quiz bank, focused on this chapter. Click an answer to check it.</p>
+  <div id="quiz-host"></div>
+  <div class="readout" style="margin-top:18px;">Score: <b id="quiz-score">0</b> / <b id="quiz-total">0</b></div>
+ </div>
+</section>
+
+<!-- ============================ EXAM ============================ -->
+<section id="exam" data-nav="Past papers">
+ <div class="wrap reveal">
+  <div class="sec-tag">⌗ · COMP27112 past papers</div>
+  <h2>Exam questions &amp; how to answer</h2>
+  <p>Real questions from past COMP27112 papers that map onto this chapter. Expand each for a model-answer
+     skeleton — illustrate <em>every</em> answer with clear diagrams, as the rubric demands.</p>
+
+  <details class="exam">
+    <summary><span class="yr">2017 Q8</span><span class="qbody"><span class="qt">Given a triangle ABC, explain how to compute the triangle's normal vector.</span> <span class="marks">(2 marks)</span></span><span class="plus">+</span></summary>
+    <div class="ans"><span class="lab">Model answer</span>
+      <ul>
+        <li>Form two edge vectors from a shared vertex, e.g. <strong>E₁ = B − A</strong> and <strong>E₂ = C − A</strong>.</li>
+        <li>Take the <strong>cross product</strong> <strong>N = E₁ × E₂</strong> — the result is perpendicular to both edges, i.e. to the triangle's plane.</li>
+        <li><strong>Normalise</strong>: <strong>n̂ = N / |N|</strong> to get a unit normal.</li>
+        <li>The <strong>winding order</strong> (CW/CCW) of A,B,C decides which way n̂ points — fix a consistent convention.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="exam">
+    <summary><span class="yr">2017 Q7</span><span class="qbody"><span class="qt">What is polygon soup? Discuss whether you think it is a good or bad idea.</span> <span class="marks">(2 marks)</span></span><span class="plus">+</span></summary>
+    <div class="ans"><span class="lab">Model answer</span>
+      <ul>
+        <li><strong>Polygon soup</strong> = an unstructured collection of polygons with no defined relationships between them.</li>
+        <li><strong>Bad:</strong> huge memory waste, vertices duplicated across adjacent polygons, and total loss of semantics/topology (you can't tell what object a vertex belongs to).</li>
+        <li><strong>Arguably fine for:</strong> simple throw-away geometry or when a mesh structure isn't needed — but for real models a <strong>structured mesh</strong> (strips, fans, indexed) is far better.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="exam">
+    <summary><span class="yr">2016 Q3b</span><span class="qbody"><span class="qt">With illustrated examples, explain: (i) polygon normal vector, (ii) polygon soup, (iv) mesh data structure.</span> <span class="marks">(2 + 2 + 4 marks)</span></span><span class="plus">+</span></summary>
+    <div class="ans"><span class="lab">Model answer</span>
+      <ul>
+        <li><strong>(i) Polygon normal vector:</strong> unit vector perpendicular to the polygon's plane; from edge vectors via cross product + normalise; defines orientation and drives lighting &amp; back-face culling.</li>
+        <li><strong>(ii) Polygon soup:</strong> unstructured polygons — wasteful, duplicated vertices, no semantics (see above).</li>
+        <li><strong>(iv) Mesh data structure:</strong> a linked group of polygons sharing vertices via an <strong>index/element array</strong> over a single vertex array; preserves topology + semantics; supports strips/fans; reduces storage. Draw a small worked example: vertex list + index list → triangles.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="exam">
+    <summary><span class="yr">2018 Q4.5</span><span class="qbody"><span class="qt">Describe what is meant by tessellation, and when it is necessary.</span> <span class="marks">(2 marks)</span></span><span class="plus">+</span></summary>
+    <div class="ans"><span class="lab">Model answer</span>
+      <ul>
+        <li><strong>Tessellation</strong> = splitting a complex polygon (convex or concave) into a set of simple convex polygons — in practice, <strong>triangles</strong>.</li>
+        <li><strong>Necessary</strong> because GPUs render triangle primitives, and because non-planar / concave polygons can't be rasterised or normal-computed reliably. Everything is tessellated before final rendering.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="exam">
+    <summary><span class="yr">2019 Q2.21</span><span class="qbody"><span class="qt">Polygon ABCD contains a hole EFG. What process enables ABCD to be correctly rendered by OpenGL, and what is its effect?</span></span><span class="plus">+</span></summary>
+    <div class="ans"><span class="lab">Model answer</span>
+      <ul>
+        <li>Apply <strong>tessellation</strong>: OpenGL cannot render a polygon with a hole (or a concave/complex outline) directly.</li>
+        <li>The tessellator decomposes ABCD-with-hole into a set of <strong>convex triangles</strong> whose union is the original filled region minus the hole.</li>
+        <li>Effect: ABCD becomes a triangle mesh that rasterises correctly, with the hole EFG left unfilled.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="exam">
+    <summary><span class="yr">2016 Q3d</span><span class="qbody"><span class="qt">You must build a walk-through 3D model of Kilburn LT 1.1 — how would you collect the data?</span> <span class="marks">(2 marks)</span></span><span class="plus">+</span></summary>
+    <div class="ans"><span class="lab">Model answer</span>
+      <ul>
+        <li><strong>3D scanning</strong>: a laser scanner captures the room as a <strong>point cloud</strong>; reconstruct surfaces by fitting triangles to the points.</li>
+        <li>Alternatively photo-based capture (multiple angles) reconstructed with <strong>NeRF / photogrammetry / Gaussian splatting</strong>.</li>
+        <li>Combine with manual modelling for furniture; tessellate &amp; build an indexed mesh for the walk-through engine.</li>
+      </ul>
+    </div>
+  </details>
+ </div>
+</section>
+
+<!-- ============================ RECAP ============================ -->
+<section id="recap" data-nav="One-page recap">
+ <div class="wrap reveal">
+  <div class="sec-tag">∎ · One-page recap</div>
+  <h2>The whole chapter, distilled</h2>
+  <div class="recap">
+    <div><b>Surfaces only</b><span>Models are hollow shells — we describe surfaces, not volumes.</span></div>
+    <div><b>Plane = n̂·v + d = 0</b><span>Normal sets orientation; d slides it along the normal.</span></div>
+    <div><b>Implicit vs explicit</b><span>Implicit gives a free inside/outside test (ray tracing); explicit gives easy vertex positions.</span></div>
+    <div><b>Procedural</b><span>Fractals, L-systems, NURBS/Bézier patches with control points.</span></div>
+    <div><b>Normal = E₁ × −E₂</b><span>Cross product then normalise; drives back-face culling.</span></div>
+    <div><b>Triangles win</b><span>Always planar &amp; convex → trivial normal; everything is tessellated to them.</span></div>
+    <div><b>Strips &amp; fans</b><span>N + 2 vertices instead of 3N; mind the winding order.</span></div>
+    <div><b>Indexed mesh</b><span>One vertex array + index array → topology, semantics, speed.</span></div>
+    <div><b>Subdivision</b><span>Average neighbours (Catmull–Clark) to smooth — polygon count explodes.</span></div>
+    <div><b>Capture</b><span>Laser scan → point cloud; NeRFs; Gaussian splatting.</span></div>
+  </div>
+ </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="big">“You should know and have a rough idea about the names of the things we introduced here and what they actually do.”</p>
+    <p class="meta">COMP27112 · Chapter 6 · Surfaces &amp; Triangles · Visual notes</p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
