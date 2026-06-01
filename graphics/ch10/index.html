@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 10 · Lights & Shading — COMP27112</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Spline+Sans+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<script>
+  MathJax = { tex: { inlineMath: [['\\(','\\)']], displayMath: [['$$','$$']] }, svg:{fontCache:'global'} };
+</script>
+<script id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script>
+<style>
+:root{
+  --bg:#0e0d13;
+  --bg2:#14131b;
+  --panel:#191822;
+  --panel2:#211f2d;
+  --ink:#ece8f0;
+  --ink-dim:#a39fb3;
+  --ink-faint:#6f6b80;
+  --line:#2c2939;
+  --amber:#f0a85a;
+  --amber-deep:#d9853a;
+  --cyan:#5ad1c7;
+  --pink:#e06a8b;
+  --green:#86cf7a;
+  --violet:#a98bda;
+  --gold:#e8c95a;
+  --radius:16px;
+  --maxw:880px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'Newsreader',Georgia,serif;
+  font-size:19px;
+  line-height:1.72;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;
+  background:
+    radial-gradient(900px 600px at 78% -5%, rgba(240,168,90,.10), transparent 60%),
+    radial-gradient(800px 700px at 10% 12%, rgba(90,209,199,.07), transparent 55%),
+    radial-gradient(1000px 900px at 50% 110%, rgba(169,139,218,.08), transparent 60%);
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;opacity:.025;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- progress bar ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:200;
+  background:linear-gradient(90deg,var(--amber),var(--pink),var(--cyan));box-shadow:0 0 12px rgba(240,168,90,.6)}
+
+/* ---------- side nav ---------- */
+#dotnav{position:fixed;right:22px;top:50%;transform:translateY(-50%);z-index:150;display:flex;flex-direction:column;gap:13px}
+#dotnav a{width:11px;height:11px;border-radius:50%;border:1.5px solid var(--ink-faint);background:transparent;transition:.25s;position:relative}
+#dotnav a:hover,#dotnav a.on{background:var(--amber);border-color:var(--amber);box-shadow:0 0 10px var(--amber)}
+#dotnav a span{position:absolute;right:20px;top:50%;transform:translateY(-50%);white-space:nowrap;font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--ink-dim);background:var(--panel);padding:3px 9px;border-radius:7px;border:1px solid var(--line);opacity:0;pointer-events:none;transition:.2s}
+#dotnav a:hover span{opacity:1}
+@media(max-width:920px){#dotnav{display:none}}
+
+/* ---------- layout ---------- */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 26px}
+section{padding:70px 0;border-bottom:1px solid var(--line)}
+section:last-of-type{border-bottom:none}
+
+/* ---------- hero ---------- */
+#hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
+  border-bottom:1px solid var(--line);position:relative;padding:60px 0}
+.kicker{font-family:'Spline Sans Mono',monospace;font-size:13px;letter-spacing:.32em;text-transform:uppercase;color:var(--amber);margin-bottom:22px}
+#hero h1{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(48px,9vw,108px);line-height:.93;letter-spacing:-.02em;color:var(--ink)}
+#hero h1 em{font-style:italic;color:var(--amber);font-weight:500}
+.lede{margin-top:30px;max-width:600px;color:var(--ink-dim);font-size:21px}
+.herometa{margin-top:42px;display:flex;gap:28px;flex-wrap:wrap;font-family:'Spline Sans Mono',monospace;font-size:12.5px;color:var(--ink-faint);letter-spacing:.05em}
+.herometa b{color:var(--cyan);font-weight:500}
+.scrollcue{position:absolute;bottom:34px;left:0;font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.25em;color:var(--ink-faint);text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.scrollcue .bar{width:40px;height:1px;background:var(--ink-faint);position:relative;overflow:hidden}
+.scrollcue .bar::after{content:"";position:absolute;left:-40px;top:0;width:40px;height:1px;background:var(--amber);animation:slide 2s infinite}
+@keyframes slide{to{left:40px}}
+
+/* ---------- typography ---------- */
+.eyebrow{font-family:'Spline Sans Mono',monospace;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--amber);margin-bottom:14px;display:flex;align-items:center;gap:12px}
+.eyebrow::before{content:"";width:26px;height:1px;background:var(--amber-deep)}
+h2{font-family:'Fraunces',serif;font-weight:700;font-size:clamp(31px,5vw,46px);line-height:1.04;letter-spacing:-.015em;margin-bottom:26px;color:var(--ink)}
+h2 em{font-style:italic;color:var(--amber)}
+h3{font-family:'Fraunces',serif;font-weight:600;font-size:25px;margin:38px 0 14px;color:var(--ink)}
+p{margin-bottom:20px;color:#d8d4e0}
+p strong{color:var(--ink);font-weight:600}
+a.ext{color:var(--cyan);text-decoration:none;border-bottom:1px solid rgba(90,209,199,.35)}
+.dim{color:var(--ink-dim)}
+
+/* ---------- figure ---------- */
+figure{margin:34px 0}
+figure img{width:100%;border-radius:var(--radius);border:1px solid var(--line);display:block;box-shadow:0 18px 50px -22px rgba(0,0,0,.8)}
+figcaption{margin-top:12px;font-family:'Spline Sans Mono',monospace;font-size:12px;color:var(--ink-faint);letter-spacing:.02em;display:flex;gap:8px;align-items:baseline}
+figcaption b{color:var(--amber);font-weight:500}
+.fig-duo{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:640px){.fig-duo{grid-template-columns:1fr}}
+
+/* ---------- callouts ---------- */
+.callout{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:12px;padding:22px 26px;margin:30px 0}
+.callout.cyan{border-left-color:var(--cyan)}
+.callout.pink{border-left-color:var(--pink)}
+.callout.violet{border-left-color:var(--violet)}
+.callout .tag{font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+.callout.cyan .tag{color:var(--cyan)}.callout.pink .tag{color:var(--pink)}.callout.violet .tag{color:var(--violet)}
+.callout p:last-child{margin-bottom:0}
+
+.formula-box{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:8px 24px;margin:26px 0;text-align:center;overflow-x:auto}
+
+/* ---------- interactive panels ---------- */
+.lab{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:26px;margin:34px 0;position:relative;overflow:hidden}
+.lab::before{content:"INTERACTIVE";position:absolute;top:14px;right:16px;font-family:'Spline Sans Mono',monospace;font-size:9.5px;letter-spacing:.22em;color:var(--ink-faint);border:1px solid var(--line);padding:3px 8px;border-radius:20px}
+.lab h4{font-family:'Fraunces',serif;font-size:20px;font-weight:600;margin-bottom:6px;color:var(--ink)}
+.lab .sub{font-family:'Newsreader';color:var(--ink-dim);font-size:16px;margin-bottom:18px;max-width:90%}
+.lab canvas{width:100%;border-radius:10px;background:#0a0910;display:block;touch-action:none;cursor:crosshair}
+.ctrl{margin-top:16px;display:flex;flex-direction:column;gap:14px}
+.ctrl .row{display:flex;align-items:center;gap:14px}
+.ctrl label{font-family:'Spline Sans Mono',monospace;font-size:12px;color:var(--ink-dim);min-width:120px;letter-spacing:.02em}
+.ctrl input[type=range]{flex:1;-webkit-appearance:none;height:4px;border-radius:4px;background:var(--line);outline:none}
+.ctrl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--amber);cursor:pointer;box-shadow:0 0 0 4px rgba(240,168,90,.18)}
+.ctrl input[type=range]::-moz-range-thumb{width:17px;height:17px;border:none;border-radius:50%;background:var(--amber);cursor:pointer}
+.ctrl .val{font-family:'Spline Sans Mono',monospace;font-size:13px;color:var(--amber);min-width:62px;text-align:right}
+.readout{margin-top:14px;font-family:'Spline Sans Mono',monospace;font-size:12.5px;color:var(--cyan);background:#0a0910;border:1px solid var(--line);border-radius:9px;padding:11px 14px;line-height:1.7}
+.readout .hl{color:var(--amber)}
+.toggle-row{display:flex;gap:9px;flex-wrap:wrap;margin-top:6px}
+.toggle-row button{font-family:'Spline Sans Mono',monospace;font-size:12px;background:var(--panel2);color:var(--ink-dim);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;transition:.18s}
+.toggle-row button.active{background:var(--amber);color:#1a1410;border-color:var(--amber);font-weight:600}
+.toggle-row button:hover:not(.active){border-color:var(--amber);color:var(--ink)}
+
+/* ---------- quiz ---------- */
+.quiz{background:linear-gradient(165deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:var(--radius);padding:26px;margin:30px 0}
+.quiz .qhead{font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:14px;display:flex;justify-content:space-between}
+.quiz .qtext{font-family:'Fraunces',serif;font-size:20px;font-weight:500;margin-bottom:18px;line-height:1.4}
+.quiz .opts{display:flex;flex-direction:column;gap:10px}
+.quiz .opt{text-align:left;font-family:'Newsreader';font-size:16.5px;background:var(--panel);border:1px solid var(--line);color:var(--ink-dim);border-radius:10px;padding:13px 16px;cursor:pointer;transition:.16s;display:flex;gap:11px;align-items:flex-start}
+.quiz .opt:hover{border-color:var(--ink-faint);color:var(--ink)}
+.quiz .opt .mk{font-family:'Spline Sans Mono',monospace;font-size:13px;color:var(--ink-faint);flex-shrink:0;margin-top:2px}
+.quiz .opt.correct{background:rgba(134,207,122,.12);border-color:var(--green);color:#d6f0cf}
+.quiz .opt.correct .mk{color:var(--green)}
+.quiz .opt.wrong{background:rgba(224,106,139,.1);border-color:var(--pink);color:#f0cdd6}
+.quiz .opt.wrong .mk{color:var(--pink)}
+.quiz .feedback{margin-top:16px;font-size:15.5px;color:var(--ink-dim);background:var(--bg2);border-radius:10px;padding:14px 16px;border-left:3px solid var(--green);display:none}
+.quiz .feedback.show{display:block;animation:fade .4s}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- exam ---------- */
+.exam{border:1px dashed var(--line);border-radius:14px;padding:22px 24px;margin:26px 0;background:var(--bg2)}
+.exam .ehead{font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--violet);margin-bottom:10px}
+.exam .q{font-size:16.5px;color:#d8d4e0;margin-bottom:8px}
+.exam details{margin-top:10px}
+.exam summary{cursor:pointer;font-family:'Spline Sans Mono',monospace;font-size:12.5px;color:var(--cyan);user-select:none}
+.exam details[open] summary{color:var(--amber)}
+.exam .ans{margin-top:12px;font-size:15.5px;color:var(--ink-dim);border-left:2px solid var(--violet);padding-left:14px}
+
+/* ---------- vector legend pills ---------- */
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.pill{font-family:'Spline Sans Mono',monospace;font-size:12px;padding:5px 11px;border-radius:20px;border:1px solid var(--line);display:inline-flex;gap:7px;align-items:center}
+.pill::before{content:"";width:9px;height:9px;border-radius:50%}
+.pill.N::before{background:#ffffff}.pill.L::before{background:var(--gold)}
+.pill.R::before{background:var(--pink)}.pill.V::before{background:var(--cyan)}
+.pill.H::before{background:var(--amber)}
+
+/* TOC */
+.toc{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:26px 30px;margin:30px 0}
+.toc ol{list-style:none;counter-reset:t}
+.toc li{counter-increment:t;padding:9px 0;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:baseline}
+.toc li:last-child{border-bottom:none}
+.toc li::before{content:counter(t,decimal-leading-zero);font-family:'Spline Sans Mono',monospace;font-size:12px;color:var(--amber)}
+.toc a{color:var(--ink);text-decoration:none;font-family:'Fraunces',serif;font-size:18px;transition:.15s}
+.toc a:hover{color:var(--amber);padding-left:4px}
+.toc .tdesc{color:var(--ink-faint);font-size:14px;font-family:'Newsreader';margin-left:auto;text-align:right}
+@media(max-width:600px){.toc .tdesc{display:none}}
+
+.endcard{text-align:center;padding:60px 0 20px}
+.endcard .big{font-family:'Fraunces',serif;font-style:italic;font-size:30px;color:var(--amber);max-width:600px;margin:0 auto 18px}
+footer{padding:40px 0;text-align:center;font-family:'Spline Sans Mono',monospace;font-size:11.5px;color:var(--ink-faint);letter-spacing:.05em}
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<nav id="dotnav"></nav>
+
+<!-- ============ HERO ============ -->
+<header id="hero" data-nav="Top">
+  <div class="wrap">
+    <div class="kicker">COMP27112 · Introduction to Visual Computing · Chapter 10</div>
+    <h1>Lights<br>&amp; <em>Shading</em></h1>
+    <p class="lede">How a flat, lifeless model becomes a believable surface — the single turning point where every piece of the rendering pipeline finally clicks together.</p>
+    <div class="herometa">
+      <span><b>FORMAT</b> &nbsp;Scroll-driven visual notes</span>
+      <span><b>BUILT FROM</b> &nbsp;Lecture slides · transcript · quizzes · past papers</span>
+      <span><b>INTERACT</b> &nbsp;Drag · slide · reveal</span>
+    </div>
+  </div>
+  <div class="scrollcue wrap"><span class="bar"></span>Scroll to begin</div>
+</header>
+
+<!-- ============ TOC / WHY ============ -->
+<section id="why" data-nav="The Problem">
+<div class="wrap">
+  <div class="eyebrow">Why this chapter matters</div>
+  <h2>A teapot that lost its <em>shape</em></h2>
+  <p>So far in the pipeline we have modelled geometry, projected it, rasterised it and even mapped textures onto it. We quietly assumed the renderer would "figure out" how light plays across a surface. It does not. With everything we have built so far, our shiny ceramic teapot renders as something disturbingly flat — all sense of depth, curvature and material simply gone.</p>
+
+  <div class="fig-duo">
+    <figure>
+      <img src="assets/teapot_shaded.jpg" alt="Teapot with shading">
+      <figcaption><b>What we expect</b> a shaded, three-dimensional surface</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/teapot_flat.jpg" alt="Flat teapot">
+      <figcaption><b>What we actually get</b> flat, shapeless, dull</figcaption>
+    </figure>
+  </div>
+
+  <p>The missing ingredient is a model of <strong>light</strong> and how it interacts with <strong>materials</strong>. Without it, any scene — and arguably the real world — looks dull and flat, or is invisible entirely. This chapter builds that model from first principles, one term at a time, until we arrive at the equation that drives real-time graphics.</p>
+
+  <div class="toc">
+    <ol>
+      <li><a href="#materials">How surfaces reflect light</a><span class="tdesc">diffuse, specular, mirrors</span></li>
+      <li><a href="#ambient">Ambient light & the flat teapot</a><span class="tdesc">the uniform-light trap</span></li>
+      <li><a href="#lambert">Modelling a light source</a><span class="tdesc">Lambert's cosine law</span></li>
+      <li><a href="#diffuse">The diffuse term</a><span class="tdesc">colour × N·L</span></li>
+      <li><a href="#specular">The specular term</a><span class="tdesc">highlights & shininess</span></li>
+      <li><a href="#reflection">Finding the reflection vector R</a><span class="tdesc">the geometry trick</span></li>
+      <li><a href="#phong">The Phong light model</a><span class="tdesc">putting it together</span></li>
+      <li><a href="#blinn">Blinn–Phong & the halfway vector</a><span class="tdesc">fixing grazing angles</span></li>
+      <li><a href="#ambient2">Adding ambient & multiple lights</a><span class="tdesc">the complete equation</span></li>
+      <li><a href="#beyond">Light types, attenuation & beyond</a><span class="tdesc">where this leads</span></li>
+      <li><a href="#quizzes">Test yourself</a><span class="tdesc">quiz + past papers</span></li>
+    </ol>
+  </div>
+</div>
+</section>
+
+<!-- ============ MATERIALS ============ -->
+<section id="materials" data-nav="Materials">
+<div class="wrap">
+  <div class="eyebrow">Section 01 · The physics</div>
+  <h2>How surfaces <em>reflect</em> light</h2>
+  <p>Return to the original idea: rays of light (let's keep it simple and say white) leave a source and strike objects in the scene. Rays that bounce away from the eye are never seen — our eyes cannot recover that energy. The interesting rays are the ones that <strong>do</strong> reach the eye. What happens to them is dictated entirely by the material the surface is made of.</p>
+
+  <figure>
+    <img src="assets/scene_ray.jpg" alt="Light ray hitting a surface in a scene">
+    <figcaption><b>Slide</b> a single ray of light leaves the source and strikes Suzanne</figcaption>
+  </figure>
+
+  <h3>Diffuse reflection — light scatters everywhere</h3>
+  <p>The most obvious material property is <strong>colour</strong>. If a surface is grey, every part of the white spectrum that isn't grey is absorbed, and the greyish component is reflected back. Crucially, on a matte surface this reflected light <strong>scatters uniformly in all directions</strong>. Trace the shape of that scattering and you get a near-perfect hemisphere (a semicircle in 2D). This is <strong>diffuse reflection</strong>: think felt, sponges, carpets, bricks — surfaces that look the same brightness no matter where you stand.</p>
+
+  <div class="fig-duo">
+    <figure>
+      <img src="assets/diffuse_materials.jpg" alt="Diffuse materials">
+      <figcaption><b>Slide</b> real diffuse materials: felt, fur, brick</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/perfect_diffuse.jpg" alt="Perfect diffuse hemisphere scattering">
+      <figcaption><b>Slide</b> a perfect hemisphere of scattering = perfect diffuse</figcaption>
+    </figure>
+  </div>
+
+  <div class="callout cyan">
+    <div class="tag">Why this matters</div>
+    <p>If we know the <em>shape</em> of the scattering, we can deduce the material. Real devices scan how light scatters off physical materials, and those profiles are used to build virtual materials — essential for simulation, architecture, and photorealistic games.</p>
+  </div>
+
+  <h3>Specular reflection — a preferred direction</h3>
+  <p>Do the same experiment with the shiny teapot and something changes: the light still scatters, but it is clearly <strong>stronger in one direction</strong>. You see bright whitish reflections from certain patches of the surface. These are <strong>specular reflections</strong> — points where light shoots out with more energy. The scattering profile shows a distinct bump toward the direction of maximum reflection.</p>
+
+  <figure>
+    <img src="assets/scene_specular.jpg" alt="Specular reflection in scene">
+    <figcaption><b>Slide</b> on the shiny teapot, reflection concentrates toward one direction</figcaption>
+  </figure>
+
+  <h3>The perfect mirror — the limiting case</h3>
+  <p>Push specularity to the extreme and you reach a perfect mirror: <strong>all</strong> incident light bounces off at the perfect reflection angle (mirrored about the surface normal), exactly as in a physics class. Every incoming ray reflects at one precise angle.</p>
+
+  <div class="fig-duo">
+    <figure>
+      <img src="assets/perfect_specular_mirror.jpg" alt="Perfect mirror">
+      <figcaption><b>Slide</b> a perfect mirror reflects everything at one angle</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/perfect_specular_rays.jpg" alt="Mirror rays">
+      <figcaption><b>Slide</b> all rays reflect about the plane normal</figcaption>
+    </figure>
+  </div>
+
+  <h3>Imperfect specular — the real world</h3>
+  <p>Most materials are not perfect mirrors (thankfully). They show <strong>imperfect specular reflection</strong>: some parts reflect strongly, but there is scattering in other directions too, creating that dome-shaped profile. The cause is microscopic roughness — zoom in and the surface is never perfectly smooth, which scatters the rays. Ceramics and metals behave this way.</p>
+
+  <div class="fig-duo">
+    <figure>
+      <img src="assets/imperfect_specular.jpg" alt="Imperfect specular">
+      <figcaption><b>Slide</b> strong reflection plus some scatter</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/imperfect_specular_zoom.jpg" alt="Imperfect specular zoom on roughness">
+      <figcaption><b>Slide</b> zooming in: micro-roughness causes the scatter</figcaption>
+    </figure>
+  </div>
+
+  <h3>Most materials are both</h3>
+  <p>Materials aren't binary — they're rarely purely shiny or purely diffuse. Real surfaces combine both. So we combine the two scattering profiles, and that combination <strong>is</strong> the material. From here on we work with exactly two ingredients: a <strong>diffuse</strong> component and a <strong>specular</strong> component (if any).</p>
+
+  <figure>
+    <img src="assets/diffuse_plus_specular.jpg" alt="Diffuse plus specular surfaces combined">
+    <figcaption><b>Slide</b> diffuse + specular profiles combine into one material model</figcaption>
+  </figure>
+</div>
+</section>
+
+<!-- ============ AMBIENT (problem) ============ -->
+<section id="ambient" data-nav="Ambient Trap">
+<div class="wrap">
+  <div class="eyebrow">Section 02 · The flat teapot, explained</div>
+  <h2>Why it looked flat: <em>ambient</em> light</h2>
+  <p>So why did our teapot render flat? In every material example above, we needed the <strong>direction</strong> the light comes from. But before this chapter we never had light directions — we assumed a single uniform light spread evenly across the whole scene. That uniform light is called <strong>ambient light</strong>.</p>
+  <p>The stronger the ambient light, the more of the teapot we see — but because it is identical everywhere, we have no information about how light would actually bounce. So the model's appearance depends only on <em>how strong</em> the ambient term is, normalised here between 0 and 1.</p>
+
+  <div class="fig-duo" style="grid-template-columns:1fr 1fr 1fr">
+    <figure><img src="assets/ambient_08.jpg" alt="Ambient 0.8"><figcaption><b>I=0.8</b></figcaption></figure>
+    <figure><img src="assets/ambient_04.jpg" alt="Ambient 0.4"><figcaption><b>I=0.4</b></figcaption></figure>
+    <figure><img src="assets/ambient_00.jpg" alt="Ambient 0"><figcaption><b>I=0</b></figcaption></figure>
+  </div>
+
+  <div class="lab" id="lab-ambient">
+    <h4>Ambient-only shading</h4>
+    <p class="sub">Ambient light has no direction. Slide it and watch the teapot get brighter — but never gain any <em>shape</em>. This is precisely the problem.</p>
+    <canvas id="cv-ambient" height="300"></canvas>
+    <div class="ctrl">
+      <div class="row"><label>Ambient intensity</label>
+        <input type="range" id="amb-int" min="0" max="1" step="0.01" value="0.4">
+        <span class="val" id="amb-val">0.40</span></div>
+    </div>
+    <div class="readout" id="amb-read"></div>
+  </div>
+
+  <div class="callout">
+    <div class="tag">The fix</div>
+    <p>To recover shape we must <strong>model light sources</strong> and <strong>simulate material properties</strong>. That sounds heavy, but it breaks down into a few small, intuitive steps. Let's build it.</p>
+  </div>
+</div>
+</section>
+
+<!-- ============ LAMBERT ============ -->
+<section id="lambert" data-nav="Lambert's Law">
+<div class="wrap">
+  <div class="eyebrow">Section 03 · Modelling a light source</div>
+  <h2>Lambert's <em>cosine</em> law</h2>
+  <p>Picture a simple Blender scene: a flat plane and a light source. The plane has a <strong>surface normal</strong> \(\hat{\mathbf N}\). We placed the light, so we know where it is — meaning we can define a vector \(\hat{\mathbf L}\) pointing toward it. That gives us the light direction. The light also has an <strong>intensity</strong> \(I\) shining on the surface.</p>
+
+  <figure>
+    <img src="assets/light_d_unit.jpg" alt="Light hitting surface, d = 1 unit">
+    <figcaption><b>Slide</b> with the light straight on, a unit of surface receives a unit of light: \(I/d\) with \(d=1\)</figcaption>
+  </figure>
+
+  <p>Keep it 2D. Take a patch of surface of width \(d = 1\) unit. With the light directly overhead, the light per unit equals \(I\) (since \(d=1\)). Now <strong>rotate the light</strong> around a point on the plane by angle \(\theta\). The incoming beam now strikes at a slant: the same beam must cover a <em>larger</em> width \(d'\!>d\), so each unit of surface receives less light. The surface gets darker.</p>
+
+  <figure>
+    <img src="assets/cos_theta_geometry.jpg" alt="Cosine theta geometry derivation">
+    <figcaption><b>Slide</b> the original beam width \(d=1\) and the slanted footprint \(d'\) form a right triangle with angle \(\theta\)</figcaption>
+  </figure>
+
+  <p>The original beam width \(d\) is still perpendicular to the light direction, so sliding it down to the surface creates a <strong>right triangle</strong>. The angle between \(d\) and \(d'\) is also \(\theta\). Since it's a right triangle and \(d=1\):</p>
+
+  <div class="formula-box">$$\cos\theta = \frac{1}{d'} \quad\Longrightarrow\quad I_d = \frac{I}{d'} = I\cos\theta$$</div>
+
+  <p>This is the key insight: the <strong>intensity landing on the surface scales with the cosine of the angle between the light direction and the surface normal</strong>. At \(\theta = 0\) the light is straight on, \(\cos 0 = 1\), and we get full intensity. As the angle grows, intensity falls.</p>
+
+  <p>And because \(\hat{\mathbf N}\) and \(\hat{\mathbf L}\) are unit vectors, \(\cos\theta\) is simply their <strong>dot product</strong>:</p>
+
+  <div class="formula-box">$$I_d = I\cos\theta = I\,(\hat{\mathbf N}\cdot\hat{\mathbf L})$$</div>
+
+  <figure>
+    <img src="assets/lambert_law.jpg" alt="Lambert's cosine law slide">
+    <figcaption><b>Slide</b> this is <b>Lambert's cosine law</b> — Lambert is the gentleman in the wig, not the Witcher character beside him</figcaption>
+  </figure>
+
+  <div class="callout pink">
+    <div class="tag">Works both ways</div>
+    <p>The relationship holds whether you move the <em>light</em> or tilt the <em>surface</em> — the normal moves with the plane. Tilt the surface so the normal faces away and \(\cos\theta\) goes negative. We can't have negative light, so we clamp it: \(\max(0,\ \hat{\mathbf N}\cdot\hat{\mathbf L})\). (Solve negative light and you'll win a Nobel Prize in quantum physics.)</p>
+  </div>
+
+  <div class="lab" id="lab-lambert">
+    <h4>Lambert's cosine law — live</h4>
+    <p class="sub">Drag the light around the surface, or tilt the surface itself. Watch how N̂·L̂ — and the brightness of the lit patch — track the angle. Note how it clamps to black once the normal faces away.</p>
+    <canvas id="cv-lambert" height="340"></canvas>
+    <div class="ctrl">
+      <div class="row"><label>Surface tilt</label>
+        <input type="range" id="lam-tilt" min="-60" max="60" step="1" value="0">
+        <span class="val" id="lam-tilt-v">0°</span></div>
+      <div class="legend">
+        <span class="pill N">N&#770; normal</span>
+        <span class="pill L">L&#770; to light</span>
+      </div>
+    </div>
+    <div class="readout" id="lam-read"></div>
+  </div>
+</div>
+</section>
+
+<!-- ============ DIFFUSE TERM ============ -->
+<section id="diffuse" data-nav="Diffuse Term">
+<div class="wrap">
+  <div class="eyebrow">Section 04 · The diffuse term</div>
+  <h2>Giving the teapot its <em>colour back</em></h2>
+  <p>Now put the teapot back and give it a colour, written \(k_d\) (the diffuse reflection coefficient). Move the light around and the teapot's shading follows Lambert's law exactly. To get the correct colour at a point, multiply the material colour by the light model:</p>
+
+  <div class="formula-box">$$I_d = I\,k_d\cos\theta = I\,k_d\,(\hat{\mathbf N}\cdot\hat{\mathbf L})$$</div>
+
+  <div class="fig-duo">
+    <figure><img src="assets/kd_color.jpg" alt="kd diffuse colour"><figcaption><b>Slide</b> \(k_d\) is the diffuse colour of the surface</figcaption></figure>
+    <figure><img src="assets/diffuse_teapots.jpg" alt="Diffuse shaded teapots"><figcaption><b>Slide</b> from flat to plausibly three-dimensional</figcaption></figure>
+  </div>
+
+  <div class="callout cyan">
+    <div class="tag">\(k_d\) can be a texture</div>
+    <p>\(k_d\) doesn't have to be a flat colour. Since we can sample textures and map them to models, we simply look up \(k_d\) at the surface point after texture mapping and multiply it by the light model. Everything we built earlier in the pipeline plugs straight in.</p>
+  </div>
+
+  <figure>
+    <img src="assets/diffuse_teapot_texture.jpg" alt="Textured diffuse teapot">
+    <figcaption><b>Slide</b> \(k_d\) sampled from a texture — diffuse shading over a mapped image</figcaption>
+  </figure>
+
+  <p>We've gone from an awful flat render to something that reads as a real shape — we can see the shadowing and understand the form. <strong>But</strong> a real ceramic teapot is shiny, and this one looks completely matte. We need to add highlights.</p>
+</div>
+</section>
+
+<!-- ============ SPECULAR ============ -->
+<section id="specular" data-nav="Specular Term">
+<div class="wrap">
+  <div class="eyebrow">Section 05 · The specular term</div>
+  <h2>Adding the <em>shine</em></h2>
+  <p>Watch the shiny teapot: as the light moves, the white highlights move too. But unlike diffuse shading, the highlight also depends on <strong>where you are looking from</strong> — think of the glare off a metal surface that hits your eye at just the right angle. (It's exactly why lecture theatres avoid reflective surfaces — projector light would bounce into someone's face.)</p>
+
+  <p>So specular reflection depends on both the <strong>light position</strong> and the <strong>viewing position</strong>. We bring in the camera. Simplify back to a 2D plane with specular properties. We now have four players:</p>
+
+  <div class="legend">
+    <span class="pill N">N&#770; surface normal</span>
+    <span class="pill L">L&#770; to light</span>
+    <span class="pill R">R&#770; perfect reflection of L</span>
+    <span class="pill V">V&#770; to viewer</span>
+  </div>
+
+  <figure>
+    <img src="assets/specular_vectors.jpg" alt="Specular vectors N L R V and angle phi">
+    <figcaption><b>Slide</b> the perfect reflection ray \(\hat{\mathbf R}\) and the viewing vector \(\hat{\mathbf V}\), separated by angle \(\phi\)</figcaption>
+  </figure>
+
+  <p>We only care about the specular component, so we use the <strong>perfect reflection</strong> ray \(\hat{\mathbf R}\). The highlight is defined by the angle \(\phi\) between \(\hat{\mathbf R}\) and the viewing direction \(\hat{\mathbf V}\). As before, the cosine of that angle is a dot product:</p>
+
+  <div class="formula-box">$$I_s = \hat{\mathbf R}\cdot\hat{\mathbf V} = \cos\phi$$</div>
+
+  <h3>The problem: the whole teapot lights up</h3>
+  <p>Add that raw term and it's wrong — almost the entire teapot becomes a highlight. Why? When \(\hat{\mathbf V}\) aligns with \(\hat{\mathbf R}\), the dot product is 1, as expected. But move slightly off-axis and we want a <strong>sharp drop-off</strong> — yet the cosine is still large (say 0.8), meaning 80% of the surface still reads as highlight. Not what a shiny material does.</p>
+
+  <h3>The fix: raise to a power</h3>
+  <p>The trick is to raise the dot product to a power \(n\). Since \(\cos\phi\) lies between −1 and 1, raising it to a power shrinks the highlight: off-axis values collapse toward zero much faster, leaving a small bright spot.</p>
+
+  <div class="formula-box">$$I_s = k_s\,(\hat{\mathbf R}\cdot\hat{\mathbf V})^{\,n} = k_s\cos^{\,n}\!\phi$$</div>
+
+  <p>Here \(k_s\) is the <strong>specular colour</strong> — usually white, though some metals tint it. This whole expression is the <strong>specular reflection term</strong>. The exponent \(n\) (the <strong>shininess</strong>) controls highlight size: bigger \(n\) → tighter, smaller, more circular highlight. As \(n\to\infty\) you approach a perfect mirror — a single ray reflecting from a vanishingly small point.</p>
+
+  <figure>
+    <img src="assets/shininess_n.jpg" alt="Shininess exponent n comparison teapots">
+    <figcaption><b>Slide</b> \(n=256\) (tight), \(n=50\) (medium), \(n=0\) (no useful highlight)</figcaption>
+  </figure>
+
+  <div class="lab" id="lab-specular">
+    <h4>Specular highlight & the shininess exponent</h4>
+    <p class="sub">Drag the viewer position and slide the shininess n. See how the highlight tightens as n grows, and how it peaks only when V̂ lines up with the reflection R̂.</p>
+    <canvas id="cv-spec" height="330"></canvas>
+    <div class="ctrl">
+      <div class="row"><label>Shininess n</label>
+        <input type="range" id="spec-n" min="1" max="200" step="1" value="32">
+        <span class="val" id="spec-n-v">32</span></div>
+      <div class="row"><label>Light angle</label>
+        <input type="range" id="spec-l" min="20" max="160" step="1" value="125">
+        <span class="val" id="spec-l-v">125°</span></div>
+      <div class="legend">
+        <span class="pill N">N&#770;</span><span class="pill L">L&#770;</span>
+        <span class="pill R">R&#770;</span><span class="pill V">V&#770; drag me</span>
+      </div>
+    </div>
+    <div class="readout" id="spec-read"></div>
+  </div>
+</div>
+</section>
+
+<!-- ============ REFLECTION VECTOR ============ -->
+<section id="reflection" data-nav="Reflection R">
+<div class="wrap">
+  <div class="eyebrow">Section 06 · The geometry</div>
+  <h2>Where does <em>R&#770;</em> come from?</h2>
+  <p>We used \(\hat{\mathbf R}\), the perfect reflection of \(\hat{\mathbf L}\) about the normal — but we still have to compute it. Here's the derivation, using only vector projection from the very first maths lecture.</p>
+
+  <figure>
+    <img src="assets/reflection_vector.jpg" alt="Reflection vector derivation">
+    <figcaption><b>Slide</b> the full construction: project \(\hat{\mathbf L}\) onto \(\hat{\mathbf N}\), then mirror</figcaption>
+  </figure>
+
+  <p>Define \(\mathbf N'\) as the projection of \(\hat{\mathbf L}\) onto the normal \(\hat{\mathbf N}\). The line joining \(\hat{\mathbf L}\) and \(\hat{\mathbf R}\) crosses the normal at a right angle, so:</p>
+  <div class="formula-box">$$\mathbf N' = \text{proj}_{L\to N} = (\hat{\mathbf L}\cdot\hat{\mathbf N})\,\hat{\mathbf N}$$</div>
+
+  <p>Let \(\mathbf c\) be the sideways component: \(\mathbf c = \hat{\mathbf L} - \mathbf N'\). On the other side of the normal that component is \(-\mathbf c\). The reflection is the projection plus this flipped component:</p>
+  <div class="formula-box">$$\hat{\mathbf R} = \mathbf N' + (-\mathbf c) = 2(\hat{\mathbf L}\cdot\hat{\mathbf N})\,\hat{\mathbf N} - \hat{\mathbf L}$$</div>
+
+  <div class="callout violet">
+    <div class="tag">Step by step</div>
+    <p><strong>1.</strong> Project \(\hat{\mathbf L}\) onto \(\hat{\mathbf N}\) → \(\mathbf N'\). &nbsp; <strong>2.</strong> The leftover sideways part is \(\mathbf c = \hat{\mathbf L}-\mathbf N'\). &nbsp; <strong>3.</strong> Flip it to \(-\mathbf c\) on the far side. &nbsp; <strong>4.</strong> Add: \(\hat{\mathbf R} = \mathbf N' - \mathbf c = 2(\hat{\mathbf L}\cdot\hat{\mathbf N})\hat{\mathbf N} - \hat{\mathbf L}\).</p>
+  </div>
+
+  <div class="lab" id="lab-reflect">
+    <h4>Reflecting L&#770; about the normal</h4>
+    <p class="sub">Drag the light vector L̂. The projection N′ onto the normal, the sideways component c, and the resulting reflection R̂ all update live — the visual proof of R̂ = 2(L̂·N̂)N̂ − L̂.</p>
+    <canvas id="cv-reflect" height="320"></canvas>
+    <div class="readout" id="reflect-read"></div>
+  </div>
+</div>
+</section>
+
+<!-- ============ PHONG ============ -->
+<section id="phong" data-nav="Phong Model">
+<div class="wrap">
+  <div class="eyebrow">Section 07 · Assembling the model</div>
+  <h2>The <em>Phong</em> light model</h2>
+  <p>We have an intensity \(I\), a diffuse term and a specular term. Because we are working with an <strong>additive</strong> model of light, we simply add them. The shared intensity \(I\) factors out:</p>
+
+  <figure>
+    <img src="assets/phong_formula.jpg" alt="Phong formula slide">
+    <figcaption><b>Slide</b> diffuse term + specular term, sharing the light intensity \(I\)</figcaption>
+  </figure>
+
+  <div class="formula-box">$$C = I\big(\,k_d(\hat{\mathbf N}\cdot\hat{\mathbf L}) + k_s(\hat{\mathbf V}\cdot\hat{\mathbf R})^{\,n}\,\big)$$</div>
+
+  <p>This is one of the most popular simple light models in graphics — the <strong>Phong light model</strong> (also called a reflection model or material model; the terms are interchangeable). It transforms our matte teapot into a believable shiny ceramic surface.</p>
+
+  <figure>
+    <img src="assets/phong_teapot.jpg" alt="Phong shaded teapot">
+    <figcaption><b>Slide</b> the Phong-shaded teapot — diffuse body with a crisp specular highlight</figcaption>
+  </figure>
+
+  <div class="callout">
+    <div class="tag">Remember</div>
+    <p>Phong is a <strong>local illumination</strong> model: it lights each surface from the light source alone. It knows nothing about how objects in the scene affect one another (a nearby mirror, say, is ignored). Local models run fast on the GPU but have real limits.</p>
+  </div>
+</div>
+</section>
+
+<!-- ============ BLINN-PHONG ============ -->
+<section id="blinn" data-nav="Blinn–Phong">
+<div class="wrap">
+  <div class="eyebrow">Section 08 · A better specular</div>
+  <h2>Blinn–Phong & the <em>halfway</em> vector</h2>
+  <p>Phong has a flaw at extreme viewing angles — <strong>grazing angles</strong> in graphics-speak. When the view direction becomes nearly perpendicular to the normal (looking at the teapot almost from underneath), the specular term breaks down and the highlight falls apart.</p>
+
+  <p>The deeper fix is to change the question. Phong asks: <em>"is the viewer looking down the reflection ray?"</em> Instead we should ask: <em>"is the surface oriented so the viewer sees a reflection?"</em> We answer it with the <strong>halfway vector</strong> \(\hat{\mathbf H}\), sitting exactly between \(\hat{\mathbf L}\) and \(\hat{\mathbf V}\), and measure the angle \(\omega\) between \(\hat{\mathbf H}\) and the normal \(\hat{\mathbf N}\).</p>
+
+  <figure>
+    <img src="assets/halfway_vector.jpg" alt="Halfway vector H blinn phong">
+    <figcaption><b>Slide</b> the halfway vector \(\hat{\mathbf H}\) between \(\hat{\mathbf L}\) and \(\hat{\mathbf V}\), angle \(\omega\) to the normal</figcaption>
+  </figure>
+
+  <p>The intuition: when \(\hat{\mathbf V}\) is aligned with the reflection, \(\hat{\mathbf H}\) aligns with \(\hat{\mathbf N}\) → full highlight. And \(\hat{\mathbf H}\) is dead cheap to compute — just add the two vectors and normalise:</p>
+
+  <div class="formula-box">$$\hat{\mathbf H} = \frac{\hat{\mathbf L}+\hat{\mathbf V}}{|\hat{\mathbf L}+\hat{\mathbf V}|} \qquad I_s = k_s(\hat{\mathbf H}\cdot\hat{\mathbf N})^{\,n} = k_s\cos^{\,n}\!\omega$$</div>
+
+  <p>One vector add plus a normalise — much faster on the GPU than building \(\hat{\mathbf R}\) with dot products and additions. This is the <strong>Blinn–Phong light model</strong>. It stays stable at grazing angles, and side-by-side it handles reflections slightly better — notice the teapot's handle and the area around the cap.</p>
+
+  <div class="fig-duo">
+    <figure><img src="assets/blinn_phong_teapot.jpg" alt="Blinn-Phong teapot"><figcaption><b>Slide</b> Blinn–Phong result</figcaption></figure>
+    <figure><img src="assets/blinn_vs_phong.jpg" alt="Blinn vs Phong comparison"><figcaption><b>Slide</b> Blinn–Phong (left) vs Phong (right)</figcaption></figure>
+  </div>
+
+  <div class="lab" id="lab-blinn">
+    <h4>Phong vs Blinn–Phong at grazing angles</h4>
+    <p class="sub">Drag the viewer toward a grazing angle (low, near the surface). Toggle between the reflection vector R̂ (Phong) and the halfway vector Ĥ (Blinn–Phong) and watch how the highlight behaves as the view skims the surface.</p>
+    <canvas id="cv-blinn" height="330"></canvas>
+    <div class="ctrl">
+      <div class="toggle-row" id="blinn-mode">
+        <button data-m="phong" class="active">Phong &nbsp;R&#770;·V&#770;</button>
+        <button data-m="blinn">Blinn–Phong &nbsp;H&#770;·N&#770;</button>
+      </div>
+      <div class="row"><label>Shininess n</label>
+        <input type="range" id="blinn-n" min="2" max="120" step="1" value="24">
+        <span class="val" id="blinn-n-v">24</span></div>
+    </div>
+    <div class="readout" id="blinn-read"></div>
+  </div>
+
+  <div class="callout cyan">
+    <div class="tag">Local illumination, again</div>
+    <p>Both Phong and Blinn–Phong are <strong>local illumination</strong> models — they light an object from the source but ignore inter-object effects. They run first and fast on the GPU. These models are the foundation that newer techniques like ray tracing and other light-transport methods build on.</p>
+  </div>
+</div>
+</section>
+
+<!-- ============ AMBIENT + MULTI ============ -->
+<section id="ambient2" data-nav="Complete Model">
+<div class="wrap">
+  <div class="eyebrow">Section 09 · Finishing the equation</div>
+  <h2>Multiple lights & the <em>ambient</em> return</h2>
+  <p>We assumed one light. With more lights, the additive model lets us simply <strong>sum</strong> their contributions — as long as we don't push past white in low dynamic range, or the colour data structure breaks down.</p>
+
+  <p>And remember ambient light from the start? Local illumination ignores object-to-object bounce, but ambient light fills that role: a uniform term that lifts every point out of pure black. We add it at the end. It has its own intensity \(I_a\) and its own colour \(k_a\) — that colour lets ambient be tinted (a purple room casts a purple wash over everything).</p>
+
+  <div class="formula-box">$$C = I\big(\,k_d(\hat{\mathbf N}\cdot\hat{\mathbf L}) + k_s(\hat{\mathbf H}\cdot\hat{\mathbf N})^{\,n}\,\big) + k_a I_a$$</div>
+
+  <div class="fig-duo">
+    <figure><img src="assets/ambient_purple.jpg" alt="Purple ambient teapot"><figcaption><b>Slide</b> a coloured ambient term tints the whole scene</figcaption></figure>
+    <figure><img src="assets/fragment_shader.jpg" alt="Fragment shader code"><figcaption><b>Slide</b> the matching fragment shader writes exactly this formula</figcaption></figure>
+  </div>
+
+  <p>Add that ambient term and the teapot finally reads as proper ceramic. Everything from the chapter maps directly onto a short <strong>fragment shader</strong>: the code mirrors the equation line for line.</p>
+</div>
+</section>
+
+<!-- ============ BEYOND ============ -->
+<section id="beyond" data-nav="Beyond">
+<div class="wrap">
+  <div class="eyebrow">Section 10 · Two loose ends</div>
+  <h2>Light shapes &amp; <em>distance</em></h2>
+
+  <h3>Lights aren't always points</h3>
+  <p>We assumed point lights. Real sources have <strong>shape</strong> — area lights, spotlights, distant (directional) lights — and each interacts with surfaces differently. Conceptually the model is unchanged; the maths just shifts slightly to account for the geometry.</p>
+
+  <div class="fig-duo">
+    <figure><img src="assets/light_types.jpg" alt="Light types"><figcaption><b>Slide</b> mesh, area, spot and point lights cast differently</figcaption></figure>
+    <figure><img src="assets/light_types_compare.jpg" alt="Light types compared"><figcaption><b>Slide</b> point · distant · spot · area, side by side</figcaption></figure>
+  </div>
+
+  <h3>Distance attenuation</h3>
+  <p>The other gap: what happens as the light moves <strong>away</strong> from the object? Everything darkens, because intensity falls with distance. To complete the equation we scale by some function of distance \(d_{att}\). This is <strong>distance attenuation</strong> — explored further in the workshops. Nothing difficult, but good to know it's there.</p>
+
+  <div class="formula-box">$$C = \frac{I}{d_{att}}\big(\,k_d(\hat{\mathbf N}\cdot\hat{\mathbf L}) + k_s(\hat{\mathbf H}\cdot\hat{\mathbf N})^{\,n}\,\big) + k_a I_a$$</div>
+
+  <figure>
+    <img src="assets/distance_attenuation.jpg" alt="Distance attenuation slide">
+    <figcaption><b>Slide</b> dividing by \(d_{att}\) makes distant lights fall off correctly</figcaption>
+  </figure>
+
+  <div class="callout pink">
+    <div class="tag">The turning point</div>
+    <p>If there's one place in this course where the pieces of the puzzle come together, it's this. These shading models are the basis of techniques you've heard of — <strong>ray tracing</strong> and other light-transport methods — and are essential groundwork for any advanced rendering.</p>
+  </div>
+</div>
+</section>
+
+<!-- ============ QUIZZES + PAST PAPERS ============ -->
+<section id="quizzes" data-nav="Test Yourself">
+<div class="wrap">
+  <div class="eyebrow">Section 11 · Active recall</div>
+  <h2>Test <em>yourself</em></h2>
+  <p>Six quiz questions drawn from the course quiz bank, then real past-paper questions mapped to this chapter. Click an answer to check it; expand the past-paper questions for model-answer pointers.</p>
+
+  <div id="quizz-host"></div>
+
+  <h3 style="margin-top:48px">From the past papers</h3>
+  <p class="dim">COMP27112 exam questions where this chapter is directly examinable. Try them closed-book first.</p>
+
+  <div class="exam">
+    <div class="ehead">2019 · Q25 · 6 marks</div>
+    <p class="q">Figure 4 shows a side view of a surface illuminated by a light source at position P. Explain what the normalised vectors \(\hat{\mathbf N}\), \(\hat{\mathbf R}\) and \(\hat{\mathbf V}\) represent. Explain how \(\hat{\mathbf R}\) and \(\hat{\mathbf V}\) are used to estimate specular reflection, and what other factors (with their ranges) must be included.</p>
+    <details><summary>▸ Show answer pointers</summary>
+      <div class="ans">\(\hat{\mathbf N}\) = surface normal; \(\hat{\mathbf R}\) = perfect reflection of the light direction about \(\hat{\mathbf N}\); \(\hat{\mathbf V}\) = direction to the viewer. Specular intensity \(=k_s(\hat{\mathbf R}\cdot\hat{\mathbf V})^n\): the dot product gives \(\cos\phi\) of the angle between \(\hat{\mathbf R}\) and \(\hat{\mathbf V}\) (range −1→1, clamped to 0→1). Other factors: \(k_s\) the specular coefficient/colour (0→1), and the shininess exponent \(n\) (\(\ge 1\), larger = tighter highlight). Mention light intensity \(I\) too.</div>
+    </details>
+  </div>
+
+  <div class="exam">
+    <div class="ehead">2016 · Q2 · 16 marks · (the big one)</div>
+    <p class="q">A lightproof box contains a partially shiny surface S, lit by a monochromatic source of intensity I at distance D.
+    <strong>(a)(i)</strong> Derive an expression for the light <em>diffusely</em> reflected from S (4). <strong>(a)(ii)</strong> Derive the light <em>specularly</em> reflected from S (6). <strong>(b)</strong> How would you modify these if I were a coloured source C? (2) <strong>(c)</strong> For a triangular mesh M of the same material, how do you render it smooth and correctly shiny? (4) <strong>(d)</strong> How would you make M appear bumpy via an image-based technique? (4)</p>
+    <details><summary>▸ Show answer pointers</summary>
+      <div class="ans"><strong>(i)</strong> Diffuse: \(I_d=I\,k_d(\hat{\mathbf N}\cdot\hat{\mathbf L})\), via Lambert's cosine law; define \(\hat{\mathbf N},\hat{\mathbf L}\) unit vectors, \(k_d\in[0,1]\), clamp \(\hat{\mathbf N}\cdot\hat{\mathbf L}\) to 0. <strong>(ii)</strong> Specular: \(I_s=I\,k_s(\hat{\mathbf R}\cdot\hat{\mathbf V})^n\); derive \(\hat{\mathbf R}=2(\hat{\mathbf L}\cdot\hat{\mathbf N})\hat{\mathbf N}-\hat{\mathbf L}\); explain \(n\) and \(k_s\). <strong>(b)</strong> Replace scalar coefficients with per-channel RGB colour (multiply by the light colour C component-wise). <strong>(c)</strong> Interpolate vertex normals across the triangle and evaluate lighting per fragment (Phong shading) so highlights appear smooth — vs flat or Gouraud. <strong>(d)</strong> Bump / normal mapping: perturb the surface normal per-fragment using a texture so lighting reacts as if the surface were bumpy, without changing geometry.</div>
+    </details>
+  </div>
+
+  <div class="exam">
+    <div class="ehead">2017 · Section B · Q9 & Q10</div>
+    <p class="q"><strong>Q9.</strong> What is the fundamental difference between local and global illumination? (1) <br><strong>Q10.</strong> What is the purpose of \(k_s(\hat{\mathbf R}\cdot\hat{\mathbf V})^n\) in a simple local illumination model? Explain each term and its range. (4)</p>
+    <details><summary>▸ Show answer pointers</summary>
+      <div class="ans"><strong>Q9.</strong> Local illumination lights each surface from the light source only, ignoring how other objects in the scene affect it; global illumination accounts for inter-object light transport (reflections, bounced/indirect light, shadows from other objects). <strong>Q10.</strong> It is the <em>specular</em> term producing view-dependent highlights. \(k_s\) = specular coefficient/colour (0→1); \(\hat{\mathbf R}\) = reflection of light about the normal; \(\hat{\mathbf V}\) = view direction; \(\hat{\mathbf R}\cdot\hat{\mathbf V}=\cos\phi\) (clamped 0→1); exponent \(n\) controls highlight tightness (larger \(n\) → smaller, sharper highlight).</div>
+    </details>
+  </div>
+
+  <div class="exam">
+    <div class="ehead">2018 · Q8 · 7 marks</div>
+    <p class="q">With reference to the lighting expression in Figure 2, explain the function of the part inside the square brackets, defining each term and its range of values.</p>
+    <details><summary>▸ Show answer pointers</summary>
+      <div class="ans">The bracketed part is the per-light reflected component: \(k_d(\hat{\mathbf N}\cdot\hat{\mathbf L}) + k_s(\hat{\mathbf R}\cdot\hat{\mathbf V})^n\) (or \(\hat{\mathbf H}\cdot\hat{\mathbf N}\) for Blinn–Phong). First term = diffuse (orientation-based, Lambert, \(\hat{\mathbf N}\cdot\hat{\mathbf L}\) clamped 0→1, \(k_d\in[0,1]\)); second = specular (view-dependent, exponent \(n\ge1\), \(k_s\in[0,1]\)). The leading \(I\) scales both; an ambient \(k_aI_a\) typically sits outside the brackets.</div>
+    </details>
+  </div>
+
+  <div class="exam">
+    <div class="ehead">2022 · Q22 & Q23 · 4 marks each</div>
+    <p class="q"><strong>Q22.</strong> Describe the shortcomings of the simple shading algorithm and how Gouraud shading addresses them. <br><strong>Q23.</strong> Describe the shortcomings of Gouraud shading and how Phong shading addresses them.</p>
+    <details><summary>▸ Show answer pointers</summary>
+      <div class="ans"><strong>Simple/flat → Gouraud:</strong> flat shading computes one colour per face, giving faceted, blocky surfaces with visible edges. Gouraud computes lighting <em>per vertex</em> and interpolates the colour across the triangle, giving smooth gradients. <strong>Gouraud → Phong:</strong> because Gouraud interpolates colour, specular highlights falling <em>inside</em> a triangle are missed or smeared (highlights stick to vertices). Phong shading interpolates the <em>normal</em> across the surface and evaluates the lighting equation <em>per fragment</em>, so highlights appear correctly mid-triangle.</div>
+    </details>
+  </div>
+</div>
+</section>
+
+<!-- ============ END ============ -->
+<section id="end" data-nav="Wrap-up" style="border-bottom:none">
+<div class="wrap">
+  <div class="endcard">
+    <div class="eyebrow" style="justify-content:center">Chapter 10 · complete</div>
+    <p class="big">"From an awful flat-looking model to something that finally makes sense — this is where the pipeline comes together."</p>
+    <p class="dim">Ambient + Diffuse (Lambert) + Specular (Phong / Blinn–Phong), summed over lights, attenuated by distance. The whole equation, on one line:</p>
+    <div class="formula-box" style="max-width:640px;margin:24px auto">$$C = \sum_{\text{lights}}\frac{I}{d_{att}}\Big(k_d(\hat{\mathbf N}\cdot\hat{\mathbf L}) + k_s(\hat{\mathbf H}\cdot\hat{\mathbf N})^{n}\Big) + k_a I_a$$</div>
+  </div>
+</div>
+</section>
+
+<footer>
+  COMP27112 · Lights &amp; Shading · interactive visual notes &nbsp;·&nbsp; figures from the course lecture slides · quiz items from the course quiz bank · exam prompts from COMP27112 past papers (2016–2025)
+</footer>
+
+<script>
+/* ============ UTIL ============ */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const css=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const COL={amber:css('--amber'),cyan:css('--cyan'),pink:css('--pink'),green:css('--green'),
+  gold:css('--gold'),violet:css('--violet'),ink:'#ece8f0',dim:'#7a7690',line:'#2c2939',white:'#ffffff'};
+function setupCanvas(cv){
+  const dpr=Math.min(devicePixelRatio||1,2);
+  const cssW=cv.clientWidth, cssH=cv.getAttribute('height')*1;
+  cv.width=cssW*dpr; cv.height=cssH*dpr;
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,W:cssW,H:cssH};
+}
+function arrow(ctx,x1,y1,x2,y2,col,w=2.2,head=9){
+  ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=w;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  const a=Math.atan2(y2-y1,x2-x1);
+  ctx.beginPath();ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-head*Math.cos(a-0.4),y2-head*Math.sin(a-0.4));
+  ctx.lineTo(x2-head*Math.cos(a+0.4),y2-head*Math.sin(a+0.4));
+  ctx.closePath();ctx.fill();
+}
+function label(ctx,x,y,t,col,size=13){
+  ctx.fillStyle=col;ctx.font=`600 ${size}px 'Spline Sans Mono',monospace`;
+  ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(t,x,y);
+}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+/* ============ 1. AMBIENT (no shape) ============ */
+(function(){
+  const cv=$('#cv-ambient'); if(!cv)return;
+  let amb=0.4;
+  function draw(){
+    const {ctx,W,H}=setupCanvas(cv);
+    ctx.clearRect(0,0,W,H);
+    // teapot-ish sphere, lit ONLY by uniform ambient (flat)
+    const cx=W/2, cy=H/2+10, r=Math.min(W,H)*0.32;
+    // background room wash
+    ctx.fillStyle=`rgba(${30+amb*40},${28+amb*40},${40+amb*45},1)`;
+    ctx.fillRect(0,0,W,H);
+    // flat-shaded body: single uniform colour, no gradient -> looks flat
+    const g=Math.round(amb*200+15);
+    ctx.fillStyle=`rgb(${g},${g},${g+8})`;
+    // body
+    ctx.beginPath();ctx.ellipse(cx,cy,r,r*0.78,0,0,7);ctx.fill();
+    // spout + handle to read as teapot, same flat colour
+    ctx.beginPath();ctx.moveTo(cx-r*0.9,cy);ctx.quadraticCurveTo(cx-r*1.5,cy-10,cx-r*1.45,cy+18);
+    ctx.quadraticCurveTo(cx-r*1.2,cy+10,cx-r*0.85,cy+18);ctx.fill();
+    ctx.lineWidth=10;ctx.strokeStyle=`rgb(${g},${g},${g+8})`;
+    ctx.beginPath();ctx.arc(cx+r*0.85,cy,r*0.42,-1.1,1.1);ctx.stroke();
+    // lid knob
+    ctx.beginPath();ctx.ellipse(cx,cy-r*0.78,r*0.12,r*0.07,0,0,7);ctx.fill();
+    label(ctx,W-150,26,`Ambient = ${amb.toFixed(2)}`,COL.dim,13);
+  }
+  $('#amb-int').addEventListener('input',e=>{amb=+e.target.value;$('#amb-val').textContent=amb.toFixed(2);
+    $('#amb-read').innerHTML=`C = k<sub>a</sub>·I<sub>a</sub> = <span class="hl">${amb.toFixed(2)}</span> &nbsp;→ uniform everywhere. The teapot gets brighter but gains <span class="hl">no shape</span>: ambient light carries no direction.`;draw();});
+  $('#amb-read').innerHTML=`C = k<sub>a</sub>·I<sub>a</sub> = <span class="hl">0.40</span> &nbsp;→ uniform everywhere. The teapot gets brighter but gains <span class="hl">no shape</span>: ambient light carries no direction.`;
+  new ResizeObserver(draw).observe(cv); draw();
+})();
+
+/* ============ 2. LAMBERT ============ */
+(function(){
+  const cv=$('#cv-lambert'); if(!cv)return;
+  let tilt=0;            // surface tilt degrees
+  let lightAng=Math.PI*0.72; // light angle around pivot (radians, measured from +x)
+  let dragging=false;
+  function geom(W,H){
+    const pivot={x:W*0.5,y:H*0.72};
+    const tr=tilt*Math.PI/180;
+    // surface line direction
+    const sdx=Math.cos(tr), sdy=Math.sin(tr);
+    // normal (pointing up-ish), perpendicular to surface
+    const nx=Math.sin(tr), ny=-Math.cos(tr);
+    return {pivot,sdx,sdy,nx,ny};
+  }
+  function draw(){
+    const {ctx,W,H}=setupCanvas(cv);ctx.clearRect(0,0,W,H);
+    const {pivot,sdx,sdy,nx,ny}=geom(W,H);
+    const Llen=Math.min(W,H)*0.42, Nlen=Math.min(W,H)*0.34;
+    // light direction (unit) from pivot
+    const lx=Math.cos(lightAng), ly=-Math.sin(lightAng);
+    // N·L
+    const ndotl=clamp(nx*lx+ny*ly,0,1);
+    // surface patch
+    const sl=W*0.34;
+    ctx.lineWidth=7;ctx.strokeStyle='#3a3550';ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(pivot.x-sdx*sl,pivot.y-sdy*sl);ctx.lineTo(pivot.x+sdx*sl,pivot.y+sdy*sl);ctx.stroke();
+    // lit overlay on surface (brightness = ndotl)
+    const lit=Math.round(ndotl*230+10);
+    ctx.lineWidth=7;ctx.strokeStyle=`rgb(${lit},${Math.round(lit*0.85)},${Math.round(lit*0.5)})`;
+    ctx.beginPath();ctx.moveTo(pivot.x-sdx*sl,pivot.y-sdy*sl);ctx.lineTo(pivot.x+sdx*sl,pivot.y+sdy*sl);ctx.stroke();
+    // incoming light beam (faded cone)
+    const src={x:pivot.x+lx*Llen, y:pivot.y+ly*Llen};
+    const grad=ctx.createLinearGradient(src.x,src.y,pivot.x,pivot.y);
+    grad.addColorStop(0,'rgba(232,201,90,0.35)');grad.addColorStop(1,'rgba(232,201,90,0.05)');
+    ctx.strokeStyle=grad;ctx.lineWidth=18;
+    ctx.beginPath();ctx.moveTo(src.x,src.y);ctx.lineTo(pivot.x,pivot.y);ctx.stroke();
+    // bulb
+    ctx.fillStyle=COL.gold;ctx.beginPath();ctx.arc(src.x,src.y,9,0,7);ctx.fill();
+    ctx.fillStyle='rgba(232,201,90,0.25)';ctx.beginPath();ctx.arc(src.x,src.y,16,0,7);ctx.fill();
+    // N and L arrows
+    arrow(ctx,pivot.x,pivot.y,pivot.x+nx*Nlen,pivot.y+ny*Nlen,COL.white,2.4);
+    arrow(ctx,pivot.x,pivot.y,pivot.x+lx*Llen*0.62,pivot.y+ly*Llen*0.62,COL.gold,2.4);
+    label(ctx,pivot.x+nx*Nlen+4,pivot.y+ny*Nlen,'N\u0302',COL.white,15);
+    label(ctx,pivot.x+lx*Llen*0.62+4,pivot.y+ly*Llen*0.62,'L\u0302',COL.gold,15);
+    // angle theta arc
+    const a1=Math.atan2(ny,nx), a2=Math.atan2(ly,lx);
+    ctx.strokeStyle=COL.cyan;ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.arc(pivot.x,pivot.y,34,Math.min(a1,a2),Math.max(a1,a2));ctx.stroke();
+    const theta=Math.acos(clamp(nx*lx+ny*ly,-1,1))*180/Math.PI;
+    label(ctx,pivot.x+38,pivot.y-30,'θ='+theta.toFixed(0)+'°',COL.cyan,12);
+    $('#lam-read').innerHTML=`θ = <span class="hl">${theta.toFixed(0)}°</span> &nbsp; N&#770;·L&#770; = cos θ = <span class="hl">${(nx*lx+ny*ly).toFixed(2)}</span> &nbsp;→ clamped diffuse = <span class="hl">${ndotl.toFixed(2)}</span>${ndotl<=0?' &nbsp;(black: normal faces away)':''}`;
+  }
+  function pos(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}
+  function update(p){const {pivot}=geom(cv.clientWidth,cv.getAttribute('height')*1);
+    lightAng=Math.atan2(-(p.y-pivot.y),p.x-pivot.x); if(lightAng<0&&lightAng>-Math.PI)lightAng=clamp(lightAng,0.05,Math.PI); draw();}
+  cv.addEventListener('mousedown',e=>{dragging=true;update(pos(e));});
+  cv.addEventListener('touchstart',e=>{dragging=true;update(pos(e));e.preventDefault();},{passive:false});
+  window.addEventListener('mousemove',e=>{if(dragging)update(pos(e));});
+  cv.addEventListener('touchmove',e=>{if(dragging){update(pos(e));e.preventDefault();}},{passive:false});
+  window.addEventListener('mouseup',()=>dragging=false);
+  window.addEventListener('touchend',()=>dragging=false);
+  $('#lam-tilt').addEventListener('input',e=>{tilt=+e.target.value;$('#lam-tilt-v').textContent=tilt+'°';draw();});
+  new ResizeObserver(draw).observe(cv);draw();
+})();
+
+/* ============ 3. SPECULAR (drag viewer + shininess) ============ */
+(function(){
+  const cv=$('#cv-spec'); if(!cv)return;
+  let n=32, lightDeg=125, viewDeg=55, dragging=false;
+  function draw(){
+    const {ctx,W,H}=setupCanvas(cv);ctx.clearRect(0,0,W,H);
+    const p={x:W*0.5,y:H*0.74}, len=Math.min(W,H)*0.46;
+    // surface
+    ctx.lineWidth=6;ctx.strokeStyle=COL.pink;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(W*0.12,p.y);ctx.lineTo(W*0.88,p.y);ctx.stroke();
+    // normal up
+    const N={x:0,y:-1};
+    arrow(ctx,p.x,p.y,p.x,p.y-len,COL.white,2.4);label(ctx,p.x+6,p.y-len+4,'N\u0302',COL.white,15);
+    // light dir
+    const la=lightDeg*Math.PI/180; const L={x:Math.cos(la),y:-Math.sin(la)};
+    const src={x:p.x+L.x*len,y:p.y-Math.abs(L.y)*len};
+    arrow(ctx,p.x,p.y,p.x+L.x*len*0.78,p.y-Math.abs(L.y)*len*0.78,COL.gold,2.4);
+    label(ctx,p.x+L.x*len*0.78,p.y-Math.abs(L.y)*len*0.78-8,'L\u0302',COL.gold,15);
+    ctx.fillStyle=COL.gold;ctx.beginPath();ctx.arc(src.x,src.y,8,0,7);ctx.fill();
+    // reflection R = reflect L about N(0,-1): Rx=-Lx? reflect about vertical normal: incoming L points to light; R mirrors across normal
+    const R={x:-L.x,y:L.y};
+    arrow(ctx,p.x,p.y,p.x+R.x*len*0.78,p.y-Math.abs(R.y)*len*0.78,COL.pink,2.4);
+    label(ctx,p.x+R.x*len*0.78,p.y-Math.abs(R.y)*len*0.78-8,'R\u0302',COL.pink,15);
+    // view dir
+    const va=viewDeg*Math.PI/180; const V={x:Math.cos(va),y:-Math.sin(va)};
+    arrow(ctx,p.x,p.y,p.x+V.x*len*0.7,p.y-Math.abs(V.y)*len*0.7,COL.cyan,2.4);
+    label(ctx,p.x+V.x*len*0.7,p.y-Math.abs(V.y)*len*0.7-8,'V\u0302 (drag)',COL.cyan,13);
+    // camera glyph
+    ctx.fillStyle=COL.cyan;ctx.fillRect(p.x+V.x*len*0.78-7,p.y-Math.abs(V.y)*len*0.78-6,14,11);
+    // specular value: (R·V)^n  (use unit vectors with proper y sign)
+    const Ru={x:R.x,y:-Math.abs(R.y)}, Vu={x:V.x,y:-Math.abs(V.y)};
+    let rdotv=clamp(Ru.x*Vu.x+Ru.y*Vu.y,0,1);
+    const spec=Math.pow(rdotv,n);
+    // highlight strip on surface following spec
+    const hi=Math.round(spec*255);
+    ctx.fillStyle=`rgba(255,255,255,${spec})`;
+    ctx.beginPath();ctx.ellipse(p.x+V.x*30,p.y,26,7,0,0,7);ctx.fill();
+    // phi arc
+    const ar=Math.atan2(Ru.y,Ru.x), av=Math.atan2(Vu.y,Vu.x);
+    ctx.strokeStyle=COL.violet;ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.arc(p.x,p.y,46,Math.min(ar,av),Math.max(ar,av));ctx.stroke();
+    const phi=Math.acos(clamp(Ru.x*Vu.x+Ru.y*Vu.y,-1,1))*180/Math.PI;
+    label(ctx,p.x-16,p.y-60,'φ='+phi.toFixed(0)+'°',COL.violet,12);
+    // shininess bar viz
+    $('#spec-read').innerHTML=`R&#770;·V&#770; = cos φ = <span class="hl">${rdotv.toFixed(2)}</span> &nbsp;|&nbsp; (R&#770;·V&#770;)<sup>n</sup> with n=<span class="hl">${n}</span> = <span class="hl">${spec.toFixed(3)}</span> &nbsp;→ highlight strength. Bigger n collapses off-axis values toward 0 = tighter spot.`;
+  }
+  function pos(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}
+  function update(pt){const p={x:cv.clientWidth*0.5,y:cv.getAttribute('height')*0.74};
+    let a=Math.atan2(-(pt.y-p.y),pt.x-p.x)*180/Math.PI; viewDeg=clamp(a,5,175);draw();}
+  cv.addEventListener('mousedown',e=>{dragging=true;update(pos(e));});
+  cv.addEventListener('touchstart',e=>{dragging=true;update(pos(e));e.preventDefault();},{passive:false});
+  window.addEventListener('mousemove',e=>{if(dragging)update(pos(e));});
+  cv.addEventListener('touchmove',e=>{if(dragging){update(pos(e));e.preventDefault();}},{passive:false});
+  window.addEventListener('mouseup',()=>dragging=false);window.addEventListener('touchend',()=>dragging=false);
+  $('#spec-n').addEventListener('input',e=>{n=+e.target.value;$('#spec-n-v').textContent=n;draw();});
+  $('#spec-l').addEventListener('input',e=>{lightDeg=+e.target.value;$('#spec-l-v').textContent=lightDeg+'°';draw();});
+  new ResizeObserver(draw).observe(cv);draw();
+})();
+
+/* ============ 4. REFLECTION VECTOR ============ */
+(function(){
+  const cv=$('#cv-reflect'); if(!cv)return;
+  let Lang=125, dragging=false;
+  function draw(){
+    const {ctx,W,H}=setupCanvas(cv);ctx.clearRect(0,0,W,H);
+    const p={x:W*0.5,y:H*0.72}, len=Math.min(W,H)*0.5;
+    // surface
+    ctx.lineWidth=6;ctx.strokeStyle=COL.pink;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(W*0.1,p.y);ctx.lineTo(W*0.9,p.y);ctx.stroke();
+    const N={x:0,y:-1};
+    // L (unit, pointing to light)
+    const la=Lang*Math.PI/180; const L={x:Math.cos(la),y:-Math.abs(Math.sin(la))};
+    // N' = projection of L onto N = (L·N)N  ; with N=(0,-1): L·N = L.y*-1 = -L.y (positive since L.y<0)
+    const LdotN=L.x*N.x+L.y*N.y;
+    const Np={x:LdotN*N.x, y:LdotN*N.y};
+    // c = L - N'
+    const c={x:L.x-Np.x, y:L.y-Np.y};
+    // R = 2(L·N)N - L
+    const R={x:2*LdotN*N.x-L.x, y:2*LdotN*N.y-L.y};
+    const S=len; // scale
+    // draw projection N' (green) along normal
+    arrow(ctx,p.x,p.y,p.x+Np.x*S,p.y+Np.y*S,COL.green,2.6);
+    label(ctx,p.x+Np.x*S+6,p.y+Np.y*S,'N\u2032',COL.green,13);
+    // draw c (violet) from tip of N' to tip of L : the horizontal component
+    ctx.setLineDash([5,4]);
+    arrow(ctx,p.x+Np.x*S,p.y+Np.y*S,p.x+(Np.x+c.x)*S,p.y+(Np.y+c.y)*S,COL.violet,2);
+    label(ctx,p.x+(Np.x+c.x*0.5)*S,p.y+(Np.y+c.y)*S-12,'c',COL.violet,13);
+    // -c on other side
+    arrow(ctx,p.x+Np.x*S,p.y+Np.y*S,p.x+(Np.x-c.x)*S,p.y+(Np.y-c.y)*S,COL.violet,2);
+    label(ctx,p.x+(Np.x-c.x*0.7)*S,p.y+(Np.y-c.y)*S-12,'−c',COL.violet,13);
+    ctx.setLineDash([]);
+    // normal
+    arrow(ctx,p.x,p.y,p.x,p.y-len*0.9,COL.white,2.2);label(ctx,p.x+6,p.y-len*0.9,'N\u0302',COL.white,15);
+    // L
+    arrow(ctx,p.x,p.y,p.x+L.x*S,p.y+L.y*S,COL.gold,2.8);label(ctx,p.x+L.x*S+6,p.y+L.y*S,'L\u0302 (drag)',COL.gold,13);
+    ctx.fillStyle=COL.gold;ctx.beginPath();ctx.arc(p.x+L.x*S,p.y+L.y*S,7,0,7);ctx.fill();
+    // R
+    arrow(ctx,p.x,p.y,p.x+R.x*S,p.y+R.y*S,COL.pink,2.8);label(ctx,p.x+R.x*S+6,p.y+R.y*S,'R\u0302',COL.pink,15);
+    $('#reflect-read').innerHTML=`L&#770;·N&#770; = <span class="hl">${LdotN.toFixed(2)}</span> &nbsp;→ N&#8242; = (L&#770;·N&#770;)N&#770; &nbsp;|&nbsp; c = L&#770;−N&#8242; &nbsp;|&nbsp; <span class="hl">R&#770; = 2(L&#770;·N&#770;)N&#770; − L&#770;</span> = (${R.x.toFixed(2)}, ${(-R.y).toFixed(2)})`;
+  }
+  function pos(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}
+  function update(pt){const p={x:cv.clientWidth*0.5,y:cv.getAttribute('height')*0.72};
+    let a=Math.atan2(-(pt.y-p.y),pt.x-p.x)*180/Math.PI; Lang=clamp(a,8,172);draw();}
+  cv.addEventListener('mousedown',e=>{dragging=true;update(pos(e));});
+  cv.addEventListener('touchstart',e=>{dragging=true;update(pos(e));e.preventDefault();},{passive:false});
+  window.addEventListener('mousemove',e=>{if(dragging)update(pos(e));});
+  cv.addEventListener('touchmove',e=>{if(dragging){update(pos(e));e.preventDefault();}},{passive:false});
+  window.addEventListener('mouseup',()=>dragging=false);window.addEventListener('touchend',()=>dragging=false);
+  new ResizeObserver(draw).observe(cv);draw();
+})();
+
+/* ============ 5. BLINN vs PHONG (grazing) ============ */
+(function(){
+  const cv=$('#cv-blinn'); if(!cv)return;
+  let mode='phong', n=24, viewDeg=35, lightDeg=130, dragging=false;
+  function draw(){
+    const {ctx,W,H}=setupCanvas(cv);ctx.clearRect(0,0,W,H);
+    const p={x:W*0.5,y:H*0.76}, len=Math.min(W,H)*0.5;
+    ctx.lineWidth=6;ctx.strokeStyle=COL.pink;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(W*0.08,p.y);ctx.lineTo(W*0.92,p.y);ctx.stroke();
+    const N={x:0,y:-1};
+    arrow(ctx,p.x,p.y,p.x,p.y-len,COL.white,2.2);label(ctx,p.x+6,p.y-len,'N\u0302',COL.white,15);
+    const la=lightDeg*Math.PI/180,L={x:Math.cos(la),y:-Math.abs(Math.sin(la))};
+    arrow(ctx,p.x,p.y,p.x+L.x*len*0.8,p.y+L.y*len*0.8,COL.gold,2.4);label(ctx,p.x+L.x*len*0.8,p.y+L.y*len*0.8-8,'L\u0302',COL.gold,15);
+    ctx.fillStyle=COL.gold;ctx.beginPath();ctx.arc(p.x+L.x*len*0.8,p.y+L.y*len*0.8,7,0,7);ctx.fill();
+    const va=viewDeg*Math.PI/180,V={x:Math.cos(va),y:-Math.abs(Math.sin(va))};
+    arrow(ctx,p.x,p.y,p.x+V.x*len*0.72,p.y+V.y*len*0.72,COL.cyan,2.4);label(ctx,p.x+V.x*len*0.72,p.y+V.y*len*0.72-8,'V\u0302 (drag)',COL.cyan,13);
+    let spec,extra='';
+    if(mode==='phong'){
+      const R={x:-L.x,y:L.y};
+      arrow(ctx,p.x,p.y,p.x+R.x*len*0.8,p.y+R.y*len*0.8,COL.pink,2.4);label(ctx,p.x+R.x*len*0.8,p.y+R.y*len*0.8-8,'R\u0302',COL.pink,15);
+      const rdotv=clamp(R.x*V.x+R.y*V.y,0,1);spec=Math.pow(rdotv,n);
+      extra=`R&#770;·V&#770;=<span class="hl">${rdotv.toFixed(2)}</span>`;
+    }else{
+      const hx=L.x+V.x,hy=L.y+V.y,hm=Math.hypot(hx,hy),Hh={x:hx/hm,y:hy/hm};
+      arrow(ctx,p.x,p.y,p.x+Hh.x*len*0.8,p.y+Hh.y*len*0.8,COL.amber,2.6);label(ctx,p.x+Hh.x*len*0.8,p.y+Hh.y*len*0.8-8,'H\u0302',COL.amber,15);
+      const hdotn=clamp(Hh.x*N.x+Hh.y*N.y,0,1);spec=Math.pow(hdotn,n);
+      extra=`H&#770;·N&#770;=<span class="hl">${hdotn.toFixed(2)}</span>`;
+    }
+    // highlight readout strip
+    ctx.fillStyle=`rgba(255,255,255,${spec})`;
+    ctx.beginPath();ctx.ellipse(p.x+V.x*26,p.y,24,6,0,0,7);ctx.fill();
+    const graze=viewDeg<22||viewDeg>158;
+    $('#blinn-read').innerHTML=`mode: <span class="hl">${mode==='phong'?'Phong':'Blinn–Phong'}</span> &nbsp; ${extra} &nbsp; specular=<span class="hl">${spec.toFixed(3)}</span>` +
+      (graze&&mode==='phong'?` &nbsp;⚠ <span style="color:${COL.pink}">grazing angle — Phong specular collapses / misbehaves here</span>`:
+       graze?` &nbsp;✓ stable at grazing angle`:``);
+  }
+  function pos(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}
+  function update(pt){const p={x:cv.clientWidth*0.5,y:cv.getAttribute('height')*0.76};
+    let a=Math.atan2(-(pt.y-p.y),pt.x-p.x)*180/Math.PI; viewDeg=clamp(a,6,174);draw();}
+  cv.addEventListener('mousedown',e=>{dragging=true;update(pos(e));});
+  cv.addEventListener('touchstart',e=>{dragging=true;update(pos(e));e.preventDefault();},{passive:false});
+  window.addEventListener('mousemove',e=>{if(dragging)update(pos(e));});
+  cv.addEventListener('touchmove',e=>{if(dragging){update(pos(e));e.preventDefault();}},{passive:false});
+  window.addEventListener('mouseup',()=>dragging=false);window.addEventListener('touchend',()=>dragging=false);
+  $$('#blinn-mode button').forEach(b=>b.addEventListener('click',()=>{
+    $$('#blinn-mode button').forEach(x=>x.classList.remove('active'));b.classList.add('active');mode=b.dataset.m;draw();}));
+  $('#blinn-n').addEventListener('input',e=>{n=+e.target.value;$('#blinn-n-v').textContent=n;draw();});
+  new ResizeObserver(draw).observe(cv);draw();
+})();
+
+/* ============ QUIZ ENGINE ============ */
+const QUIZ=[
+ {q:"What does Lambert's cosine law state?",
+  o:["Light intensity falls off with the square of the distance from the source",
+     "A surface reflects all incident light equally in all directions",
+     "Diffuse light intensity is proportional to the cosine of the angle between the surface normal and the light direction",
+     "Surface colour equals albedo multiplied by ambient light colour"],
+  a:2,
+  f:"Lambert's cosine law: diffuse intensity scales with cos θ, where θ is the angle between the surface normal N&#770; and the light direction L&#770;. For unit vectors this is just N&#770;·L&#770;."},
+ {q:"Which list correctly gives the three components of the Phong lighting model?",
+  o:["Emissive, reflective, and refractive","Diffuse, normal, and depth","Ambient, diffuse, and specular","Direct, indirect, and global"],
+  a:2,
+  f:"The three Phong components are ambient (uniform fill), diffuse (N&#770;·L&#770;, orientation-based) and specular ((R&#770;·V&#770;)ⁿ, view-dependent highlight), summed for the final colour."},
+ {q:"What is the key difference between Gouraud shading and Phong shading?",
+  o:["Gouraud is only for diffuse materials; Phong only for specular",
+     "Gouraud computes lighting per vertex and interpolates colour; Phong interpolates the normal and computes lighting per fragment",
+     "Gouraud computes one flat colour per triangle; Phong computes one colour per mesh",
+     "Phong uses a lower shininess exponent to widen the highlight"],
+  a:1,
+  f:"It's about where the lighting equation is evaluated. Gouraud evaluates per vertex then interpolates the colour; Phong interpolates the normal and evaluates lighting per fragment — giving correct highlights even mid-triangle."},
+ {q:"What does the shininess exponent n control in the specular term?",
+  o:["The ratio between diffuse and specular reflection",
+     "The overall surface brightness regardless of view direction",
+     "The size and sharpness of the highlight: larger n → tighter, sharper spot; smaller n → broader, softer",
+     "The number of light sources contributing to the specular term"],
+  a:2,
+  f:"A large n makes (R&#770;·V&#770;)ⁿ drop off quickly away from the ideal reflection direction → a small, sharp highlight. A small n gives a wide, soft one."},
+ {q:"Why does Blinn–Phong use a halfway vector H rather than the reflection vector R?",
+  o:["H incorporates surface roughness, removing the need for a shininess exponent",
+     "H lets specular be evaluated once per triangle instead of per fragment",
+     "H is cheaper to compute and avoids the grazing-angle artefact Phong produces at extreme viewing directions",
+     "H is physically correct for all materials; R only works for perfect mirrors"],
+  a:2,
+  f:"H&#770; = normalise(L&#770;+V&#770;) is just an addition and a normalise — cheaper than building R&#770; — and it avoids the Phong breakdown at grazing angles. That's the Blinn–Phong modification."},
+ {q:"Why must surface normals be transformed by the inverse transpose of the model-view matrix rather than the matrix itself?",
+  o:["Because the fragment shader can't access the model-view matrix directly",
+     "Because normals must be normalised before lighting, which requires the inverse",
+     "Because normals are stored in a different coordinate space from vertex positions",
+     "Because non-uniform scale in the model-view matrix tilts normals away from the surface"],
+  a:3,
+  f:"With non-uniform scale, applying the model-view matrix directly to normals tilts them off the true surface direction, breaking lighting. The inverse transpose cancels the scale distortion while keeping the correct orientation."}
+];
+(function(){
+  const host=$('#quizz-host'); if(!host)return;
+  QUIZ.forEach((item,qi)=>{
+    const el=document.createElement('div');el.className='quiz';
+    el.innerHTML=`<div class="qhead"><span>Quiz · Question ${qi+1} of ${QUIZ.length}</span><span>Multiple choice</span></div>
+      <div class="qtext">${item.q}</div>
+      <div class="opts">${item.o.map((o,i)=>`<button class="opt" data-i="${i}"><span class="mk">${String.fromCharCode(65+i)}</span><span>${o}</span></button>`).join('')}</div>
+      <div class="feedback"></div>`;
+    host.appendChild(el);
+    const fb=el.querySelector('.feedback');
+    el.querySelectorAll('.opt').forEach(btn=>btn.addEventListener('click',()=>{
+      if(el.dataset.done)return; el.dataset.done='1';
+      const i=+btn.dataset.i;
+      el.querySelectorAll('.opt').forEach(b=>{
+        const bi=+b.dataset.i;
+        if(bi===item.a)b.classList.add('correct');
+        else if(bi===i)b.classList.add('wrong');
+        b.style.pointerEvents='none';
+      });
+      fb.innerHTML=(i===item.a?'<b style="color:var(--green)">Correct. </b>':'<b style="color:var(--pink)">Not quite. </b>')+item.f;
+      fb.classList.add('show');
+    }));
+  });
+})();
+
+/* ============ PROGRESS + DOTNAV + REVEAL ============ */
+(function(){
+  const bar=$('#progress');
+  const onScroll=()=>{const h=document.documentElement;const s=h.scrollTop/(h.scrollHeight-h.clientHeight);bar.style.width=(s*100)+'%';};
+  document.addEventListener('scroll',onScroll,{passive:true});onScroll();
+  // dot nav
+  const secs=$$('section[data-nav], header[data-nav]');
+  const nav=$('#dotnav');
+  secs.forEach(s=>{const a=document.createElement('a');a.href='#'+ (s.id||'');
+    a.innerHTML=`<span>${s.dataset.nav}</span>`;a.dataset.id=s.id;nav.appendChild(a);});
+  const navlinks=$$('#dotnav a');
+  const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){
+    navlinks.forEach(l=>l.classList.toggle('on',l.dataset.id===e.target.id));}});},{rootMargin:'-45% 0px -45% 0px'});
+  secs.forEach(s=>io.observe(s));
+  // reveal
+  $$('section .wrap > *').forEach(el=>el.classList.add('reveal'));
+  const ro=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');ro.unobserve(e.target);}});},{rootMargin:'0px 0px -8% 0px'});
+  $$('.reveal').forEach(el=>ro.observe(el));
+})();
+</script>
+</body>
+</html>
